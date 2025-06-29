@@ -14,6 +14,10 @@ impl<const DIM: usize, const N_USIZE: usize> HyperVector for BinaryHDV<DIM, N_US
         BinaryHDV::multiply(self, other)
     }
 
+    fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self {
+        BinaryHDV::pmultiply(self, pa, other, pb)
+    }
+
     fn acc(vectors: &[&Self]) -> Self {
         BinaryHDV::acc(vectors)
     }
@@ -63,8 +67,20 @@ impl<const DIM: usize, const N_USIZE: usize> BinaryHDV<DIM, N_USIZE> {
         result
     }
 
+    /// Like multiply, but permute vectors first
+    pub fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self {
+        let mut result = Self::zero();
+
+        for i in 0..N_USIZE {
+            result.data[i] = self.data[(i + pa) % N_USIZE] ^ other.data[(i + pb) % N_USIZE];
+        }
+
+        result
+    }
+
     /// count number of 1 bits for each bit position - if more than half are 1, then set
     /// that bit position to 1 in the returned vector
+    /// For ties: random 1 or 0
     pub fn acc(vectors: &[&Self]) -> Self {
         const BITS_PER_USIZE: usize = usize::BITS as usize;
         let mut a = vec![0usize; N_USIZE * 64]; // vote counter per bit
@@ -91,23 +107,6 @@ impl<const DIM: usize, const N_USIZE: usize> BinaryHDV<DIM, N_USIZE> {
         r
     }
 }
-
-// #[derive(Debug)]
-// pub struct Hdv {
-//     //v: [usize; VEC_SIZE],
-//     v: Vec<usize>,
-// }
-
-// pub fn pmultiply(a: &Hdv, pa: usize, b: &Hdv, pb: usize) -> Hdv {
-//     //permute and multiply
-//     let mut result = Hdv::zeros();
-
-//     for i in 0..VEC_SIZE {
-//         result.v[i] = a.v[(i + pa) % VEC_SIZE] ^ b.v[(i + pb) % VEC_SIZE];
-//     }
-
-//     result
-// }
 
 #[cfg(test)]
 mod tests {

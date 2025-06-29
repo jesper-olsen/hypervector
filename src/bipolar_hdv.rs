@@ -13,6 +13,10 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV::multiply(self, other)
     }
 
+    fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self {
+        BipolarHDV::pmultiply(self, pa, other, pb)
+    }
+
     fn acc(vectors: &[&Self]) -> Self {
         BipolarHDV::acc(vectors)
     }
@@ -57,12 +61,10 @@ impl<const DIM: usize> BipolarHDV<DIM> {
     }
 
     /// permute HDVs then multiply
-    pub fn pmultiply(h1: &Self, order1: usize, h2: &Self, order2: usize) -> Self {
-        let len = h1.data.len();
-        let shift1 = order1 % len;
-        let shift2 = order2 % len;
-        let data =
-            std::array::from_fn(|i| h2.data[(i + shift1) % len] * h2.data[(i + shift2) % len]);
+    pub fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self {
+        let p1 = pa % DIM;
+        let p2 = pb % DIM;
+        let data = std::array::from_fn(|i| self.data[(i + p1) % DIM] * other.data[(i + p2) % DIM]);
         Self { data }
     }
 

@@ -5,6 +5,7 @@ pub trait HyperVector: Sized {
     fn new() -> Self;
     fn distance(&self, other: &Self) -> f32;
     fn multiply(&self, other: &Self) -> Self;
+    fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self;
     fn acc(vectors: &[&Self]) -> Self;
 }
 
