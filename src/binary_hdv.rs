@@ -1,7 +1,7 @@
 use crate::HyperVector;
 use rand::Rng;
 
-impl<const DIM: usize, const N_USIZE: usize> HyperVector for BinaryHDV<DIM, N_USIZE> {
+impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     fn new() -> Self {
         BinaryHDV::new()
     }
@@ -24,7 +24,7 @@ impl<const DIM: usize, const N_USIZE: usize> HyperVector for BinaryHDV<DIM, N_US
 }
 
 #[derive(Debug, PartialEq)]
-pub struct BinaryHDV<const DIM: usize, const N_USIZE: usize> {
+pub struct BinaryHDV<const N_USIZE: usize> {
     pub data: [usize; N_USIZE],
 }
 
@@ -34,12 +34,10 @@ const fn vec_size(dim: usize) -> usize {
     if n % 2 == 0 { n } else { n + 1 } // legacy - for balancing 1s & 0s on rng init
 }
 
-impl<const DIM: usize, const N_USIZE: usize> BinaryHDV<DIM, N_USIZE> {
+impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     fn new() -> Self {
-        assert_eq!(N_USIZE, vec_size(DIM));
         let mut rng = rand::rng();
         let data = std::array::from_fn(|_| rng.random_range(0..=usize::MAX));
-
         Self { data }
     }
 
@@ -94,7 +92,6 @@ impl<const DIM: usize, const N_USIZE: usize> BinaryHDV<DIM, N_USIZE> {
             }
         }
 
-        //for i in 0..DIM {
         for i in 0..N_USIZE * BITS_PER_USIZE {
             let uidx = i / BITS_PER_USIZE;
             let bidx = i % BITS_PER_USIZE;
@@ -115,10 +112,10 @@ mod tests {
     #[test]
     fn test_accumulate() {
         // note - if accumulating an even number of vectors, the result has a random component
-        let mut v1 = BinaryHDV::<128, 2>::zero();
-        let mut v2 = BinaryHDV::<128, 2>::zero();
-        let mut v3 = BinaryHDV::<128, 2>::zero();
-        let mut r = BinaryHDV::<128, 2>::zero();
+        let mut v1 = BinaryHDV::<2>::zero();
+        let mut v2 = BinaryHDV::<2>::zero();
+        let mut v3 = BinaryHDV::<2>::zero();
+        let mut r = BinaryHDV::<2>::zero();
         v1.data[0] = 5; // 0101
         v1.data[1] = 0;
         v2.data[0] = 1; // 0001
@@ -127,12 +124,12 @@ mod tests {
         v3.data[1] = 1;
         r.data[0] = 1;
         r.data[1] = 0;
-        let b = BinaryHDV::<128, 2>::acc(&[&v1, &v2, &v3]);
+        let b = BinaryHDV::<2>::acc(&[&v1, &v2, &v3]);
         assert_eq!(b, r);
     }
 
     #[test]
     fn binary_mexican_dollar() {
-        crate::example_mexican_dollar::<BinaryHDV<1000, 16>>();
+        crate::example_mexican_dollar::<BinaryHDV<16>>(); // 16*64 = 1024 bits
     }
 }
