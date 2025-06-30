@@ -91,14 +91,15 @@ where
     let v1 = T::from_slice(&[1, -1, 1, -1, -1]);
     let v2 = T::from_slice(&[1, -1, -1, -1, -1]);
     let v3 = T::from_slice(&[1, -1, -1, 1, -1]);
-
     let expected = T::from_slice(&[1, -1, -1, -1, -1]);
 
     acc.add(&v1);
     acc.add(&v2);
     acc.add(&v3);
-
     let result = acc.finalize();
+    assert_eq!(result, expected);
+
+    let result = T::acc(&[&v1, &v2, &v3]);
     assert_eq!(result, expected);
 }
 

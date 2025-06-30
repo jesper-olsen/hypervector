@@ -14,6 +14,6 @@ fn test_accumulate() {
 }
 fn main() {
     test_accumulate();
-    example_mexican_dollar::<BipolarHDV<1000>>();
+    example_mexican_dollar::<BipolarHDV<1024>>();
     example_mexican_dollar::<BinaryHDV<16>>();
 }
