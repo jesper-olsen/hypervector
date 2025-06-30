@@ -5,6 +5,15 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV::new()
     }
 
+    fn from_slice(slice: &[i8]) -> Self {
+        assert_eq!(slice.len(), DIM);
+        let mut hdv = Self::zero();
+        for i in 0..DIM {
+            hdv.data[i] = if slice[i] >= 0 { 1 } else { -1 };
+        }
+        hdv
+    }
+
     fn distance(&self, other: &Self) -> f32 {
         1.0 - self.dot(other)
     }
@@ -22,6 +31,41 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     }
 }
 
+pub struct Accumulator<const DIM: usize> {
+    sum: [i64; DIM],
+}
+
+impl<const DIM: usize> Accumulator<DIM> {
+    pub fn new() -> Self {
+        Self { sum: [0; DIM] }
+    }
+
+    pub fn add(&mut self, v: &BipolarHDV<DIM>) {
+        for i in 0..DIM {
+            self.sum[i] += v.data[i] as i64;
+        }
+    }
+
+    pub fn finalize(self) -> BipolarHDV<DIM> {
+        let mut result = BipolarHDV::<DIM>::zero();
+        for i in 0..DIM {
+            result.data[i] = match self.sum[i].cmp(&0) {
+                std::cmp::Ordering::Greater => 1,
+                std::cmp::Ordering::Less => -1,
+                std::cmp::Ordering::Equal => {
+                    if rand::random() {
+                        1
+                    } else {
+                        -1
+                    }
+                }
+            };
+        }
+        result
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct BipolarHDV<const DIM: usize> {
     data: [i8; DIM], // +1 or -1
 }
@@ -82,6 +126,22 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_accumulate() {
+        let mut acc = Accumulator::<5>::new();
+        // note - if accumulating an even number of vectors, the result has a random component
+        let v1 = BipolarHDV::<5>::from_slice(&[1, -1, 1, -1, -1]);
+        let v2 = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
+        let v3 = BipolarHDV::<5>::from_slice(&[1, -1, -1, 1, -1]);
+        let r = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
+
+        acc.add(&v1);
+        acc.add(&v2);
+        acc.add(&v3);
+        let b = acc.finalize();
+        assert_eq!(b, r);
+    }
 
     #[test]
     fn bipolar_mexican_dollar() {

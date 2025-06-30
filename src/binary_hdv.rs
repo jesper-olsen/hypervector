@@ -6,6 +6,20 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         BinaryHDV::new()
     }
 
+    fn from_slice(slice: &[i8]) -> Self {
+        let dim = N_USIZE * usize::BITS as usize;
+        assert_eq!(slice.len(), dim);
+        let mut hdv = Self::zero();
+        for i in 0..dim {
+            let word_idx = i / 64;
+            let bit_idx = i % 64;
+            if slice[i] != 0 {
+                hdv.data[word_idx] |= 1 << bit_idx;
+            }
+        }
+        hdv
+    }
+
     fn distance(&self, other: &Self) -> f32 {
         self.hamming_distance(other) as f32 / (N_USIZE * usize::BITS as usize) as f32
     }
@@ -28,10 +42,47 @@ pub struct BinaryHDV<const N_USIZE: usize> {
     pub data: [usize; N_USIZE],
 }
 
-const fn vec_size(dim: usize) -> usize {
-    let bits_per_usize = usize::BITS as usize;
-    let n = (dim + bits_per_usize - 1) / bits_per_usize;
-    if n % 2 == 0 { n } else { n + 1 } // legacy - for balancing 1s & 0s on rng init
+pub struct BinaryAccumulator<const N_USIZE: usize> {
+    votes: Vec<usize>, // one vote counter per bit
+    count: usize,      // total number of vectors added
+}
+
+impl<const N_USIZE: usize> BinaryAccumulator<N_USIZE> {
+    pub fn new() -> Self {
+        Self {
+            votes: vec![0; N_USIZE * usize::BITS as usize],
+            count: 0,
+        }
+    }
+
+    pub fn add(&mut self, v: &BinaryHDV<N_USIZE>) {
+        for i in 0..N_USIZE {
+            let word = v.data[i];
+            for j in 0..usize::BITS {
+                if (word >> j) & 1 != 0 {
+                    self.votes[i * usize::BITS as usize + j as usize] += 1;
+                }
+            }
+        }
+        self.count += 1;
+    }
+
+    pub fn finalize(self) -> BinaryHDV<N_USIZE> {
+        let mut result = BinaryHDV::zero();
+        let bits_per_word = usize::BITS as usize;
+
+        for i in 0..self.votes.len() {
+            let uidx = i / bits_per_word;
+            let bidx = i % bits_per_word;
+            let n1 = self.votes[i];
+            let n0 = self.count - n1;
+            if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
+                result.data[uidx] |= 1 << bidx;
+            }
+        }
+
+        result
+    }
 }
 
 impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
@@ -125,6 +176,30 @@ mod tests {
         r.data[0] = 1;
         r.data[1] = 0;
         let b = BinaryHDV::<2>::acc(&[&v1, &v2, &v3]);
+        assert_eq!(b, r);
+    }
+
+    #[test]
+    fn test_accumulate2() {
+        let mut acc = BinaryAccumulator::<2>::new();
+        // note - if accumulating an even number of vectors, the result has a random component
+        let mut v1 = BinaryHDV::<2>::zero();
+        let mut v2 = BinaryHDV::<2>::zero();
+        let mut v3 = BinaryHDV::<2>::zero();
+        let mut r = BinaryHDV::<2>::zero();
+        v1.data[0] = 5; // 0101
+        v1.data[1] = 0;
+        v2.data[0] = 1; // 0001
+        v2.data[1] = 0;
+        v3.data[0] = 9; // 1001
+        v3.data[1] = 1;
+        r.data[0] = 1;
+        r.data[1] = 0;
+
+        acc.add(&v1);
+        acc.add(&v2);
+        acc.add(&v3);
+        let b = acc.finalize();
         assert_eq!(b, r);
     }
 

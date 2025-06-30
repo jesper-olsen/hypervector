@@ -3,6 +3,7 @@ pub mod bipolar_hdv;
 
 pub trait HyperVector: Sized {
     fn new() -> Self;
+    fn from_slice(slice: &[i8]) -> Self;
     fn distance(&self, other: &Self) -> f32;
     fn multiply(&self, other: &Self) -> Self;
     fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self;
