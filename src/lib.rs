@@ -19,7 +19,6 @@ pub trait HyperVector: Sized {
 }
 
 pub fn example_mexican_dollar<T: HyperVector>() {
-    //pub fn example_mexican_dollar<const DIM: usize>() {
     // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
     // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
     // Calculate answer: Mexican Peso - mpe
@@ -83,41 +82,38 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     assert_eq!(ml, "mpe", "Expected mpe");
 }
 
-fn test_accumulate<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>()
-where
-    T::Accumulator: Accumulator<T> + Default,
-{
-    let mut acc = T::Accumulator::default();
-    let v1 = T::from_slice(&[1, -1, 1, -1, -1]);
-    let v2 = T::from_slice(&[1, -1, -1, -1, -1]);
-    let v3 = T::from_slice(&[1, -1, -1, 1, -1]);
-    let expected = T::from_slice(&[1, -1, -1, -1, -1]);
-
-    acc.add(&v1);
-    acc.add(&v2);
-    acc.add(&v3);
-    let result = acc.finalize();
-    assert_eq!(result, expected);
-
-    let result = T::acc(&[&v1, &v2, &v3]);
-    assert_eq!(result, expected);
-}
-
 #[cfg(test)]
 mod tests {
-    //use super::*;
-    use crate::{binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV};
+    use crate::{Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV};
+
+    fn test_accumulate<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>()
+    where
+        T::Accumulator: Accumulator<T> + Default,
+    {
+        let mut acc = T::Accumulator::default();
+        let v1 = T::from_slice(&[1, -1, 1, -1, -1]);
+        let v2 = T::from_slice(&[1, -1, -1, -1, -1]);
+        let v3 = T::from_slice(&[1, -1, -1, 1, -1]);
+        let expected = T::from_slice(&[1, -1, -1, -1, -1]);
+
+        acc.add(&v1);
+        acc.add(&v2);
+        acc.add(&v3);
+        let result = acc.finalize();
+        assert_eq!(result, expected);
+
+        let result = T::acc(&[&v1, &v2, &v3]);
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn test_bipolar_accumulate() {
-        //test_accumulate::<BipolarHDV<5>>();
-        crate::test_accumulate::<BipolarHDV<5>>();
+        test_accumulate::<BipolarHDV<5>>();
     }
 
     #[test]
     fn test_binary_accumulate() {
-        //test_accumulate::<BipolarHDV<5>>();
-        crate::test_accumulate::<BinaryHDV<64>>();
+        test_accumulate::<BinaryHDV<64>>();
     }
 
     #[test]

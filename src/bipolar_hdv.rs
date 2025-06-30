@@ -131,38 +131,3 @@ impl<const DIM: usize> BipolarHDV<DIM> {
         dot as f32 / self.data.len() as f32
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn test_bp_accumulate() {
-//         // note - if accumulating an even number of vectors, the result has a random component
-//         let v1 = BipolarHDV::<5>::from_slice(&[1, -1, 1, -1, -1]);
-//         let v2 = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
-//         let v3 = BipolarHDV::<5>::from_slice(&[1, -1, -1, 1, -1]);
-//         let r = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
-
-//         let b = BipolarHDV::<5>::acc(&[&v1, &v2, &v3]);
-//         assert_eq!(b, r);
-
-//         // streaming accumulate
-//         let mut acc = BipolarAccumulator::<5>::new();
-//         acc.add(&v1);
-//         acc.add(&v2);
-//         acc.add(&v3);
-//         let b = acc.finalize();
-//         assert_eq!(b, r);
-//     }
-
-//     #[test]
-//     fn test_bipolar_accumulate() {
-//         crate::test_accumulate::<BipolarHDV<5>>();
-//     }
-
-//     #[test]
-//     fn bipolar_mexican_dollar() {
-//         crate::example_mexican_dollar::<BipolarHDV<1000>>();
-//     }
-// }
