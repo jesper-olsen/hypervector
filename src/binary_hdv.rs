@@ -8,9 +8,9 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 
     fn from_slice(slice: &[i8]) -> Self {
         let dim = N_USIZE * usize::BITS as usize;
-        assert_eq!(slice.len(), dim);
+        assert!(slice.len() <= dim);
         let mut hdv = Self::zero();
-        for i in 0..dim {
+        for i in 0..slice.len() {
             let word_idx = i / 64;
             let bit_idx = i % 64;
             if slice[i] != 0 {
@@ -42,12 +42,12 @@ pub struct BinaryHDV<const N_USIZE: usize> {
     pub data: [usize; N_USIZE],
 }
 
-pub struct BinaryAccumulator<const N_USIZE: usize> {
+pub struct Accumulator<const N_USIZE: usize> {
     votes: Vec<usize>, // one vote counter per bit
     count: usize,      // total number of vectors added
 }
 
-impl<const N_USIZE: usize> BinaryAccumulator<N_USIZE> {
+impl<const N_USIZE: usize> Accumulator<N_USIZE> {
     pub fn new() -> Self {
         Self {
             votes: vec![0; N_USIZE * usize::BITS as usize],
@@ -181,20 +181,12 @@ mod tests {
 
     #[test]
     fn test_accumulate2() {
-        let mut acc = BinaryAccumulator::<2>::new();
+        let mut acc = Accumulator::<2>::new();
         // note - if accumulating an even number of vectors, the result has a random component
-        let mut v1 = BinaryHDV::<2>::zero();
-        let mut v2 = BinaryHDV::<2>::zero();
-        let mut v3 = BinaryHDV::<2>::zero();
-        let mut r = BinaryHDV::<2>::zero();
-        v1.data[0] = 5; // 0101
-        v1.data[1] = 0;
-        v2.data[0] = 1; // 0001
-        v2.data[1] = 0;
-        v3.data[0] = 9; // 1001
-        v3.data[1] = 1;
-        r.data[0] = 1;
-        r.data[1] = 0;
+        let v1 = BinaryHDV::<2>::from_slice(&[1, 0, 1, 0]);
+        let v2 = BinaryHDV::<2>::from_slice(&[1, 0, 0, 0]);
+        let v3 = BinaryHDV::<2>::from_slice(&[1, 0, 0, 1]);
+        let r = BinaryHDV::<2>::from_slice(&[1, 0, 0, 0]);
 
         acc.add(&v1);
         acc.add(&v2);
