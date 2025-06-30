@@ -1,7 +1,15 @@
 pub mod binary_hdv;
 pub mod bipolar_hdv;
 
+pub trait Accumulator<T: HyperVector> {
+    fn new() -> Self;
+    fn add(&mut self, v: &T);
+    fn finalize(self) -> T;
+}
+
 pub trait HyperVector: Sized {
+    type Accumulator: Default + Accumulator<Self>;
+
     fn new() -> Self;
     fn from_slice(slice: &[i8]) -> Self;
     fn distance(&self, other: &Self) -> f32;
@@ -73,4 +81,51 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     }
     println!("Min is: {ml}");
     assert_eq!(ml, "mpe", "Expected mpe");
+}
+
+fn test_accumulate<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>()
+where
+    T::Accumulator: Accumulator<T> + Default,
+{
+    let mut acc = T::Accumulator::default();
+    let v1 = T::from_slice(&[1, -1, 1, -1, -1]);
+    let v2 = T::from_slice(&[1, -1, -1, -1, -1]);
+    let v3 = T::from_slice(&[1, -1, -1, 1, -1]);
+
+    let expected = T::from_slice(&[1, -1, -1, -1, -1]);
+
+    acc.add(&v1);
+    acc.add(&v2);
+    acc.add(&v3);
+
+    let result = acc.finalize();
+    assert_eq!(result, expected);
+}
+
+#[cfg(test)]
+mod tests {
+    //use super::*;
+    use crate::{binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV};
+
+    #[test]
+    fn test_bipolar_accumulate() {
+        //test_accumulate::<BipolarHDV<5>>();
+        crate::test_accumulate::<BipolarHDV<5>>();
+    }
+
+    #[test]
+    fn test_binary_accumulate() {
+        //test_accumulate::<BipolarHDV<5>>();
+        crate::test_accumulate::<BinaryHDV<64>>();
+    }
+
+    #[test]
+    fn binary_mexican_dollar() {
+        crate::example_mexican_dollar::<BinaryHDV<16>>(); // 16*64 = 1024 bits
+    }
+
+    #[test]
+    fn bipolar_mexican_dollar() {
+        crate::example_mexican_dollar::<BipolarHDV<1024>>();
+    }
 }
