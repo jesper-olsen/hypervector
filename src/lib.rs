@@ -11,6 +11,10 @@ pub trait HyperVector: Sized {
     type Accumulator: Default + Accumulator<Self>;
 
     fn new() -> Self;
+    /// Returns the identity element of the hypervector space:
+    /// - Binary: all 0s (XOR identity)
+    /// - Bipolar: all +1s (multiplicative identity)
+    fn ident() -> Self;
     fn from_slice(slice: &[i8]) -> Self;
     fn distance(&self, other: &Self) -> f32;
     fn multiply(&self, other: &Self) -> Self;

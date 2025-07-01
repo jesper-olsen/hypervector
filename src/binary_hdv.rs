@@ -8,6 +8,10 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         BinaryHDV::new()
     }
 
+    fn ident() -> Self {
+        BinaryHDV { data: [0; N_USIZE] }
+    }
+
     fn from_slice(slice: &[i8]) -> Self {
         let dim = N_USIZE * usize::BITS as usize;
         assert!(slice.len() <= dim);

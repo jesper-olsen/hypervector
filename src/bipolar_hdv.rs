@@ -7,17 +7,28 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV::new()
     }
 
+    fn ident() -> Self {
+        BipolarHDV { data: [1; DIM] }
+    }
+
     fn from_slice(slice: &[i8]) -> Self {
         assert_eq!(slice.len(), DIM);
-        let mut hdv = Self::zero();
-        for i in 0..DIM {
-            hdv.data[i] = if slice[i] >= 0 { 1 } else { -1 };
-        }
-        hdv
+        let data = std::array::from_fn(|i| if slice[i] >= 0 { 1 } else { -1 });
+        BipolarHDV { data }
     }
 
     fn distance(&self, other: &Self) -> f32 {
-        1.0 - self.dot(other)
+        // 1.0 - cos angle between self and other
+        // = 1.0 - dot(self,other)/(norm(self)*norm(other)
+        // for bipolar vectors, the norm is sqrt(DIM).
+        // distance is a number in the interval 0..2
+        let dot: i32 = self
+            .data
+            .iter()
+            .zip(&other.data)
+            .map(|(a, b)| (a * b) as i32)
+            .sum();
+        1.0 - (dot as f32) / DIM as f32
     }
 
     fn multiply(&self, other: &Self) -> Self {
@@ -56,9 +67,9 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
     }
 
     fn finalize(self) -> BipolarHDV<DIM> {
-        let mut result = BipolarHDV::<DIM>::zero();
+        let mut data = [0; DIM];
         for i in 0..DIM {
-            result.data[i] = match self.sum[i].cmp(&0) {
+            data[i] = match self.sum[i].cmp(&0) {
                 std::cmp::Ordering::Greater => 1,
                 std::cmp::Ordering::Less => -1,
                 std::cmp::Ordering::Equal => {
@@ -70,7 +81,7 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
                 }
             };
         }
-        result
+        BipolarHDV { data }
     }
 }
 
@@ -85,19 +96,12 @@ impl<const DIM: usize> BipolarHDV<DIM> {
         Self { data }
     }
 
-    fn zero() -> Self {
-        Self { data: [0i8; DIM] }
-    }
-
     /// sum HDVs in l self and normalise
     fn acc(l: &[&BipolarHDV<DIM>]) -> Self {
-        let mut a = BipolarHDV::<DIM>::zero();
+        let mut data = [0i8; DIM];
         for i in 0..DIM {
-            let mut s = 0i64;
-            for v in l {
-                s += v.data[i] as i64;
-            }
-            a.data[i] = if s > 0 {
+            let s: i64 = l.iter().map(|v| v.data[i] as i64).sum();
+            data[i] = if s > 0 {
                 1
             } else if s < 0 {
                 -1
@@ -105,7 +109,7 @@ impl<const DIM: usize> BipolarHDV<DIM> {
                 if rand::random() { 1 } else { -1 }
             };
         }
-        a
+        Self { data }
     }
 
     pub fn multiply(&self, b: &Self) -> Self {
@@ -119,15 +123,5 @@ impl<const DIM: usize> BipolarHDV<DIM> {
         let p2 = pb % DIM;
         let data = std::array::from_fn(|i| self.data[(i + p1) % DIM] * other.data[(i + p2) % DIM]);
         Self { data }
-    }
-
-    pub fn dot(&self, other: &Self) -> f32 {
-        let dot: i32 = self
-            .data
-            .iter()
-            .zip(&other.data)
-            .map(|(a, b)| (a * b) as i32)
-            .sum();
-        dot as f32 / self.data.len() as f32
     }
 }
