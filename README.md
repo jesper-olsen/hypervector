@@ -1,6 +1,6 @@
 # hypervector
 
-A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) and binary (0/1) hypervectors. Includes applications such as logical inference and language identification.
+A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) and binary (0/1) hypervectors. Includes example applications such as logical inference and language identification.
 
 > Hyperdimensional computing extends the traditional (von Neumann)
 > model of computing with numbers, to computing with wide vectors, e.g., 10,000-
