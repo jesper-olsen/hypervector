@@ -30,13 +30,12 @@ Benchmark
 ---------
 
 Here we benchmark bipolar and binary HDVs on a language identification task [2].
-HDVs are used for representing letter n-grams and a profile for a language is constructed by summing over a
-example texts in the language. For testing, a similar profile is constructed from a test sentence and compared to the reference profile (Hamming distance or cosine similarity).
+HDVs are used for representing letter n-grams and a profile for a language is constructed by summing over example texts in the language. For testing, a similar profile is constructed from a test sentence and compared to the reference profile (Hamming distance or cosine similarity).
 
 There are 21 test languages (1k sentences per language) and 22 training languages (21+afr, 10k sentences each). All times are in seconds (wall clock) on a Macbook Air M1 (2020, 8 cores). 
 
 Bipolar HDVs are represented as u8 arrays with one element per dimension. Binary HDVs are more compact
-because they only use one bit per dimension; this is not only more storage efficient but also computationally faster as can be seen from the table below.
+because they only use one bit per dimension; this is not only more storage efficient but also computationally significantly faster as can be seen from the table below.
 
 ```
 cargo run --release --bin main_li -- --mode binary --dim 100032 --ngram 5
