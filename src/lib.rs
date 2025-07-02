@@ -82,7 +82,7 @@ pub fn example_mexican_dollar<T: HyperVector>() {
             ml = label;
         }
     }
-    println!("Min is: {ml}");
+    println!("Min is: {ml}\n\n");
     assert_eq!(ml, "mpe", "Expected mpe");
 }
 

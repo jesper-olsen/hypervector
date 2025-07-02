@@ -71,9 +71,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
         for i in 0..N_USIZE {
             let word = v.data[i];
             for j in 0..usize::BITS {
-                if (word >> j) & 1 != 0 {
-                    self.votes[i * usize::BITS as usize + j as usize] += 1;
-                }
+                self.votes[i * usize::BITS as usize + j as usize] += (word >> j) & 1
             }
         }
         self.count += 1;
