@@ -2,7 +2,11 @@
 
 A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) and binary (0/1) hypervectors. Includes applications such as logical inference and language identification.
 
-> “Hyperdimensional computing extends the traditional (von Neumann) model of computing with numbers...”
+> Hyperdimensional computing extends the traditional (von Neumann)
+> model of computing with numbers, to computing with wide vectors, e.g., 10,000-
+> bit. Operations that correspond to the addition and multiplication of numbers,
+> augmented by permutations of vector coordinates, allow us to build computers for
+> tasks that are served poorly by today’s computers. 
 > — [Kanerva, 2022](https://redwood.berkeley.edu/wp-content/uploads/2022/05/kanerva2022hdmss.pdf)
 
 ## Features
