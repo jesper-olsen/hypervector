@@ -13,9 +13,9 @@ Hyperdimensional computing (HDC) is a brain-inspired paradigm where information 
 ## References
 
 1. ["What We Mean When We Say 'What’s the Dollar of Mexico?'" – Pentti Kanerva, 2010](https://aaai.org/papers/02243-2243-what-we-mean-when-we-say-whats-the-dollar-of-mexico-prototypes-and-mapping-in-concept-space/)  
-2. "Language Geometry using Random Indexing" – Aditya Joshi et al., 2016  
-3. "A Robust and Energy-Efficient Classifier..." – Abbas Rahimi et al., 2016  
-4. ["Hyperdimensional Computing: An Algebra..." – Pentti Kanerva, 2022](https://redwood.berkeley.edu/wp-content/uploads/2022/05/kanerva2022hdmss.pdf)
+2. "Language Geometry using Random Indexing" Aditya Joshi1, Johan T. Halseth, and Pentti Kanerva, 2016
+3. "A Robust and Energy-Efficient Classifier Using Brain-Inspired Hyperdimensional Computing" Abbas Rahimi, Pentti Kanerva, Jan M. Rabaey, 2016
+4. ["Hyperdimensional Computing: An Algebra for Computing with Vectors", Pentti Kanerva, 2022](https://redwood.berkeley.edu/wp-content/uploads/2022/05/kanerva2022hdmss.pdf)
 
 Run
 -----
@@ -45,10 +45,10 @@ cargo run --release --bin main_li -- --mode binary --dim 100032 --ngram 5
 | kind    | ngram | hdv bits| Accuracy    | Time       |  
 | ----:   | ----: | --:     | ---------:  | ----------:| 
 | bipolar | 3     |    1024 | 91.0%       |   263s     |
-| bipolar | 3     |   10048 | 96.5%       |  2615s     | 
+| bipolar | 3     |   10048 | 96.7%       |  2589s     | 
+| bipolar | 3     |  100032 | 97.0%       | 29187s     | 
 | binary  | 3     |    1024 | 90.7%       |    13s     |
 | binary  | 3     |   10048 | 96.5%       |    89s     |
 | binary  | 3     |  100032 | 97.0%       |  1009s     |
 | binary  | 4     |  100032 | 98.0%       |  1031s     |
 | binary  | 5     |  100032 | 98.1%       |   953s     |
-
