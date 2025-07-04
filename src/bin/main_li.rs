@@ -43,15 +43,15 @@ pub fn compute_sum_hv<T: HyperVector>(
         for &c in &chars[..n] {
             let b0 = symbols.entry(c).or_insert(T::new());
             block.push_front(c);
-            ngram = ngram.pmultiply(1, b0, 0);
+            ngram = ngram.pbind(1, b0, 0);
         }
         for &c in &chars[n..] {
             let forget = block.pop_back().unwrap();
             let forget_sym = symbols.get(&forget).unwrap();
-            ngram = ngram.pmultiply(0, forget_sym, n - 1); // Unbind oldest character (position n-1)
+            ngram = ngram.punbind(0, forget_sym, n - 1); // Unbind oldest character (position n-1)
             let new_sym = symbols.entry(c).or_insert(T::new());
             block.push_front(c);
-            ngram = ngram.pmultiply(1, new_sym, 0); // Bind newest character (position 0)
+            ngram = ngram.pbind(1, new_sym, 0); // Bind newest character (position 0)
             acc.add(&ngram);
         }
     }

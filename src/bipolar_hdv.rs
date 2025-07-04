@@ -31,11 +31,19 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         1.0 - (dot as f32) / DIM as f32
     }
 
-    fn multiply(&self, other: &Self) -> Self {
+    fn bind(&self, other: &Self) -> Self {
         BipolarHDV::multiply(self, other)
     }
 
-    fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self {
+    fn unbind(&self, other: &Self) -> Self {
+        BipolarHDV::multiply(self, other)
+    }
+
+    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
+        BipolarHDV::pmultiply(self, pa, other, pb)
+    }
+
+    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
         BipolarHDV::pmultiply(self, pa, other, pb)
     }
 

@@ -30,11 +30,19 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         self.hamming_distance(other) as f32 / (N_USIZE * usize::BITS as usize) as f32
     }
 
-    fn multiply(&self, other: &Self) -> Self {
+    fn bind(&self, other: &Self) -> Self {
         BinaryHDV::multiply(self, other)
     }
 
-    fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self {
+    fn unbind(&self, other: &Self) -> Self {
+        BinaryHDV::multiply(self, other)
+    }
+
+    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
+        BinaryHDV::pmultiply(self, pa, other, pb)
+    }
+
+    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
         BinaryHDV::pmultiply(self, pa, other, pb)
     }
 

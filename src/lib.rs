@@ -17,8 +17,10 @@ pub trait HyperVector: Sized {
     fn ident() -> Self;
     fn from_slice(slice: &[i8]) -> Self;
     fn distance(&self, other: &Self) -> f32;
-    fn multiply(&self, other: &Self) -> Self;
-    fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self;
+    fn bind(&self, other: &Self) -> Self;
+    fn unbind(&self, other: &Self) -> Self;
+    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
+    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
     fn acc(vectors: &[&Self]) -> Self;
 }
 
@@ -42,24 +44,16 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     let mpe = T::new();
     let skr = T::new();
 
-    let ustates = T::acc(&[
-        &name.multiply(&usa),
-        &capital.multiply(&wdc),
-        &currency.multiply(&usd),
-    ]);
+    let ustates = T::acc(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
     let _sweden = T::acc(&[
-        &name.multiply(&swe),
-        &capital.multiply(&stockholm),
-        &currency.multiply(&skr),
+        &name.bind(&swe),
+        &capital.bind(&stockholm),
+        &currency.bind(&skr),
     ]);
-    let mexico = T::acc(&[
-        &name.multiply(&mex),
-        &capital.multiply(&cdmx),
-        &currency.multiply(&mpe),
-    ]);
+    let mexico = T::acc(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
 
-    let fmu = mexico.multiply(&ustates);
-    let x = fmu.multiply(&usd);
+    let fmu = mexico.bind(&ustates);
+    let x = fmu.unbind(&usd);
 
     let vocab = [
         ("swe", swe),
