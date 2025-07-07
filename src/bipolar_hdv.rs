@@ -1,10 +1,12 @@
 use crate::{Accumulator, HyperVector};
+use rand::Rng;
+use rand_core::RngCore;
 
 impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     type Accumulator = BipolarAccumulator<DIM>;
 
-    fn new() -> Self {
-        BipolarHDV::new()
+    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+        BipolarHDV::random(rng)
     }
 
     fn ident() -> Self {
@@ -99,8 +101,8 @@ pub struct BipolarHDV<const DIM: usize> {
 }
 
 impl<const DIM: usize> BipolarHDV<DIM> {
-    fn new() -> Self {
-        let data = std::array::from_fn(|_| if rand::random::<bool>() { 1 } else { -1 });
+    pub fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+        let data = std::array::from_fn(|_| if rng.random_bool(0.5) { 1 } else { -1 });
         Self { data }
     }
 

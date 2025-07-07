@@ -1,6 +1,6 @@
 # hypervector
 
-A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) and binary (0/1) hypervectors. Includes example applications such as logical inference and language identification.
+A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) binary (0/1) hypervectors and real hypervectors. Includes example applications such as logical inference and language identification.
 
 Hyperdimensional computing (HDC) is a brain-inspired paradigm where information is represented as high-dimensional vectors—called hypervectors—and processed using simple algebraic operations like addition, multiplication, and permutation. This enables fast, robust, and noise-tolerant learning for tasks like classification, symbolic reasoning, and associative memory [4].
 
@@ -42,13 +42,16 @@ cargo run --release --bin main_li -- --mode binary --dim 100032 --ngram 5
 ```
 
 ### Accuracy 
-| kind    | ngram | hdv bits| Accuracy    | Time       |  
-| ----:   | ----: | --:     | ---------:  | ----------:| 
-| bipolar | 3     |    1024 | 91.0%       |   263s     |
-| bipolar | 3     |   10048 | 96.7%       |  2589s     | 
-| bipolar | 3     |  100032 | 97.0%       | 29187s     | 
-| binary  | 3     |    1024 | 90.7%       |    13s     |
-| binary  | 3     |   10048 | 96.5%       |    89s     |
-| binary  | 3     |  100032 | 97.0%       |  1009s     |
-| binary  | 4     |  100032 | 98.0%       |  1031s     |
-| binary  | 5     |  100032 | 98.1%       |   953s     |
+| kind    | ngram | hdv dim | hdv bits  | Accuracy  | Time      |  
+| ----:   | ----: | --:     | --------: | ---------:| --------: |
+| bipolar | 3     |    1024 |   8192    | 91.0%     |   263s    |
+| bipolar | 3     |   10048 |  80384    | 96.7%     |  2589s    | 
+| bipolar | 3     |  100032 | 800256    | 97.0%     | 29187s    | 
+| binary  | 3     |    1024 |   1024    | 90.7%     |    13s    |
+| binary  | 3     |   10048 |  10048    | 96.5%     |    89s    |
+| binary  | 3     |  100032 | 100032    | 97.0%     |  1009s    |
+| binary  | 4     |  100032 | 100032    | 98.0%     |  1031s    |
+| binary  | 5     |  100032 | 100032    | 98.1%     |   953s    |
+| real    | 3     |    1024 |   8192    | 96.9%     |   413s    |
+| real    | 3     |   10048 |  80384    | 97.0%     |  4109s    |
+

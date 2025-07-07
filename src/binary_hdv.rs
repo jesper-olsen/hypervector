@@ -1,11 +1,11 @@
 use crate::{Accumulator, HyperVector};
-use rand::Rng;
+use rand_core::RngCore;
 
 impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     type Accumulator = BinaryAccumulator<N_USIZE>;
 
-    fn new() -> Self {
-        BinaryHDV::new()
+    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+        BinaryHDV::random(rng)
     }
 
     fn ident() -> Self {
@@ -104,9 +104,8 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
 }
 
 impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
-    fn new() -> Self {
-        let mut rng = rand::rng();
-        let data = std::array::from_fn(|_| rng.random_range(0..=usize::MAX));
+    pub fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+        let data = std::array::from_fn(|_| rng.next_u64() as usize);
         Self { data }
     }
 

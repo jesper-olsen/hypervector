@@ -1,5 +1,9 @@
 pub mod binary_hdv;
 pub mod bipolar_hdv;
+//pub mod complex_hdv;
+pub mod real_hdv;
+use mersenne_twister_rs::MersenneTwister64;
+use rand_core::RngCore;
 
 pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
@@ -10,7 +14,7 @@ pub trait Accumulator<T: HyperVector> {
 pub trait HyperVector: Sized {
     type Accumulator: Default + Accumulator<Self>;
 
-    fn new() -> Self;
+    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self;
     /// Returns the identity element of the hypervector space:
     /// - Binary: all 0s (XOR identity)
     /// - Bipolar: all +1s (multiplicative identity)
@@ -28,21 +32,23 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
     // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
     // Calculate answer: Mexican Peso - mpe
-    let name = T::new();
-    let capital = T::new();
-    let currency = T::new();
+    //
+    let mut mt = MersenneTwister64::new(42);
+    let name = T::random(&mut mt);
+    let capital = T::random(&mut mt);
+    let currency = T::random(&mut mt);
 
-    let swe = T::new();
-    let usa = T::new();
-    let mex = T::new();
+    let swe = T::random(&mut mt);
+    let usa = T::random(&mut mt);
+    let mex = T::random(&mut mt);
 
-    let stockholm = T::new();
-    let wdc = T::new();
-    let cdmx = T::new();
+    let stockholm = T::random(&mut mt);
+    let wdc = T::random(&mut mt);
+    let cdmx = T::random(&mut mt);
 
-    let usd = T::new();
-    let mpe = T::new();
-    let skr = T::new();
+    let usd = T::random(&mut mt);
+    let mpe = T::random(&mut mt);
+    let skr = T::random(&mut mt);
 
     let ustates = T::acc(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
     let _sweden = T::acc(&[
@@ -82,7 +88,9 @@ pub fn example_mexican_dollar<T: HyperVector>() {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV};
+    use crate::{
+        Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, real_hdv::RealHDV,
+    };
 
     fn test_accumulate<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>()
     where
@@ -104,6 +112,18 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    fn test_bind_unbind<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>() {
+        //let mut rng = MersenneTwister64::new(42);
+        let mut rng = rand::rng();
+        let a = T::random(&mut rng);
+        let b = T::random(&mut rng);
+        let c = a.bind(&b);
+        let d = c.unbind(&b);
+        let dist = a.distance(&d);
+        println!("dist {dist:?}");
+        assert!(dist < 1e-6);
+    }
+
     #[test]
     fn test_bipolar_accumulate() {
         test_accumulate::<BipolarHDV<5>>();
@@ -115,6 +135,21 @@ mod tests {
     }
 
     #[test]
+    fn test_bipolar_bind_unbind() {
+        test_bind_unbind::<BipolarHDV<1024>>();
+    }
+
+    #[test]
+    fn test_binary_bind_unbind() {
+        test_bind_unbind::<BinaryHDV<64>>();
+    }
+
+    // #[test]
+    // fn test_real_bind_unbind() {
+    //     test_bind_unbind::<RealHDV<1000>>();
+    // }
+
+    #[test]
     fn binary_mexican_dollar() {
         crate::example_mexican_dollar::<BinaryHDV<16>>(); // 16*64 = 1024 bits
     }
@@ -122,5 +157,10 @@ mod tests {
     #[test]
     fn bipolar_mexican_dollar() {
         crate::example_mexican_dollar::<BipolarHDV<1024>>();
+    }
+
+    #[test]
+    fn real_mexican_dollar() {
+        crate::example_mexican_dollar::<RealHDV<2048>>();
     }
 }
