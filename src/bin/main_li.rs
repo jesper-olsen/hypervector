@@ -1,5 +1,8 @@
 use clap::Parser;
-use hypervector::{Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV};
+use hypervector::{
+    Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
+    complex_hdv::ComplexHDV,
+};
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;
 use std::collections::hash_map::HashMap;
@@ -10,7 +13,7 @@ use std::io::{self, BufRead};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(long, default_value = "binary", value_parser=["binary", "bipolar", "real"])]
+    #[arg(long, default_value = "binary", value_parser=["binary", "bipolar", "real", "complex"])]
     mode: String,
 
     #[arg(long, default_value_t = 1024)]
@@ -139,6 +142,9 @@ fn main() -> Result<(), io::Error> {
         ("real", 1024) => run::<BinaryHDV<1024>>(n)?,
         ("real", 10048) => run::<BinaryHDV<10048>>(n)?,
         ("real", 100032) => run::<BinaryHDV<100032>>(n)?,
+        ("complex", 1024) => run::<ComplexHDV<1024>>(n)?,
+        ("complex", 10048) => run::<ComplexHDV<10048>>(n)?,
+        ("complex", 100032) => run::<ComplexHDV<100032>>(n)?,
         _ => {
             eprintln!("Unsupported combination: {:?}", args);
             std::process::exit(1);

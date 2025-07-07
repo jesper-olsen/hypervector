@@ -54,6 +54,11 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         let mag_b = other.data.iter().map(|b| b * b).sum::<f64>().sqrt();
 
         let cosine_similarity = dot / (mag_a * mag_b);
+
+        //let angle = (dot / (mag_a * mag_b)).acos() as f32;
+        //angle 0 => same direction,
+        //      π/2 => orthogonal,
+        //      π => opposite
         (1.0 - cosine_similarity) as f32 // Convert to distance (0 = identical, 2 = opposite)
     }
 
@@ -85,7 +90,8 @@ impl<const N: usize> HyperVector for RealHDV<N> {
             sum.iter_mut().zip(v.data.iter()).for_each(|(s, d)| *s += d);
         }
         if vectors.len() > 0 {
-            sum.iter_mut().for_each(|e| *e /= vectors.len() as f64)
+            sum.iter_mut()
+                .for_each(|e| *e /= (vectors.len() as f64).sqrt())
         }
         RealHDV { data: sum }
     }
@@ -168,7 +174,7 @@ impl<const N: usize> RealHDV<N> {
         self.permute(N - (by % N))
     }
 
-    fn _normalise(&mut self) {
+    pub fn normalise(&mut self) {
         let norm = self
             .data
             .iter()
@@ -207,7 +213,7 @@ impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
     }
 
     fn finalize(self) -> RealHDV<N> {
-        let data: [f64; N] = std::array::from_fn(|i| self.sum[i] / self.n as f64);
+        let data: [f64; N] = std::array::from_fn(|i| self.sum[i] / (self.n as f64).sqrt());
         RealHDV { data }
     }
 }

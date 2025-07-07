@@ -1,6 +1,6 @@
 pub mod binary_hdv;
 pub mod bipolar_hdv;
-//pub mod complex_hdv;
+pub mod complex_hdv;
 pub mod real_hdv;
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;
@@ -89,7 +89,8 @@ pub fn example_mexican_dollar<T: HyperVector>() {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, real_hdv::RealHDV,
+        Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
+        complex_hdv::ComplexHDV, real_hdv::RealHDV,
     };
 
     fn test_accumulate<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>()
@@ -162,5 +163,10 @@ mod tests {
     #[test]
     fn real_mexican_dollar() {
         crate::example_mexican_dollar::<RealHDV<2048>>();
+    }
+
+    #[test]
+    fn complex_mexican_dollar() {
+        crate::example_mexican_dollar::<ComplexHDV<2048>>();
     }
 }
