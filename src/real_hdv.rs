@@ -43,23 +43,8 @@ impl<const N: usize> HyperVector for RealHDV<N> {
     }
 
     fn distance(&self, other: &Self) -> f32 {
-        let dot = self
-            .data
-            .iter()
-            .zip(other.data.iter())
-            .map(|(a, b)| a * b)
-            .sum::<f64>();
-
-        let mag_a = self.data.iter().map(|a| a * a).sum::<f64>().sqrt();
-        let mag_b = other.data.iter().map(|b| b * b).sum::<f64>().sqrt();
-
-        let cosine_similarity = dot / (mag_a * mag_b);
-
-        //let angle = (dot / (mag_a * mag_b)).acos() as f32;
-        //angle 0 => same direction,
-        //      π/2 => orthogonal,
-        //      π => opposite
-        (1.0 - cosine_similarity) as f32 // Convert to distance (0 = identical, 2 = opposite)
+        self.distance_cosine_sim(other)
+        //self.dot(other) as f32
     }
 
     fn bind(&self, other: &Self) -> Self {
@@ -183,6 +168,27 @@ impl<const N: usize> RealHDV<N> {
             .sqrt()
             .max(1e-12);
         self.data.iter_mut().for_each(|e| *e /= norm);
+    }
+
+    fn dot(&self, other: &Self) -> f64 {
+        self.data
+            .iter()
+            .zip(other.data.iter())
+            .map(|(a, b)| a * b)
+            .sum::<f64>()
+    }
+
+    fn distance_cosine_sim(&self, other: &Self) -> f32 {
+        let mag_a = self.data.iter().map(|a| a * a).sum::<f64>().sqrt();
+        let mag_b = other.data.iter().map(|b| b * b).sum::<f64>().sqrt();
+
+        let cosine_similarity = self.dot(other) / (mag_a * mag_b);
+
+        //let angle = (dot / (mag_a * mag_b)).acos() as f32;
+        //angle 0 => same direction,
+        //      π/2 => orthogonal,
+        //      π => opposite
+        (1.0 - cosine_similarity) as f32 // Convert to distance (0 = identical, 2 = opposite)
     }
 }
 
