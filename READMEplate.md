@@ -1,6 +1,6 @@
 # Hypervector - Inference
 
-Inference example from [1]. Frame HDVs are created from token and role HDVs to represent the meaning
+Inference example from Tony Plate's [1995 HRR paper](https://www.researchgate.net/publication/5589577_Holographic_Reduced_Representations). Frame HDVs are created from token and role HDVs to represent the meaning
 of the sentences:
 
 1. "Mark ate the fish."
@@ -9,8 +9,6 @@ of the sentences:
 1. "John saw Mark."
 1. "John saw the fish."
 1. "The fish saw John."
-
-1. ["Holographic Reduced Representations", Tony Plate, IEEE Transactions on Neural Networks, February, 1995, 6(3):623-41](https://www.researchgate.net/publication/5589577_Holographic_Reduced_Representations)
 
 Run
 -----
