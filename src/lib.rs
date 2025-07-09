@@ -21,7 +21,7 @@ pub trait HyperVector: Sized {
     /// - Binary: all 0s (XOR identity)
     /// - Bipolar: all +1s (multiplicative identity)
     fn ident() -> Self;
-    fn from_slice(slice: &[f64]) -> Self;
+    fn from_slice(slice: &[f32]) -> Self;
     fn distance(&self, other: &Self) -> f32;
     fn bind(&self, other: &Self) -> Self;
     fn unbind(&self, other: &Self) -> Self;

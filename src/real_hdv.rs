@@ -30,9 +30,15 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         }
     }
 
-    fn from_slice(slice: &[f64]) -> Self {
+    fn from_slice(slice: &[f32]) -> Self {
         assert!(slice.len() <= N);
-        let data = std::array::from_fn(|i| if i < slice.len() { slice[i] } else { 0.0 });
+        let data = std::array::from_fn(|i| {
+            if i < slice.len() {
+                slice[i] as f64
+            } else {
+                0.0
+            }
+        });
         Self { data }
     }
 
