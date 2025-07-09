@@ -12,5 +12,5 @@ def plot_heatmap(file, title):
 
 for hdv in ["binary", "bipolar", "real", "complex"]: 
     plot_heatmap(f"RESULTS/hdv_{hdv}_objects.csv", f"HDV: {hdv} – Object Similarities")
-    plot_heatmap(f"RESULTS/hdv_{hdv}_sentences.csv", f"HDV: {hdv}– Sentence Similarities")
+    plot_heatmap(f"RESULTS/hdv_{hdv}_sentences.csv", f"HDV: {hdv} – Sentence Similarities")
 
