@@ -1,12 +1,13 @@
 # Hypervector
 
-A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) and binary (0/1) hypervectors (HDVs) as well as real and complex hypervectors (also know as HRRs, or Holographic Reduced Representations). Includes example applications such as logical inference and language identification.
+A Rust library for hyperdimensional computing (HDC).
 
-Hyperdimensional computing (HDC) is a brain-inspired paradigm where information is represented as high-dimensional vectors—called hypervectors—and processed using simple algebraic operations like addition, multiplication, and permutation. This enables fast, robust, and noise-tolerant learning for tasks like classification, symbolic reasoning, and associative memory [4].
+Hyperdimensional computing is a brain-inspired paradigm where information is represented as high-dimensional vectors (hypervectors or HDVs) and processed using simple algebraic operations like addition, multiplication, and permutation. This enables fast, robust, and noise-tolerant learning for tasks like classification, symbolic reasoning, and associative memory [4].
 
 ## Features
 
-- Binary and bipolar hypervector types
+- Binary (0/1) and bipolar (+1/-1) hypervector types (HDVs).
+- Real and complex hypervector types (also known as HRRs or Holographic Reduced Representations).
 - Trait-based design for extensibility
 - Example applications: concept inference and text classification
 
@@ -27,6 +28,6 @@ There are three examples that can all be run from the commandline:
   ```
   % cargo run --release --bin main_mexican
   ```
-* The [inferencing example](READMEplate.md) used in [5].
+* Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
 * [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
 
