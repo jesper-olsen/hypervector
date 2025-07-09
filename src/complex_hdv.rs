@@ -9,7 +9,7 @@ thread_local! {
     static FFT_PLANNER: RefCell<FftPlanner<f64>> = RefCell::new(FftPlanner::new());
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComplexHDV<const N: usize> {
     pub data: [Complex<f64>; N],
 }
@@ -114,6 +114,15 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         // let mut h = Self { data: sum };
         // h.normalise();
         // h
+    }
+
+    fn unpack(&self) -> Vec<f32> {
+        let mut out = Vec::with_capacity(self.data.len() * 2);
+        for &c in &self.data {
+            out.push(c.re as f32);
+            out.push(c.im as f32);
+        }
+        out
     }
 }
 

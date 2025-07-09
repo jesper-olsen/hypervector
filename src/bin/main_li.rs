@@ -1,7 +1,7 @@
 use clap::Parser;
 use hypervector::{
     Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
-    complex_hdv::ComplexHDV, real_hdv::RealHDV,
+    complex_hdv::ComplexHDV, real_hdv::RealHDV, save_hypervectors_to_csv,
 };
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;
@@ -119,9 +119,11 @@ fn test<T: HyperVector, R: RngCore>(
     Ok(())
 }
 
-fn run<T: HyperVector>(n: usize) -> Result<(), io::Error> {
+fn run<T: HyperVector + Copy>(n: usize) -> Result<(), io::Error> {
     let mut mt = MersenneTwister64::new(42);
     let (mut symbols, languages) = train::<T, _>(n, &mut mt).expect("Training failed");
+    let model: Vec<T> = languages.iter().map(|(_label, hdv)| *hdv).collect();
+    save_hypervectors_to_csv("RESULTS/model.csv", &model);
     test(&mut symbols, &languages, n, &mut mt)
 }
 
@@ -146,7 +148,7 @@ fn main() -> Result<(), io::Error> {
         // ("complex", 10048) => run::<ComplexHDV<10048>>(n)?,
         // ("complex", 100032) => run::<ComplexHDV<100032>>(n)?,
         _ => {
-            eprintln!("Unsupported combination: {:?}", args);
+            eprintln!("Unsupported combination: {args:?}");
             std::process::exit(1);
         }
     };

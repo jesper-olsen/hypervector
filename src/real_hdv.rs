@@ -9,7 +9,7 @@ thread_local! {
     static FFT_PLANNER: RefCell<FftPlanner<f64>> = RefCell::new(FftPlanner::new());
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RealHDV<const N: usize> {
     pub data: [f64; N],
 }
@@ -79,6 +79,10 @@ impl<const N: usize> HyperVector for RealHDV<N> {
                 .for_each(|e| *e /= (vectors.len() as f64).sqrt())
         }
         RealHDV { data: sum }
+    }
+
+    fn unpack(&self) -> Vec<f32> {
+        self.data.iter().map(|&e| e as f32).collect()
     }
 }
 

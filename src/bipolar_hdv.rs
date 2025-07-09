@@ -52,8 +52,13 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     fn acc(vectors: &[&Self]) -> Self {
         BipolarHDV::acc(vectors)
     }
+
+    fn unpack(&self) -> Vec<f32> {
+        self.data.iter().map(|&e| e as f32).collect()
+    }
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BipolarAccumulator<const DIM: usize> {
     sum: [i64; DIM],
 }
@@ -65,7 +70,6 @@ impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
 }
 
 impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> {
-    //impl<const DIM: usize> BipolarAccumulator<DIM> {
     fn new() -> Self {
         Self { sum: [0; DIM] }
     }
@@ -95,7 +99,7 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct BipolarHDV<const DIM: usize> {
     data: [i8; DIM], // +1 or -1
 }

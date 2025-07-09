@@ -39,13 +39,13 @@ fn print_confusions<T: HyperVector>(items: &[(T, &str)]) {
     // Print header row
     print!("{:10}", ""); // empty top-left corner
     for (_, lab) in items {
-        print!("{:>8}", lab);
+        print!("{lab:>8}");
     }
     println!();
 
     // Print matrix
     for (t1, l1) in items {
-        print!("{:>8}", l1); // row label
+        print!("{l1:>8}"); // row label
         for (t2, _) in items {
             print!("{:8.2}", t1.distance(t2)); // align all numbers right with 3 decimals
         }
@@ -61,7 +61,7 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
 
     let agent = T::random(&mut mt);
     let agent_cause = T::random(&mut mt);
-    let agent_eat = T::random(&mut mt);
+    let _agent_eat = T::random(&mut mt);
     let agent_see = T::random(&mut mt);
     let being = T::random(&mut mt);
     let bread = T::random(&mut mt);
@@ -85,23 +85,23 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
     let see = T::random(&mut mt);
     let state = T::random(&mut mt);
     let id_eat_agent = T::random(&mut mt);
-    let id_object_cause = T::random(&mut mt);
+    let _id_object_cause = T::random(&mut mt);
     let id_eat_object = T::random(&mut mt);
-    let id_see_object = T::random(&mut mt);
-    let id_agent_cause = T::random(&mut mt);
-    let id_see_agent = T::random(&mut mt);
+    let _id_see_object = T::random(&mut mt);
+    let _id_agent_cause = T::random(&mut mt);
+    let _id_see_agent = T::random(&mut mt);
 
     let mark = T::acc(&[&being, &person, &id_mark]);
     let john = T::acc(&[&being, &person, &id_john]);
     let paul = T::acc(&[&being, &person, &id_paul]);
     let luke = T::acc(&[&being, &person, &id_luke]);
     let the_fish = T::acc(&[&food, &fish, &id_fish]);
-    let the_bread = T::acc(&[&food, &bread, &id_bread]);
+    let _the_bread = T::acc(&[&food, &bread, &id_bread]);
     let hunger = T::acc(&[&state, &id_hunger]);
     let thirst = T::acc(&[&state, &id_thirst]);
 
     let agent_eat = T::acc(&[&agent, &id_eat_agent]);
-    let obj_eat = T::acc(&[&object, &id_eat_object]);
+    let _obj_eat = T::acc(&[&object, &id_eat_object]);
 
     let sentences = [
         "Mark ate the fish.",
@@ -131,7 +131,7 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
     ];
 
     print_confusions(&l);
-    if fname_prefix.len() > 0 {
+    if !fname_prefix.is_empty() {
         let filename = format!("{fname_prefix}_objects.csv");
         write_confusion_csv(&filename, &l)?;
     }
@@ -149,7 +149,7 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
         (s6, "s6     "),
     ];
     print_confusions(&l);
-    if fname_prefix.len() > 0 {
+    if !fname_prefix.is_empty() {
         let filename = format!("{fname_prefix}_sentences.csv");
         write_confusion_csv(&filename, &l)?;
     }

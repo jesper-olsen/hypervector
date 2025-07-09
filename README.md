@@ -1,6 +1,6 @@
 # Hypervector
 
-A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) and binary (0/1) hypervectors as well as real and complex hypervectors (also know as HRRs, or Holographic Reduced Representations). Includes example applications such as logical inference and language identification.
+A Rust library for hyperdimensional computing (HDC), supporting bipolar (+1/–1) and binary (0/1) hypervectors (HDVs) as well as real and complex hypervectors (also know as HRRs, or Holographic Reduced Representations). Includes example applications such as logical inference and language identification.
 
 Hyperdimensional computing (HDC) is a brain-inspired paradigm where information is represented as high-dimensional vectors—called hypervectors—and processed using simple algebraic operations like addition, multiplication, and permutation. This enables fast, robust, and noise-tolerant learning for tasks like classification, symbolic reasoning, and associative memory [4].
 
@@ -52,6 +52,12 @@ because they only use one bit per dimension; this is not only more storage effic
 cargo run --release --bin main_li -- --mode binary --dim 1024 --ngram 3
 ```
 
+View the language space - computed with TSNE:
+```
+% uv run tsne.py
+```
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/BinaryHDV_objects.png)
+
 ### Accuracy 
 | kind    | ngram | hdv dim | hdv bits  | Accuracy  | Time      |  
 | ----:   | ----: | --:     | --------: | ---------:| --------: |
@@ -63,3 +69,4 @@ cargo run --release --bin main_li -- --mode binary --dim 1024 --ngram 3
 | binary  | 3     |  100032 | 100032    | 97.0%     |  1009s    |
 | binary  | 4     |  100032 | 100032    | 98.0%     |  1031s    |
 | binary  | 5     |  100032 | 100032    | 98.1%     |   953s    |
+

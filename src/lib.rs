@@ -4,6 +4,8 @@ pub mod complex_hdv;
 pub mod real_hdv;
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;
+use std::fs::File;
+use std::io::{BufWriter, Write};
 
 pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
@@ -26,6 +28,18 @@ pub trait HyperVector: Sized {
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
     fn acc(vectors: &[&Self]) -> Self;
+    fn unpack(&self) -> Vec<f32>;
+}
+
+pub fn save_hypervectors_to_csv<H: HyperVector + Copy>(filename: &str, vectors: &[H]) {
+    let file = File::create(filename).expect("Unable to create file");
+    let mut writer = BufWriter::new(file);
+
+    println!("Saving {} HDVs to {filename}", vectors.len());
+    for v in vectors {
+        let row: Vec<String> = v.unpack().iter().map(|x| x.to_string()).collect();
+        writeln!(writer, "{}", row.join(",")).expect("Write failed");
+    }
 }
 
 pub fn example_mexican_dollar<T: HyperVector>() {

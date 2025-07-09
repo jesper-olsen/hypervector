@@ -49,9 +49,21 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     fn acc(vectors: &[&Self]) -> Self {
         BinaryHDV::acc(vectors)
     }
+
+    fn unpack(&self) -> Vec<f32> {
+        let n = N_USIZE * usize::BITS as usize;
+        let mut out = Vec::with_capacity(n);
+        for i in 0..N_USIZE {
+            for j in 0..usize::BITS {
+                let bit = (self.data[i] >> j) & 1;
+                out.push(if bit == 1 { 1.0 } else { 0.0 });
+            }
+        }
+        out
+    }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BinaryHDV<const N_USIZE: usize> {
     pub data: [usize; N_USIZE],
 }
