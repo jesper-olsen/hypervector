@@ -16,12 +16,6 @@ because they only use one bit per dimension; this is not only more storage effic
 cargo run --release --bin main_li -- --mode binary --dim 1024 --ngram 3
 ```
 
-View the language space - computed with TSNE:
-```
-% uv run tsne.py
-```
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/LanguageSpace.png)
-
 ### Accuracy 
 | kind    | ngram | hdv dim | hdv bits  | Accuracy  | Time      |  
 | ----:   | ----: | --:     | --------: | ---------:| --------: |
@@ -33,4 +27,11 @@ View the language space - computed with TSNE:
 | binary  | 3     |  100032 | 100032    | 97.0%     |  1009s    |
 | binary  | 4     |  100032 | 100032    | 98.0%     |  1031s    |
 | binary  | 5     |  100032 | 100032    | 98.1%     |   953s    |
+
+View the language space - computed with TSNE for a particular model (here --binary --dim 1024 --ngram 3):
+```
+% uv run tsne.py
+```
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/LanguageSpace.png)
+
 
