@@ -56,7 +56,7 @@ View the language space - computed with TSNE:
 ```
 % uv run tsne.py
 ```
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/BinaryHDV_objects.png)
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/LanguageSpace.png)
 
 ### Accuracy 
 | kind    | ngram | hdv dim | hdv bits  | Accuracy  | Time      |  
