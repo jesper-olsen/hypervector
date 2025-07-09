@@ -55,14 +55,12 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         }
     }
 
-    fn from_slice(slice: &[i8]) -> Self {
-        assert!(slice.len() <= N);
+    fn from_slice(slice: &[f64]) -> Self {
         let data = std::array::from_fn(|i| {
-            if i < slice.len() {
-                Complex::new(slice[i] as f64, 0.0)
-            } else {
-                Complex::new(0.0, 0.0)
-            }
+            //let re = slice.get(2 * i).copied().unwrap_or(0.0);
+            let re = slice.get(2 * i).copied().unwrap_or(0.0);
+            let im = slice.get(2 * i + 1).copied().unwrap_or(0.0);
+            Complex::new(re, im)
         });
         Self { data }
     }
@@ -306,19 +304,7 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
 mod tests {
     use super::ComplexHDV;
     use crate::HyperVector;
-
     use mersenne_twister_rs::MersenneTwister64;
-
-    #[test]
-    fn bind_unbind() {
-        let mut mt = MersenneTwister64::new(42);
-        let a = ComplexHDV::<2048>::random(&mut mt);
-        let b = ComplexHDV::<2048>::random(&mut mt);
-        let bound = a.bind(&b);
-        let recovered_b = bound.unbind(&a);
-        let dist = b.distance(&recovered_b);
-        assert!(dist < 0.5)
-    }
 
     #[test]
     fn bind_random_length() {

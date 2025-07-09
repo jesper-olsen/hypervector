@@ -13,9 +13,9 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV { data: [1; DIM] }
     }
 
-    fn from_slice(slice: &[i8]) -> Self {
+    fn from_slice(slice: &[f64]) -> Self {
         assert_eq!(slice.len(), DIM);
-        let data = std::array::from_fn(|i| if slice[i] >= 0 { 1 } else { -1 });
+        let data = std::array::from_fn(|i| if slice[i] >= 0.0 { 1 } else { -1 });
         BipolarHDV { data }
     }
 

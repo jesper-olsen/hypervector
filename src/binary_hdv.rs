@@ -12,14 +12,14 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         BinaryHDV { data: [0; N_USIZE] }
     }
 
-    fn from_slice(slice: &[i8]) -> Self {
+    fn from_slice(slice: &[f64]) -> Self {
         let dim = N_USIZE * usize::BITS as usize;
         assert!(slice.len() <= dim);
         let mut hdv = Self::zero();
         for i in 0..slice.len() {
             let word_idx = i / 64;
             let bit_idx = i % 64;
-            if slice[i] != 0 {
+            if slice[i] > 0.5 {
                 hdv.data[word_idx] |= 1 << bit_idx;
             }
         }

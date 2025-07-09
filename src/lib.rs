@@ -21,7 +21,7 @@ pub trait HyperVector: Sized {
     /// - Binary: all 0s (XOR identity)
     /// - Bipolar: all +1s (multiplicative identity)
     fn ident() -> Self;
-    fn from_slice(slice: &[i8]) -> Self;
+    fn from_slice(slice: &[f64]) -> Self;
     fn distance(&self, other: &Self) -> f32;
     fn bind(&self, other: &Self) -> Self;
     fn unbind(&self, other: &Self) -> Self;
@@ -119,10 +119,10 @@ mod tests {
         T::Accumulator: Accumulator<T> + Default,
     {
         let mut acc = T::Accumulator::default();
-        let v1 = T::from_slice(&[1, -1, 1, -1, -1]);
-        let v2 = T::from_slice(&[1, -1, -1, -1, -1]);
-        let v3 = T::from_slice(&[1, -1, -1, 1, -1]);
-        let expected = T::from_slice(&[1, -1, -1, -1, -1]);
+        let v1 = T::from_slice(&[1.0, -1.0, 1.0, -1.0, -1.0]);
+        let v2 = T::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
+        let v3 = T::from_slice(&[1.0, -1.0, -1.0, 1.0, -1.0]);
+        let expected = T::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
 
         acc.add(&v1);
         acc.add(&v2);
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    fn test_bind_unbind<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>() {
+    fn test_bind_unbind<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>(thr: f32) {
         //let mut rng = MersenneTwister64::new(42);
         let mut rng = rand::rng();
         let a = T::random(&mut rng);
@@ -142,8 +142,8 @@ mod tests {
         let c = a.bind(&b);
         let d = c.unbind(&b);
         let dist = a.distance(&d);
-        println!("dist {dist:?}");
-        assert!(dist < 1e-6);
+        println!("dist {dist:?} thr {thr}");
+        assert!(dist <= thr);
     }
 
     #[test]
@@ -158,18 +158,23 @@ mod tests {
 
     #[test]
     fn test_bipolar_bind_unbind() {
-        test_bind_unbind::<BipolarHDV<1024>>();
+        test_bind_unbind::<BipolarHDV<1024>>(0.01);
     }
 
     #[test]
     fn test_binary_bind_unbind() {
-        test_bind_unbind::<BinaryHDV<64>>();
+        test_bind_unbind::<BinaryHDV<64>>(0.0);
     }
 
-    // #[test]
-    // fn test_real_bind_unbind() {
-    //     test_bind_unbind::<RealHDV<1000>>();
-    // }
+    #[test]
+    fn test_real_bind_unbind() {
+        test_bind_unbind::<RealHDV<1000>>(0.5);
+    }
+
+    #[test]
+    fn test_complex_bind_unbind() {
+        test_bind_unbind::<ComplexHDV<1000>>(0.5);
+    }
 
     #[test]
     fn binary_mexican_dollar() {

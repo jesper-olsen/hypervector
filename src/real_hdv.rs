@@ -30,15 +30,9 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         }
     }
 
-    fn from_slice(slice: &[i8]) -> Self {
+    fn from_slice(slice: &[f64]) -> Self {
         assert!(slice.len() <= N);
-        let data = std::array::from_fn(|i| {
-            if i < slice.len() {
-                slice[i] as f64
-            } else {
-                0.0
-            }
-        });
+        let data = std::array::from_fn(|i| if i < slice.len() { slice[i] } else { 0.0 });
         Self { data }
     }
 
@@ -243,6 +237,7 @@ mod tests {
         let bound = a.bind(&b);
         let recovered_b = bound.unbind(&a);
         let dist = b.distance(&recovered_b);
+        println!("Dist: {dist}");
         assert!(dist < 0.5)
     }
 
