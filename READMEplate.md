@@ -23,11 +23,7 @@ and examine the results with
 ```
 % uv run plot.py
 ```
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/BinaryHDV_objects.png)
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/BinaryHDV_sentences.png)
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/BipolarHDV_objects.png)
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/BipolarHDV_sentences.png)
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/RealHDV_objects.png)
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/RealHDV_sentences.png)
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/ComplexHDV_objects.png)
-![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/ComplexHDV_sentences.png)
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/binary_hdv_combined.png)
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/bipolar_hdv_combined.png)
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/real_hdv_combined.png)
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/complex_hdv_combined.png)
