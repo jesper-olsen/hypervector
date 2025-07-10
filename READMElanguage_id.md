@@ -28,7 +28,7 @@ cargo run --release --bin main_li -- --mode binary --dim 1024 --ngram 3
 | binary  | 4     |  100032 | 100032    | 98.0%     |  1031s    |
 | binary  | 5     |  100032 | 100032    | 98.1%     |   953s    |
 
-View the language space - computed with [t-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding) for a particular model (here --binary --dim 1024 --ngram 3):
+View the language space - computed with [t-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding) for a particular model:
 ```
 % uv run tsne.py
 ```

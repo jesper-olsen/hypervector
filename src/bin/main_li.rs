@@ -138,6 +138,7 @@ fn main() -> Result<(), io::Error> {
         ("binary", 1024) => run::<BinaryHDV<16>>(n)?,
         ("binary", 10048) => run::<BinaryHDV<157>>(n)?,
         ("binary", 100032) => run::<BinaryHDV<1563>>(n)?,
+        ("binary", 200000) => run::<BinaryHDV<3125>>(n)?,
         ("bipolar", 1024) => run::<BipolarHDV<1024>>(n)?,
         ("bipolar", 10048) => run::<BipolarHDV<10048>>(n)?,
         ("bipolar", 100032) => run::<BipolarHDV<100032>>(n)?,

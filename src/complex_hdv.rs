@@ -57,7 +57,6 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
 
     fn from_slice(slice: &[f32]) -> Self {
         let data = std::array::from_fn(|i| {
-            //let re = slice.get(2 * i).copied().unwrap_or(0.0);
             let re = slice.get(2 * i).copied().unwrap_or(0.0) as f64;
             let im = slice.get(2 * i + 1).copied().unwrap_or(0.0) as f64;
             Complex::new(re, im)
