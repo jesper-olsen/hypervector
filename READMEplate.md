@@ -23,7 +23,14 @@ and examine the results with
 ```
 % uv run plot.py
 ```
+#### Binary HDV
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/binary_hdv_combined.png)
+
+#### Bipolar HDV
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/bipolar_hdv_combined.png)
+
+#### Real HDV
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/real_hdv_combined.png)
+
+#### Complex HDV
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/complex_hdv_combined.png)
