@@ -1,5 +1,13 @@
 use crate::{Accumulator, HyperVector};
 use rand_core::RngCore;
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::mem::size_of;
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct BinaryHDV<const N_USIZE: usize> {
+    pub data: [usize; N_USIZE],
+}
 
 impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     type Accumulator = BinaryAccumulator<N_USIZE>;
@@ -38,6 +46,18 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         BinaryHDV::multiply(self, other)
     }
 
+    fn permute(&self, by: usize) -> Self {
+        let mut result = Self::zero();
+        for i in 0..N_USIZE {
+            result.data[i] = self.data[(i + by) % N_USIZE];
+        }
+        result
+    }
+
+    fn unpermute(&self, by: usize) -> Self {
+        self.permute(N_USIZE - (by % N_USIZE))
+    }
+
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
         BinaryHDV::pmultiply(self, pa, other, pb)
     }
@@ -61,13 +81,31 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         }
         out
     }
+
+    fn write(&self, file: &mut File) -> io::Result<()> {
+        for &value in &self.data {
+            file.write_all(&value.to_ne_bytes())?;
+        }
+        Ok(())
+    }
+
+    fn read(file: &mut File) -> io::Result<Self> {
+        // println!(
+        //     "Reading HDV of {} usize elements = {} bits",
+        //     N_USIZE,
+        //     N_USIZE as u32 * usize::BITS
+        // );
+        let mut data = [0usize; N_USIZE];
+        for slot in &mut data {
+            let mut buf = [0u8; size_of::<usize>()];
+            file.read_exact(&mut buf)?;
+            *slot = usize::from_ne_bytes(buf);
+        }
+        Ok(Self { data })
+    }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct BinaryHDV<const N_USIZE: usize> {
-    pub data: [usize; N_USIZE],
-}
-
+#[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
     votes: Vec<usize>, // one vote counter per bit
     count: usize,      // total number of vectors added
@@ -87,25 +125,25 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
         }
     }
 
-    fn add(&mut self, v: &BinaryHDV<N_USIZE>) {
+    fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: usize) {
         for i in 0..N_USIZE {
             let word = v.data[i];
             for j in 0..usize::BITS {
-                self.votes[i * usize::BITS as usize + j as usize] += (word >> j) & 1
+                self.votes[i * usize::BITS as usize + j as usize] += weight * ((word >> j) & 1)
             }
         }
-        self.count += 1;
+        self.count += weight;
     }
 
-    fn finalize(self) -> BinaryHDV<N_USIZE> {
+    fn finalize(&self) -> BinaryHDV<N_USIZE> {
         let mut result = BinaryHDV::zero();
         let bits_per_word = usize::BITS as usize;
 
         for i in 0..self.votes.len() {
             let uidx = i / bits_per_word;
             let bidx = i % bits_per_word;
-            let n1 = self.votes[i];
-            let n0 = self.count - n1;
+            let n1 = self.votes[i]; // #1s
+            let n0 = self.count - n1; // #0s
             if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
                 result.data[uidx] |= 1 << bidx;
             }

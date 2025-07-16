@@ -1,6 +1,9 @@
 use crate::{Accumulator, HyperVector};
 use rand::Rng;
 use rand_core::RngCore;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::mem::size_of;
 
 impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     type Accumulator = BipolarAccumulator<DIM>;
@@ -41,6 +44,15 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV::multiply(self, other)
     }
 
+    fn permute(&self, by: usize) -> Self {
+        let data = std::array::from_fn(|i| self.data[(i + by) % DIM]);
+        Self { data }
+    }
+
+    fn unpermute(&self, by: usize) -> Self {
+        self.permute(DIM - (by % DIM))
+    }
+
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
         BipolarHDV::pmultiply(self, pa, other, pb)
     }
@@ -55,6 +67,21 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
 
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
+    }
+
+    fn write(&self, file: &mut File) -> std::io::Result<()> {
+        // Write all bytes at once
+        let bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(self.data.as_ptr() as *const u8, DIM) };
+        file.write_all(bytes)
+    }
+
+    fn read(file: &mut File) -> std::io::Result<Self> {
+        let mut data = [0i8; DIM];
+        let buffer: &mut [u8] =
+            unsafe { std::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut u8, DIM) };
+        file.read_exact(buffer)?;
+        Ok(Self { data })
     }
 }
 
@@ -74,13 +101,13 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
         Self { sum: [0; DIM] }
     }
 
-    fn add(&mut self, v: &BipolarHDV<DIM>) {
+    fn add(&mut self, v: &BipolarHDV<DIM>, weight: usize) {
         for i in 0..DIM {
-            self.sum[i] += v.data[i] as i64;
+            self.sum[i] += (weight as i64) * (v.data[i] as i64);
         }
     }
 
-    fn finalize(self) -> BipolarHDV<DIM> {
+    fn finalize(&self) -> BipolarHDV<DIM> {
         let mut data = [0; DIM];
         for i in 0..DIM {
             data[i] = match self.sum[i].cmp(&0) {

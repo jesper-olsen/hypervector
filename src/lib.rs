@@ -5,16 +5,16 @@ pub mod real_hdv;
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{BufWriter, Read, Write};
 
 pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
-    fn add(&mut self, v: &T);
-    fn finalize(self) -> T;
+    fn add(&mut self, v: &T, weight: usize);
+    fn finalize(&self) -> T;
 }
 
 pub trait HyperVector: Sized {
-    type Accumulator: Default + Accumulator<Self>;
+    type Accumulator: Default + Clone + Accumulator<Self>;
 
     fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self;
     /// Returns the identity element of the hypervector space:
@@ -25,21 +25,52 @@ pub trait HyperVector: Sized {
     fn distance(&self, other: &Self) -> f32;
     fn bind(&self, other: &Self) -> Self;
     fn unbind(&self, other: &Self) -> Self;
+    fn permute(&self, by: usize) -> Self;
+    fn unpermute(&self, by: usize) -> Self;
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
     fn acc(vectors: &[&Self]) -> Self;
     fn unpack(&self) -> Vec<f32>;
+    fn write(&self, file: &mut File) -> std::io::Result<()>;
+    fn read(file: &mut File) -> std::io::Result<Self>;
 }
 
-pub fn save_hypervectors_to_csv<H: HyperVector + Copy>(filename: &str, vectors: &[H]) {
-    let file = File::create(filename).expect("Unable to create file");
+pub fn save_hypervectors_to_csv<H: HyperVector + Copy>(
+    filename: &str,
+    vectors: &[H],
+) -> Result<(), std::io::Error> {
+    let file = File::create(filename)?;
     let mut writer = BufWriter::new(file);
 
     println!("Saving {} HDVs to {filename}", vectors.len());
     for v in vectors {
         let row: Vec<String> = v.unpack().iter().map(|x| x.to_string()).collect();
-        writeln!(writer, "{}", row.join(",")).expect("Write failed");
+        writeln!(writer, "{}", row.join(","))?
     }
+    Ok(())
+}
+
+pub fn write_hypervectors<H: HyperVector>(vec: &[H], mut file: File) -> std::io::Result<()> {
+    // Write number of HDVs
+    let len = vec.len();
+    file.write_all(&len.to_ne_bytes())?;
+    for hdv in vec {
+        hdv.write(&mut file)?;
+    }
+    file.flush()
+}
+
+pub fn read_hypervectors<H: HyperVector>(mut file: File) -> std::io::Result<Vec<H>> {
+    // Read number of HDVs
+    let mut len_buf = [0u8; size_of::<usize>()];
+    file.read_exact(&mut len_buf)?;
+    let len = usize::from_ne_bytes(len_buf);
+    println!("read_hypervectors: reading {len} HDVs");
+    let mut vec = Vec::with_capacity(len);
+    for _ in 0..len {
+        vec.push(H::read(&mut file)?);
+    }
+    Ok(vec)
 }
 
 pub fn example_mexican_dollar<T: HyperVector>() {
@@ -72,9 +103,9 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     ]);
 
     let mut acc = T::Accumulator::default();
-    acc.add(&name.bind(&mex));
-    acc.add(&capital.bind(&cdmx));
-    acc.add(&currency.bind(&mpe));
+    acc.add(&name.bind(&mex), 1);
+    acc.add(&capital.bind(&cdmx), 1);
+    acc.add(&currency.bind(&mpe), 1);
     let mexico = acc.finalize();
     //let mexico = T::acc(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
 
@@ -124,9 +155,9 @@ mod tests {
         let v3 = T::from_slice(&[1.0, -1.0, -1.0, 1.0, -1.0]);
         let expected = T::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
 
-        acc.add(&v1);
-        acc.add(&v2);
-        acc.add(&v3);
+        acc.add(&v1, 1);
+        acc.add(&v2, 1);
+        acc.add(&v3, 1);
         let result = acc.finalize();
         assert_eq!(result, expected);
 

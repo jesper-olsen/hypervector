@@ -3,6 +3,9 @@ use rand_core::RngCore;
 use rand_distr::{Distribution, Normal};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::cell::RefCell;
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::mem::size_of;
 
 // avoid repeated setup of FftPlanner in bind()
 thread_local! {
@@ -57,6 +60,14 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         self.bind(&oi)
     }
 
+    fn permute(&self, by: usize) -> Self {
+        self.permute(by)
+    }
+
+    fn unpermute(&self, by: usize) -> Self {
+        self.unpermute(by)
+    }
+
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
         let perm_a = self.permute(pa);
         let perm_b = other.permute(pb);
@@ -83,6 +94,23 @@ impl<const N: usize> HyperVector for RealHDV<N> {
 
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
+    }
+
+    fn write(&self, file: &mut File) -> io::Result<()> {
+        for &value in &self.data {
+            file.write_all(&value.to_ne_bytes())?;
+        }
+        Ok(())
+    }
+
+    fn read(file: &mut File) -> io::Result<Self> {
+        let mut data = [0f64; N];
+        for slot in &mut data {
+            let mut buf = [0u8; size_of::<f64>()];
+            file.read_exact(&mut buf)?;
+            *slot = f64::from_ne_bytes(buf);
+        }
+        Ok(Self { data })
     }
 }
 
@@ -196,6 +224,7 @@ impl<const N: usize> RealHDV<N> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RealAccumulator<const N: usize> {
     sum: [f64; N],
     n: usize,
@@ -215,14 +244,14 @@ impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
         }
     }
 
-    fn add(&mut self, v: &RealHDV<N>) {
+    fn add(&mut self, v: &RealHDV<N>, weight: usize) {
         for i in 0..N {
-            self.sum[i] += v.data[i];
+            self.sum[i] += weight as f64 * v.data[i];
         }
-        self.n += 1
+        self.n += weight;
     }
 
-    fn finalize(self) -> RealHDV<N> {
+    fn finalize(&self) -> RealHDV<N> {
         let data: [f64; N] = std::array::from_fn(|i| self.sum[i] / (self.n as f64).sqrt());
         RealHDV { data }
     }

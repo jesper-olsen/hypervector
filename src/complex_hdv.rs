@@ -3,6 +3,9 @@ use rand_core::RngCore;
 use rand_distr::{Distribution, Normal};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::cell::RefCell;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::mem::size_of;
 
 // avoid repeated setup of FftPlanner in bind()
 thread_local! {
@@ -86,6 +89,14 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         // h
     }
 
+    fn permute(&self, by: usize) -> Self {
+        self.permute(by)
+    }
+
+    fn unpermute(&self, by: usize) -> Self {
+        self.unpermute(by)
+    }
+
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
         let perm_a = self.permute(pa);
         let perm_b = other.permute(pb);
@@ -121,10 +132,32 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         }
         out
     }
+
+    fn write(&self, file: &mut File) -> std::io::Result<()> {
+        for &value in &self.data {
+            file.write_all(&value.re.to_ne_bytes())?;
+            file.write_all(&value.im.to_ne_bytes())?;
+        }
+        Ok(())
+    }
+
+    fn read(file: &mut File) -> std::io::Result<Self> {
+        let mut data = [Complex::<f64>::new(0.0, 0.0); N];
+        for slot in &mut data {
+            let mut re_buf = [0u8; size_of::<f64>()];
+            let mut im_buf = [0u8; size_of::<f64>()];
+            file.read_exact(&mut re_buf)?;
+            file.read_exact(&mut im_buf)?;
+            let re = f64::from_ne_bytes(re_buf);
+            let im = f64::from_ne_bytes(im_buf);
+            *slot = Complex::new(re, im);
+        }
+        Ok(Self { data })
+    }
 }
 
 impl<const N: usize> ComplexHDV<N> {
-    fn bind_circular_convolution(&self, other: &Self) -> Self {
+    fn _bind_circular_convolution(&self, other: &Self) -> Self {
         // Performs circular convolution using the direct, time-domain formula:
         // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]
         let mut result_data = [Complex::new(0.0, 0.0); N];
@@ -176,7 +209,7 @@ impl<const N: usize> ComplexHDV<N> {
         })
     }
 
-    fn unbind_fft(&self, other: &Self) -> Self {
+    fn _unbind_fft(&self, other: &Self) -> Self {
         // same as bind_fft except line with conj()
         FFT_PLANNER.with(|planner| {
             let mut planner = planner.borrow_mut();
@@ -267,6 +300,7 @@ impl<const N: usize> ComplexHDV<N> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ComplexAccumulator<const N: usize> {
     sum: [Complex<f64>; N],
     n: usize,
@@ -286,14 +320,14 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
         }
     }
 
-    fn add(&mut self, v: &ComplexHDV<N>) {
+    fn add(&mut self, v: &ComplexHDV<N>, weight: usize) {
         for i in 0..N {
-            self.sum[i] += v.data[i];
+            self.sum[i] += weight as f64 * v.data[i];
         }
-        self.n += 1
+        self.n += weight
     }
 
-    fn finalize(self) -> ComplexHDV<N> {
+    fn finalize(&self) -> ComplexHDV<N> {
         let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / (self.n as f64).sqrt());
         ComplexHDV { data }
     }
