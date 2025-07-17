@@ -29,7 +29,7 @@ pub trait HyperVector: Sized {
     fn unpermute(&self, by: usize) -> Self;
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
-    fn acc(vectors: &[&Self]) -> Self;
+    fn bundle(vectors: &[&Self]) -> Self;
     fn unpack(&self) -> Vec<f32>;
     fn write(&self, file: &mut File) -> std::io::Result<()>;
     fn read(file: &mut File) -> std::io::Result<Self>;
@@ -95,8 +95,8 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     let mpe = T::random(&mut mt);
     let skr = T::random(&mut mt);
 
-    let ustates = T::acc(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
-    let _sweden = T::acc(&[
+    let ustates = T::bundle(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
+    let _sweden = T::bundle(&[
         &name.bind(&swe),
         &capital.bind(&stockholm),
         &currency.bind(&skr),
@@ -107,7 +107,7 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     acc.add(&capital.bind(&cdmx), 1);
     acc.add(&currency.bind(&mpe), 1);
     let mexico = acc.finalize();
-    //let mexico = T::acc(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
+    //let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
 
     let fmu = mexico.bind(&ustates);
     let x = fmu.unbind(&usd);
@@ -161,7 +161,7 @@ mod tests {
         let result = acc.finalize();
         assert_eq!(result, expected);
 
-        let result = T::acc(&[&v1, &v2, &v3]);
+        let result = T::bundle(&[&v1, &v2, &v3]);
         assert_eq!(result, expected);
     }
 

@@ -61,8 +61,8 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV::pmultiply(self, pa, other, pb)
     }
 
-    fn acc(vectors: &[&Self]) -> Self {
-        BipolarHDV::acc(vectors)
+    fn bundle(vectors: &[&Self]) -> Self {
+        BipolarHDV::bundle(vectors)
     }
 
     fn unpack(&self) -> Vec<f32> {
@@ -138,7 +138,7 @@ impl<const DIM: usize> BipolarHDV<DIM> {
     }
 
     /// sum HDVs in l self and normalise
-    fn acc(l: &[&BipolarHDV<DIM>]) -> Self {
+    fn bundle(l: &[&BipolarHDV<DIM>]) -> Self {
         let mut data = [0i8; DIM];
         for i in 0..DIM {
             let s: i64 = l.iter().map(|v| v.data[i] as i64).sum();

@@ -66,8 +66,8 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         BinaryHDV::pmultiply(self, pa, other, pb)
     }
 
-    fn acc(vectors: &[&Self]) -> Self {
-        BinaryHDV::acc(vectors)
+    fn bundle(vectors: &[&Self]) -> Self {
+        BinaryHDV::bundle(vectors)
     }
 
     fn unpack(&self) -> Vec<f32> {
@@ -197,7 +197,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     /// count number of 1 bits for each bit position - if more than half are 1, then set
     /// that bit position to 1 in the returned vector
     /// For ties: random 1 or 0
-    pub fn acc(vectors: &[&Self]) -> Self {
+    pub fn bundle(vectors: &[&Self]) -> Self {
         const BITS_PER_USIZE: usize = usize::BITS as usize;
         let mut a = vec![0usize; N_USIZE * 64]; // vote counter per bit
         let mut r = Self::zero(); // result vector

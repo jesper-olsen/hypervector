@@ -109,7 +109,7 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         unbound.unpermute(pa)
     }
 
-    fn acc(vectors: &[&Self]) -> Self {
+    fn bundle(vectors: &[&Self]) -> Self {
         let mut sum = [Complex::new(0.0, 0.0); N];
         for v in vectors {
             sum.iter_mut().zip(v.data.iter()).for_each(|(s, d)| *s += d);

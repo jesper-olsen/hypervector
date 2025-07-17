@@ -91,17 +91,17 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
     let _id_agent_cause = T::random(&mut mt);
     let _id_see_agent = T::random(&mut mt);
 
-    let mark = T::acc(&[&being, &person, &id_mark]);
-    let john = T::acc(&[&being, &person, &id_john]);
-    let paul = T::acc(&[&being, &person, &id_paul]);
-    let luke = T::acc(&[&being, &person, &id_luke]);
-    let the_fish = T::acc(&[&food, &fish, &id_fish]);
-    let _the_bread = T::acc(&[&food, &bread, &id_bread]);
-    let hunger = T::acc(&[&state, &id_hunger]);
-    let thirst = T::acc(&[&state, &id_thirst]);
+    let mark = T::bundle(&[&being, &person, &id_mark]);
+    let john = T::bundle(&[&being, &person, &id_john]);
+    let paul = T::bundle(&[&being, &person, &id_paul]);
+    let luke = T::bundle(&[&being, &person, &id_luke]);
+    let the_fish = T::bundle(&[&food, &fish, &id_fish]);
+    let _the_bread = T::bundle(&[&food, &bread, &id_bread]);
+    let hunger = T::bundle(&[&state, &id_hunger]);
+    let thirst = T::bundle(&[&state, &id_thirst]);
 
-    let agent_eat = T::acc(&[&agent, &id_eat_agent]);
-    let _obj_eat = T::acc(&[&object, &id_eat_object]);
+    let agent_eat = T::bundle(&[&agent, &id_eat_agent]);
+    let _obj_eat = T::bundle(&[&object, &id_eat_object]);
 
     let sentences = [
         "Mark ate the fish.",
@@ -112,12 +112,12 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
         "The fish saw John.",
     ];
 
-    let s1 = T::acc(&[&eat, &agent_eat.bind(&mark), &object_eat.bind(&the_fish)]);
-    let s2 = T::acc(&[&cause, &agent_cause.bind(&hunger), &object_cause.bind(&s1)]);
-    let s3 = T::acc(&[&eat, &agent_eat.bind(&john)]);
-    let s4 = T::acc(&[&see, &agent_see.bind(&john), &object_see.bind(&mark)]);
-    let s5 = T::acc(&[&see, &agent_see.bind(&john), &object_see.bind(&the_fish)]);
-    let s6 = T::acc(&[&see, &agent_see.bind(&the_fish), &object_see.bind(&john)]);
+    let s1 = T::bundle(&[&eat, &agent_eat.bind(&mark), &object_eat.bind(&the_fish)]);
+    let s2 = T::bundle(&[&cause, &agent_cause.bind(&hunger), &object_cause.bind(&s1)]);
+    let s3 = T::bundle(&[&eat, &agent_eat.bind(&john)]);
+    let s4 = T::bundle(&[&see, &agent_see.bind(&john), &object_see.bind(&mark)]);
+    let s5 = T::bundle(&[&see, &agent_see.bind(&john), &object_see.bind(&the_fish)]);
+    let s6 = T::bundle(&[&see, &agent_see.bind(&the_fish), &object_see.bind(&john)]);
 
     let l = [
         (mark, "mark   "),

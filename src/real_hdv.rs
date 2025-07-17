@@ -80,7 +80,7 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         unbound.unpermute(pa)
     }
 
-    fn acc(vectors: &[&Self]) -> Self {
+    fn bundle(vectors: &[&Self]) -> Self {
         let mut sum = [0.0; N];
         for v in vectors {
             sum.iter_mut().zip(v.data.iter()).for_each(|(s, d)| *s += d);
