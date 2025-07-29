@@ -3,7 +3,6 @@ use rand::Rng;
 use rand_core::RngCore;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::mem::size_of;
 
 impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     type Accumulator = BipolarAccumulator<DIM>;
@@ -87,7 +86,7 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BipolarAccumulator<const DIM: usize> {
-    sum: [i64; DIM],
+    sum: [f64; DIM],
 }
 
 impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
@@ -98,29 +97,27 @@ impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
 
 impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> {
     fn new() -> Self {
-        Self { sum: [0; DIM] }
+        Self { sum: [0.0; DIM] }
     }
 
-    fn add(&mut self, v: &BipolarHDV<DIM>, weight: usize) {
+    fn add(&mut self, v: &BipolarHDV<DIM>, weight: f64) {
         for i in 0..DIM {
-            self.sum[i] += (weight as i64) * (v.data[i] as i64);
+            self.sum[i] += weight * v.data[i] as f64;
         }
     }
 
     fn finalize(&self) -> BipolarHDV<DIM> {
-        let mut data = [0; DIM];
+        let mut data = [0i8; DIM];
         for i in 0..DIM {
-            data[i] = match self.sum[i].cmp(&0) {
-                std::cmp::Ordering::Greater => 1,
-                std::cmp::Ordering::Less => -1,
-                std::cmp::Ordering::Equal => {
-                    if rand::random() {
-                        1
-                    } else {
-                        -1
-                    }
-                }
-            };
+            data[i] = if self.sum[i] > 0.0 {
+                1
+            } else if self.sum[i] < 0.0 {
+                -1
+            } else if rand::random::<bool>() {
+                1
+            } else {
+                -1
+            }
         }
         BipolarHDV { data }
     }

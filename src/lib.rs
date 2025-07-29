@@ -9,7 +9,7 @@ use std::io::{BufWriter, Read, Write};
 
 pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
-    fn add(&mut self, v: &T, weight: usize);
+    fn add(&mut self, v: &T, weight: f64);
     fn finalize(&self) -> T;
 }
 
@@ -103,9 +103,9 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     ]);
 
     let mut acc = T::Accumulator::default();
-    acc.add(&name.bind(&mex), 1);
-    acc.add(&capital.bind(&cdmx), 1);
-    acc.add(&currency.bind(&mpe), 1);
+    acc.add(&name.bind(&mex), 1.0);
+    acc.add(&capital.bind(&cdmx), 1.0);
+    acc.add(&currency.bind(&mpe), 1.0);
     let mexico = acc.finalize();
     //let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
 
@@ -155,9 +155,9 @@ mod tests {
         let v3 = T::from_slice(&[1.0, -1.0, -1.0, 1.0, -1.0]);
         let expected = T::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
 
-        acc.add(&v1, 1);
-        acc.add(&v2, 1);
-        acc.add(&v3, 1);
+        acc.add(&v1, 1.0);
+        acc.add(&v2, 1.0);
+        acc.add(&v3, 1.0);
         let result = acc.finalize();
         assert_eq!(result, expected);
 

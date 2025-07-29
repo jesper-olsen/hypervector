@@ -107,8 +107,8 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 
 #[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
-    votes: Vec<usize>, // one vote counter per bit
-    count: usize,      // total number of vectors added
+    votes: Vec<f64>, // one vote counter per bit
+    count: f64,      // total number of vectors added
 }
 
 impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
@@ -120,16 +120,17 @@ impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
 impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator<N_USIZE> {
     fn new() -> Self {
         Self {
-            votes: vec![0; N_USIZE * usize::BITS as usize],
-            count: 0,
+            votes: vec![0.0; N_USIZE * usize::BITS as usize],
+            count: 0.0,
         }
     }
 
-    fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: usize) {
+    fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
         for i in 0..N_USIZE {
             let word = v.data[i];
             for j in 0..usize::BITS {
-                self.votes[i * usize::BITS as usize + j as usize] += weight * ((word >> j) & 1)
+                let flag = ((word >> j) & 1) as f64;
+                self.votes[i * usize::BITS as usize + j as usize] += weight * flag
             }
         }
         self.count += weight;

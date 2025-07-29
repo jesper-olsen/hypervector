@@ -227,7 +227,7 @@ impl<const N: usize> RealHDV<N> {
 #[derive(Debug, Clone)]
 pub struct RealAccumulator<const N: usize> {
     sum: [f64; N],
-    n: usize,
+    n: f64,
 }
 
 impl<const N: usize> Default for RealAccumulator<N> {
@@ -240,13 +240,13 @@ impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
     fn new() -> Self {
         Self {
             sum: [0.0; N],
-            n: 0,
+            n: 0.0,
         }
     }
 
-    fn add(&mut self, v: &RealHDV<N>, weight: usize) {
+    fn add(&mut self, v: &RealHDV<N>, weight: f64) {
         for i in 0..N {
-            self.sum[i] += weight as f64 * v.data[i];
+            self.sum[i] += weight * v.data[i];
         }
         self.n += weight;
     }

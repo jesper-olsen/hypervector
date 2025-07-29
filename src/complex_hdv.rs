@@ -303,7 +303,7 @@ impl<const N: usize> ComplexHDV<N> {
 #[derive(Debug, Clone)]
 pub struct ComplexAccumulator<const N: usize> {
     sum: [Complex<f64>; N],
-    n: usize,
+    n: f64,
 }
 
 impl<const N: usize> Default for ComplexAccumulator<N> {
@@ -316,13 +316,13 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
     fn new() -> Self {
         Self {
             sum: [Complex::new(0.0, 0.0); N],
-            n: 0,
+            n: 0.0,
         }
     }
 
-    fn add(&mut self, v: &ComplexHDV<N>, weight: usize) {
+    fn add(&mut self, v: &ComplexHDV<N>, weight: f64) {
         for i in 0..N {
-            self.sum[i] += weight as f64 * v.data[i];
+            self.sum[i] += weight * v.data[i];
         }
         self.n += weight
     }

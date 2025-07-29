@@ -55,7 +55,7 @@ pub fn create_language_profile<T: HyperVector, R: RngCore>(
                 let sym = symbols.entry(c).or_insert_with(|| T::random(rng));
                 ngram = ngram.pbind(1, sym, 0);
             }
-            acc.add(&ngram, 1);
+            acc.add(&ngram, 1.0);
         }
     }
     Ok(acc.finalize())
@@ -85,7 +85,7 @@ pub fn create_language_profile_bind<T: HyperVector, R: RngCore>(
             block.push_front(c);
             ngram = ngram.pbind(1, sym, 0);
         }
-        acc.add(&ngram, 1);
+        acc.add(&ngram, 1.0);
         for &c in &chars[n..] {
             let forget = block.pop_back().unwrap();
             let forget_sym = symbols.get(&forget).unwrap();
@@ -93,7 +93,7 @@ pub fn create_language_profile_bind<T: HyperVector, R: RngCore>(
             let new_sym = symbols.entry(c).or_insert_with(|| T::random(rng));
             block.push_front(c);
             ngram = ngram.pbind(1, new_sym, 0); // Bind newest character (position 0)
-            acc.add(&ngram, 1);
+            acc.add(&ngram, 1.0);
         }
     }
     Ok(acc.finalize())
