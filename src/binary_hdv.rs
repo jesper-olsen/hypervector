@@ -191,7 +191,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         Self { data }
     }
 
-    pub fn dim() -> usize {
+    const pub fn dim() -> usize {
         N_USIZE * usize::BITS as usize
     }
 
