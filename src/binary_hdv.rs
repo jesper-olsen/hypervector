@@ -191,6 +191,10 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         Self { data }
     }
 
+    pub fn dim() -> usize {
+        N_USIZE * usize::BITS as usize
+    }
+
     pub fn hamming_distance(&self, other: &Self) -> usize {
         self.data
             .iter()
