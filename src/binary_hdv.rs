@@ -155,6 +155,8 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
 }
 
 impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
+    pub const DIM: usize = N_USIZE * usize::BITS as usize;
+
     pub fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
         let data = std::array::from_fn(|_| rng.next_u64() as usize);
         Self { data }
@@ -189,10 +191,6 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         }
 
         Self { data }
-    }
-
-    pub const fn dim() -> usize {
-        N_USIZE * usize::BITS as usize
     }
 
     pub fn hamming_distance(&self, other: &Self) -> usize {
