@@ -166,6 +166,31 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         }
     }
 
+    /// Creates a new HDV by blending `self` and `other`
+    /// `indices` are bit positions where values from `other` are used.
+    pub fn blend(&self, other: &Self, indices: &[usize]) -> Self {
+        // 1. Precompute masks per usize
+        let mut masks = [0usize; N_USIZE];
+        for &idx in indices {
+            let i = idx / (usize::BITS as usize);
+            let j = idx % (usize::BITS as usize);
+            masks[i] |= 1 << j;
+        }
+
+        // 2. Apply masks in bulk
+        let mut data = self.data.clone();
+        for i in 0..N_USIZE {
+            let mask = masks[i];
+            if mask != 0 {
+                // copy bits from `other` where mask=1
+                // and keep bits from `self` where mask=0
+                data[i] = (data[i] & !mask) | (other.data[i] & mask);
+            }
+        }
+
+        Self { data }
+    }
+
     pub fn hamming_distance(&self, other: &Self) -> usize {
         self.data
             .iter()
