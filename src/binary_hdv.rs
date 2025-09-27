@@ -193,6 +193,42 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         Self { data }
     }
 
+    /// Creates a new HDV by cloning `self` and flipping `nbits` unique, random bits.
+    pub fn flip<R: RngCore + ?Sized>(&self, nbits: usize, rng: &mut R) -> Self {
+        let mut data = self.data.clone();
+
+        let dim = Self::DIM;
+
+        // Handle edge cases where no flips are needed or the dimension is zero.
+        if nbits == 0 || dim == 0 {
+            return Self { data };
+        }
+
+        // Use a HashSet to track flipped indices and ensure we only flip each bit once.
+        let mut flipped_indices = HashSet::new();
+        let bits_to_flip = nbits.min(dim); // Don't try to flip more bits than available
+
+        // Loop until we have selected the required number of unique bits.
+        while flipped_indices.len() < bits_to_flip {
+            // 1. Generate a random bit index in the range [0, DIM - 1].
+            // We use next_u64() and modulo for basic random range generation from RngCore.
+            let idx = (rng.next_u64() as usize) % dim;
+
+            // 2. Check if the index is new. If it is, insert it and proceed to flip.
+            if flipped_indices.insert(idx) {
+                // 3. Calculate the array index (i) and the bit position (j) within the block.
+                let i = idx / (usize::BITS as usize);
+                let j = idx % (usize::BITS as usize);
+
+                // 4. Flip the bit at position j in block i using XOR (1 << j).
+                // This is safe because we check that i < N_USIZE implicitly via idx < dim.
+                data[i] ^= 1 << j;
+            }
+        }
+
+        Self { data }
+    }
+
     pub fn hamming_distance(&self, other: &Self) -> usize {
         self.data
             .iter()
