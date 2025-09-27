@@ -3,6 +3,7 @@ use rand_core::RngCore;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::mem::size_of;
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BinaryHDV<const N_USIZE: usize> {
