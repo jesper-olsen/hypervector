@@ -169,6 +169,10 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         }
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.data.iter().all(|&e| e==0)
+    }
+
     /// Creates a new HDV by blending `self` and `other`
     /// `indices` are bit positions where values from `other` are used.
     pub fn blend(&self, other: &Self, indices: &[usize]) -> Self {
