@@ -20,7 +20,6 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     fn ident() -> Self {
         BinaryHDV { data: [0; N_USIZE] }
     }
-
     fn from_slice(slice: &[f32]) -> Self {
         let dim = N_USIZE * usize::BITS as usize;
         assert!(slice.len() <= dim);
@@ -171,6 +170,18 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
 
     pub fn is_zero(&self) -> bool {
         self.data.iter().all(|&e| e==0)
+    }
+
+    /// Returns a Vec<u8> with one entry per bit (0 or 1).
+    pub fn as_u8_vec(&self) -> Vec<u8> {
+        let mut bits = Vec::with_capacity(N_USIZE * usize::BITS as usize);
+        for word in self.data {
+            for i in 0..usize::BITS {
+                let bit = (word >> i) & 1;
+                bits.push(bit as u8);
+            }
+        }
+        bits
     }
 
     /// Creates a new HDV by blending `self` and `other`
