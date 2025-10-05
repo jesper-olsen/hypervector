@@ -1,7 +1,7 @@
 use crate::{Accumulator, HyperVector};
 use rand_core::RngCore;
 use std::fs::File;
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Write, BufWriter};
 use std::mem::size_of;
 use std::collections::HashSet;
 
@@ -81,6 +81,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         }
         out
     }
+
 
     fn write(&self, file: &mut File) -> io::Result<()> {
         for &value in &self.data {
@@ -301,4 +302,36 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
 
         r
     }
+
+    pub fn write_csv(&self, writer: &mut impl Write) -> io::Result<()> {
+        // Create an iterator that yields each bit ('0' or '1') as a character
+        let bit_chars = self.data.iter().flat_map(|&chunk| {
+            (0..64).map(move |i| {
+                if (chunk >> i) & 1 == 1 { '1' } else { '0' }
+            })
+        });
+
+        let mut line = String::with_capacity(N_USIZE * 64 * 2);
+        let mut first = true;
+        for ch in bit_chars {
+            if !first {
+                line.push(',');
+            }
+            line.push(ch);
+            first = false;
+        }
+        line.push('\n');
+
+        writer.write_all(line.as_bytes())
+    }
+}
+
+
+fn save_hdvs_to_csv<const N: usize>(filename: &str, hdv_dataset: &[BinaryHDV<N>]) -> io::Result<()> {
+    let file = File::create(filename)?;
+    let mut writer = BufWriter::new(file);
+    for hdv in hdv_dataset {
+        hdv.write_csv(&mut writer)?;
+    }
+    Ok(())
 }
