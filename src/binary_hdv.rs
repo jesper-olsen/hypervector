@@ -327,7 +327,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
 }
 
 
-fn save_hdvs_to_csv<const N: usize>(filename: &str, hdv_dataset: &[BinaryHDV<N>]) -> io::Result<()> {
+pub fn save_hdvs_to_csv<const N: usize>(filename: &str, hdv_dataset: &[BinaryHDV<N>]) -> io::Result<()> {
     let file = File::create(filename)?;
     let mut writer = BufWriter::new(file);
     for hdv in hdv_dataset {
