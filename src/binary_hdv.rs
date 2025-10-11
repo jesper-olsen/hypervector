@@ -109,7 +109,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 #[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
     votes: Vec<f64>, // one vote counter per bit
-    count: f64,      // total number of vectors added
+    pub count: f64,      // total number of vectors added
 }
 
 impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
