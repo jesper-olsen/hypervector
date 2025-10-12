@@ -254,6 +254,16 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
             .sum()
     }
 
+    pub fn xnor(&self, other: &Self) -> Self {
+        let mut result = Self::zero();
+
+        for i in 0..N_USIZE {
+            result.data[i] = !(self.data[i] ^ other.data[i]);
+        }
+
+        result
+    }
+
     pub fn multiply(&self, other: &Self) -> Self {
         let mut result = Self::zero();
 
