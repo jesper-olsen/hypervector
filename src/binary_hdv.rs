@@ -252,11 +252,11 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         Self { data }
     }
 
-    pub fn hamming_distance(&self, other: &Self) -> usize {
+    pub fn hamming_distance(&self, other: &Self) -> u32 {
         self.data
             .iter()
             .zip(other.data.iter())
-            .map(|(&x, &y)| (x ^ y).count_ones() as usize)
+            .map(|(&x, &y)| (x ^ y).count_ones())
             .sum()
     }
 
