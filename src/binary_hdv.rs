@@ -118,6 +118,12 @@ impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
     }
 }
 
+impl<const N_USIZE: usize> BinaryAccumulator<N_USIZE> {
+    pub const fn is_empty(&self) -> bool {
+        self.count==0.0
+    }
+}
+
 impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator<N_USIZE> {
     fn new() -> Self {
         Self {
