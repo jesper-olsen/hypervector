@@ -9,7 +9,7 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 - Binary (0/1) and bipolar (+1/-1) hypervector types (HDVs).
 - Real and complex hypervector types (also known as HRRs or Holographic Reduced Representations).
 - Trait-based design for extensibility
-- Example applications: concept inference and text classification
+- Example applications: concept inference, text image classification
 
 ## References
 
@@ -22,7 +22,7 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 Run
 -----
 
-There are three examples that can all be run from the commandline:
+Three examples of problems that can be solved with hypervectors:
 
 * Kanerva's Mexican Dollar [1] inferencing example - run it with:
   ```
@@ -30,4 +30,5 @@ There are three examples that can all be run from the commandline:
   ```
 * Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
 * [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
+* [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
 
