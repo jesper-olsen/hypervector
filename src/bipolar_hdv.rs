@@ -1,3 +1,8 @@
+// BipolarHDV - note that this module uses one i8 per dimension.
+// It can be implemented more compactly with bitarrays.
+// However, that would make the implementation basically the same as BinaryHDV.
+// Only difference is how 0 and 1 are interpreted - ie. for bipolar 0=1 and 1=-1.
+
 use crate::{Accumulator, HyperVector};
 use rand::Rng;
 use rand_core::RngCore;

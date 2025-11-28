@@ -3,11 +3,11 @@
 // IEEE Transactions on Neural Networks, February, 1995, 6(3):623-41
 // https://www.researchgate.net/publication/5589577_Holographic_Reduced_Representations
 
-use hypervector::HyperVector;
 use hypervector::binary_hdv::BinaryHDV;
 use hypervector::bipolar_hdv::BipolarHDV;
 use hypervector::complex_hdv::ComplexHDV;
 use hypervector::real_hdv::RealHDV;
+use hypervector::{HyperVector, gen_vars};
 use mersenne_twister_rs::MersenneTwister64;
 use std::any::type_name;
 
@@ -59,37 +59,17 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
 
     let mut mt = MersenneTwister64::new(42);
 
-    let agent = T::random(&mut mt);
-    let agent_cause = T::random(&mut mt);
-    let _agent_eat = T::random(&mut mt);
-    let agent_see = T::random(&mut mt);
-    let being = T::random(&mut mt);
-    let bread = T::random(&mut mt);
-    let cause = T::random(&mut mt);
-    let eat = T::random(&mut mt);
-    let fish = T::random(&mut mt);
-    let food = T::random(&mut mt);
-    let id_bread = T::random(&mut mt);
-    let id_fish = T::random(&mut mt);
-    let id_hunger = T::random(&mut mt);
-    let id_john = T::random(&mut mt);
-    let id_luke = T::random(&mut mt);
-    let id_mark = T::random(&mut mt);
-    let id_paul = T::random(&mut mt);
-    let id_thirst = T::random(&mut mt);
-    let object = T::random(&mut mt);
-    let object_cause = T::random(&mut mt);
-    let object_eat = T::random(&mut mt);
-    let object_see = T::random(&mut mt);
-    let person = T::random(&mut mt);
-    let see = T::random(&mut mt);
-    let state = T::random(&mut mt);
-    let id_eat_agent = T::random(&mut mt);
-    let _id_object_cause = T::random(&mut mt);
-    let id_eat_object = T::random(&mut mt);
-    let _id_see_object = T::random(&mut mt);
-    let _id_agent_cause = T::random(&mut mt);
-    let _id_see_agent = T::random(&mut mt);
+    #[rustfmt::skip]
+    gen_vars!(
+        &mut mt,
+        T,
+        agent, agent_cause, _agent_eat, agent_see,
+        being, bread, cause, eat, fish, food,
+        id_bread, id_fish, id_hunger, id_john, id_luke, id_mark, id_paul, id_thirst,
+        object, object_cause, object_eat, object_see,
+        person, see, state,
+        id_eat_agent, _id_object_cause, id_eat_object, _id_see_object, _id_agent_cause, _id_see_agent
+    );
 
     let mark = T::bundle(&[&being, &person, &id_mark]);
     let john = T::bundle(&[&being, &person, &id_john]);

@@ -9,6 +9,7 @@ use std::io::{BufWriter, Read, Write};
 
 /// Generates multiple random hypervectors from a single RNG.
 /// Usage: gen_vars!(rng, Type, var1, var2, var3);
+#[macro_export]
 macro_rules! gen_vars {
     ($rng:expr, $t:ty, $($name:ident),+) => {
         $(
