@@ -1,9 +1,9 @@
 use crate::{Accumulator, HyperVector};
 use rand_core::RngCore;
-use std::fs::File;
-use std::io::{self, Read, Write, BufWriter};
-use std::mem::size_of;
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::{self, BufWriter, Read, Write};
+use std::mem::size_of;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BinaryHDV<const N_USIZE: usize> {
@@ -82,7 +82,6 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         out
     }
 
-
     fn write(&self, file: &mut File) -> io::Result<()> {
         for &value in &self.data {
             file.write_all(&value.to_ne_bytes())?;
@@ -109,7 +108,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 #[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
     votes: Vec<f64>, // one vote counter per bit
-    pub count: f64,      // total number of vectors added
+    pub count: f64,  // total number of vectors added
 }
 
 impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
@@ -120,7 +119,7 @@ impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
 
 impl<const N_USIZE: usize> BinaryAccumulator<N_USIZE> {
     pub const fn is_empty(&self) -> bool {
-        self.count==0.0
+        self.count == 0.0
     }
 }
 
@@ -176,7 +175,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     }
 
     pub fn is_zero(&self) -> bool {
-        self.data.iter().all(|&e| e==0)
+        self.data.iter().all(|&e| e == 0)
     }
 
     /// Returns a Vec<u8> with one entry per bit (0 or 1).
@@ -321,11 +320,10 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
 
     pub fn write_csv(&self, writer: &mut impl Write) -> io::Result<()> {
         // Create an iterator that yields each bit ('0' or '1') as a character
-        let bit_chars = self.data.iter().flat_map(|&chunk| {
-            (0..64).map(move |i| {
-                if (chunk >> i) & 1 == 1 { '1' } else { '0' }
-            })
-        });
+        let bit_chars = self
+            .data
+            .iter()
+            .flat_map(|&chunk| (0..64).map(move |i| if (chunk >> i) & 1 == 1 { '1' } else { '0' }));
 
         let mut line = String::with_capacity(N_USIZE * 64 * 2);
         let mut first = true;
@@ -342,8 +340,10 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     }
 }
 
-
-pub fn save_hdvs_to_csv<const N: usize>(filename: &str, hdv_dataset: &[BinaryHDV<N>]) -> io::Result<()> {
+pub fn save_hdvs_to_csv<const N: usize>(
+    filename: &str,
+    hdv_dataset: &[BinaryHDV<N>],
+) -> io::Result<()> {
     let file = File::create(filename)?;
     let mut writer = BufWriter::new(file);
     for hdv in hdv_dataset {

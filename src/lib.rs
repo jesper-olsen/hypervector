@@ -7,6 +7,16 @@ use rand_core::RngCore;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 
+/// Generates multiple random hypervectors from a single RNG.
+/// Usage: gen_vars!(rng, Type, var1, var2, var3);
+macro_rules! gen_vars {
+    ($rng:expr, $t:ty, $($name:ident),+) => {
+        $(
+            let $name = <$t>::random($rng);
+        )+
+    };
+}
+
 pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
     fn add(&mut self, v: &T, weight: f64);
@@ -79,21 +89,9 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     // Calculate answer: Mexican Peso - mpe
     //
     let mut mt = MersenneTwister64::new(42);
-    let name = T::random(&mut mt);
-    let capital = T::random(&mut mt);
-    let currency = T::random(&mut mt);
-
-    let swe = T::random(&mut mt);
-    let usa = T::random(&mut mt);
-    let mex = T::random(&mut mt);
-
-    let stockholm = T::random(&mut mt);
-    let wdc = T::random(&mut mt);
-    let cdmx = T::random(&mut mt);
-
-    let usd = T::random(&mut mt);
-    let mpe = T::random(&mut mt);
-    let skr = T::random(&mut mt);
+    gen_vars!(
+        &mut mt, T, name, capital, currency, swe, usa, mex, stockholm, wdc, cdmx, usd, mpe, skr
+    );
 
     let ustates = T::bundle(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
     let _sweden = T::bundle(&[
