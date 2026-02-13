@@ -114,7 +114,7 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         for v in vectors {
             sum.iter_mut().zip(v.data.iter()).for_each(|(s, d)| *s += d);
         }
-        if vectors.len() > 0 {
+        if !vectors.is_empty() {
             sum.iter_mut()
                 .for_each(|e| *e /= (vectors.len() as f64).sqrt())
         }
@@ -328,7 +328,7 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
     }
 
     fn finalize(&self) -> ComplexHDV<N> {
-        let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / (self.n as f64).sqrt());
+        let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / self.n.sqrt());
         ComplexHDV { data }
     }
 }

@@ -24,10 +24,10 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         let dim = N_USIZE * usize::BITS as usize;
         assert!(slice.len() <= dim);
         let mut hdv = Self::zero();
-        for i in 0..slice.len() {
+        for (i, e) in slice.iter().enumerate() {
             let word_idx = i / 64;
             let bit_idx = i % 64;
-            if slice[i] > 0.5 {
+            if *e > 0.5 {
                 hdv.data[word_idx] |= 1 << bit_idx;
             }
         }
@@ -295,7 +295,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     /// For ties: random 1 or 0
     pub fn bundle(vectors: &[&Self]) -> Self {
         const BITS_PER_USIZE: usize = usize::BITS as usize;
-        let mut a = vec![0usize; N_USIZE * 64]; // vote counter per bit
+        let mut a = vec![0usize; N_USIZE * BITS_PER_USIZE]; // vote counter per bit
         let mut r = Self::zero(); // result vector
 
         for i in 0..N_USIZE {
@@ -337,6 +337,43 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         line.push('\n');
 
         writer.write_all(line.as_bytes())
+    }
+
+    /// Render the hypervector as a Braille block of `width` characters per line.
+    /// Each Braille char encodes 8 bits (2 cols × 4 rows, column-major).
+    pub fn to_braille(&self, width: usize) -> String {
+        let bits = self.as_u8_vec(); // already in order: word0 lsb first
+        let total_chars = (bits.len() + 7) / 8;
+        let width = width.max(1);
+        let height = (total_chars + width - 1) / width;
+
+        let mut out = String::with_capacity(height * (width * 3 + 1)); // UTF-8: braille = 3 bytes
+
+        for row in 0..height {
+            for col in 0..width {
+                let char_idx = row * width + col;
+                let bit_base = char_idx * 8;
+
+                // Dot-to-bit mapping (column-major, standard Braille):
+                // dot1=bit0, dot2=bit1, dot3=bit2, dot7=bit6  (left col)
+                // dot4=bit3, dot5=bit4, dot6=bit5, dot8=bit7  (right col)
+                let mut offset = 0u32;
+                let dot_weights: [u32; 8] = [1, 2, 4, 64, 8, 16, 32, 128];
+                for (k, &w) in dot_weights.iter().enumerate() {
+                    let bit_idx = bit_base + k;
+                    if bit_idx < bits.len() && bits[bit_idx] != 0 {
+                        offset += w;
+                    }
+                }
+                out.push(char::from_u32(0x2800 + offset).unwrap());
+            }
+            out.push('\n');
+        }
+        out
+    }
+
+    pub fn diff_braille(&self, other: &Self, width: usize) -> String {
+        self.multiply(other).to_braille(width)
     }
 }
 

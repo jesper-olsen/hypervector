@@ -252,7 +252,7 @@ impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
     }
 
     fn finalize(&self) -> RealHDV<N> {
-        let data: [f64; N] = std::array::from_fn(|i| self.sum[i] / (self.n as f64).sqrt());
+        let data: [f64; N] = std::array::from_fn(|i| self.sum[i] / self.n.sqrt());
         RealHDV { data }
     }
 }

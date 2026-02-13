@@ -148,9 +148,7 @@ impl<const DIM: usize> BipolarHDV<DIM> {
                 1
             } else if s < 0 {
                 -1
-            } else {
-                if rand::random() { 1 } else { -1 }
-            };
+            } else if rand::random() { 1 } else { -1 };
         }
         Self { data }
     }
