@@ -20,19 +20,6 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     fn ident() -> Self {
         BinaryHDV { data: [0; N_USIZE] }
     }
-    fn from_slice(slice: &[f32]) -> Self {
-        let dim = N_USIZE * usize::BITS as usize;
-        assert!(slice.len() <= dim);
-        let mut hdv = Self::zero();
-        for (i, e) in slice.iter().enumerate() {
-            let word_idx = i / 64;
-            let bit_idx = i % 64;
-            if *e > 0.5 {
-                hdv.data[word_idx] |= 1 << bit_idx;
-            }
-        }
-        hdv
-    }
 
     fn distance(&self, other: &Self) -> f32 {
         self.hamming_distance(other) as f32 / (N_USIZE * usize::BITS as usize) as f32
@@ -162,6 +149,20 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
 
 impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     pub const DIM: usize = N_USIZE * usize::BITS as usize;
+
+    fn from_slice(slice: &[u8]) -> Self {
+        let dim = N_USIZE * usize::BITS as usize;
+        assert!(slice.len() <= dim);
+        let mut hdv = Self::zero();
+        for (i, e) in slice.iter().enumerate() {
+            let word_idx = i / 64;
+            let bit_idx = i % 64;
+            if *e != 0 {
+                hdv.data[word_idx] |= 1 << bit_idx;
+            }
+        }
+        hdv
+    }
 
     pub fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
         let data = std::array::from_fn(|_| rng.next_u64() as usize);
@@ -387,4 +388,28 @@ pub fn save_hdvs_to_csv<const N: usize>(
         hdv.write_csv(&mut writer)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::binary_hdv::{BinaryAccumulator, BinaryHDV};
+    use crate::{Accumulator, HyperVector};
+
+    #[test]
+    fn test_accumulate() {
+        let mut acc = BinaryAccumulator::<5>::default();
+        let v1 = BinaryHDV::<5>::from_slice(&[1, 0, 1, 0, 0]);
+        let v2 = BinaryHDV::<5>::from_slice(&[1, 0, 0, 0, 0]);
+        let v3 = BinaryHDV::<5>::from_slice(&[1, 0, 0, 1, 0]);
+        let expected = BinaryHDV::<5>::from_slice(&[1, 0, 0, 0, 0]);
+
+        acc.add(&v1, 1.0);
+        acc.add(&v2, 1.0);
+        acc.add(&v3, 1.0);
+        let result = acc.finalize();
+        assert_eq!(result, expected);
+
+        let result = BinaryHDV::<5>::bundle(&[&v1, &v2, &v3]);
+        assert_eq!(result, expected);
+    }
 }

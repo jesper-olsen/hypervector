@@ -33,18 +33,6 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         }
     }
 
-    fn from_slice(slice: &[f32]) -> Self {
-        assert!(slice.len() <= N);
-        let data = std::array::from_fn(|i| {
-            if i < slice.len() {
-                slice[i] as f64
-            } else {
-                0.0
-            }
-        });
-        Self { data }
-    }
-
     fn distance(&self, other: &Self) -> f32 {
         self.distance_cosine_sim(other)
         //self.dot(other) as f32
@@ -115,6 +103,18 @@ impl<const N: usize> HyperVector for RealHDV<N> {
 }
 
 impl<const N: usize> RealHDV<N> {
+    pub fn from_slice(slice: &[f32]) -> Self {
+        assert!(slice.len() <= N);
+        let data = std::array::from_fn(|i| {
+            if i < slice.len() {
+                slice[i] as f64
+            } else {
+                0.0
+            }
+        });
+        Self { data }
+    }
+
     fn _bind_circular_convolution(&self, other: &Self) -> Self {
         // Performs circular convolution using the direct, time-domain formula:
         // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]
@@ -259,8 +259,8 @@ impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
 
 #[cfg(test)]
 mod tests {
-    use super::RealHDV;
-    use crate::HyperVector;
+    use super::{RealAccumulator, RealHDV};
+    use crate::{Accumulator, HyperVector};
 
     use mersenne_twister_rs::MersenneTwister64;
 

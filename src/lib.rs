@@ -32,7 +32,6 @@ pub trait HyperVector: Sized {
     /// - Binary: all 0s (XOR identity)
     /// - Bipolar: all +1s (multiplicative identity)
     fn ident() -> Self;
-    fn from_slice(slice: &[f32]) -> Self;
     fn distance(&self, other: &Self) -> f32;
     fn bind(&self, other: &Self) -> Self;
     fn unbind(&self, other: &Self) -> Self;
@@ -141,28 +140,8 @@ pub fn example_mexican_dollar<T: HyperVector>() {
 mod tests {
     use crate::{
         Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
-        complex_hdv::ComplexHDV, real_hdv::RealHDV,
+        complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV,
     };
-
-    fn test_accumulate<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>()
-    where
-        T::Accumulator: Accumulator<T> + Default,
-    {
-        let mut acc = T::Accumulator::default();
-        let v1 = T::from_slice(&[1.0, -1.0, 1.0, -1.0, -1.0]);
-        let v2 = T::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
-        let v3 = T::from_slice(&[1.0, -1.0, -1.0, 1.0, -1.0]);
-        let expected = T::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
-
-        acc.add(&v1, 1.0);
-        acc.add(&v2, 1.0);
-        acc.add(&v3, 1.0);
-        let result = acc.finalize();
-        assert_eq!(result, expected);
-
-        let result = T::bundle(&[&v1, &v2, &v3]);
-        assert_eq!(result, expected);
-    }
 
     fn test_bind_unbind<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>(thr: f32) {
         //let mut rng = MersenneTwister64::new(42);
@@ -177,13 +156,8 @@ mod tests {
     }
 
     #[test]
-    fn test_bipolar_accumulate() {
-        test_accumulate::<BipolarHDV<5>>();
-    }
-
-    #[test]
-    fn test_binary_accumulate() {
-        test_accumulate::<BinaryHDV<64>>();
+    fn test_modular_bind_unbind() {
+        test_bind_unbind::<ModularHDV<256>>(0.0);
     }
 
     #[test]
@@ -221,9 +195,9 @@ mod tests {
         crate::example_mexican_dollar::<RealHDV<2048>>();
     }
 
-    // #[test]
-    // fn complex_mexican_dollar() {
-    //     // fails - noisy bind-unbind
-    //     crate::example_mexican_dollar::<ComplexHDV<512>>();
-    // }
+    //#[test]
+    //fn complex_mexican_dollar() {
+    //    // fails - noisy bind-unbind
+    //    crate::example_mexican_dollar::<ComplexHDV<512>>();
+    //}
 }

@@ -20,12 +20,6 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV { data: [1; DIM] }
     }
 
-    fn from_slice(slice: &[f32]) -> Self {
-        assert_eq!(slice.len(), DIM);
-        let data = std::array::from_fn(|i| if slice[i] >= 0.0 { 1 } else { -1 });
-        BipolarHDV { data }
-    }
-
     fn distance(&self, other: &Self) -> f32 {
         // 1.0 - cos angle between self and other
         // = 1.0 - dot(self,other)/(norm(self)*norm(other)
@@ -139,8 +133,14 @@ impl<const DIM: usize> BipolarHDV<DIM> {
         Self { data }
     }
 
+    pub fn from_slice(slice: &[i8]) -> Self {
+        assert_eq!(slice.len(), DIM);
+        let data = std::array::from_fn(|i| if slice[i] == 1 { 1 } else { -1 });
+        BipolarHDV { data }
+    }
+
     /// sum HDVs in l self and normalise
-    fn bundle(l: &[&BipolarHDV<DIM>]) -> Self {
+    pub fn bundle(l: &[&BipolarHDV<DIM>]) -> Self {
         let mut data = [0i8; DIM];
         for i in 0..DIM {
             let s: i64 = l.iter().map(|v| v.data[i] as i64).sum();
@@ -148,7 +148,11 @@ impl<const DIM: usize> BipolarHDV<DIM> {
                 1
             } else if s < 0 {
                 -1
-            } else if rand::random() { 1 } else { -1 };
+            } else if rand::random() {
+                1
+            } else {
+                -1
+            };
         }
         Self { data }
     }
@@ -164,5 +168,29 @@ impl<const DIM: usize> BipolarHDV<DIM> {
         let p2 = pb % DIM;
         let data = std::array::from_fn(|i| self.data[(i + p1) % DIM] * other.data[(i + p2) % DIM]);
         Self { data }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::bipolar_hdv::{BipolarAccumulator, BipolarHDV};
+    use crate::{Accumulator, HyperVector};
+
+    #[test]
+    fn test_accumulate() {
+        let mut acc = BipolarAccumulator::<5>::default();
+        let v1 = BipolarHDV::<5>::from_slice(&[1, -1, 1, -1, -1]);
+        let v2 = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
+        let v3 = BipolarHDV::<5>::from_slice(&[1, -1, -1, 1, -1]);
+        let expected = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
+
+        acc.add(&v1, 1.0);
+        acc.add(&v2, 1.0);
+        acc.add(&v3, 1.0);
+        let result = acc.finalize();
+        assert_eq!(result, expected);
+
+        let result = BipolarHDV::<5>::bundle(&[&v1, &v2, &v3]);
+        assert_eq!(result, expected);
     }
 }

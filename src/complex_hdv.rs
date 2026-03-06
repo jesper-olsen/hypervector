@@ -1,4 +1,5 @@
 use crate::{Accumulator, HyperVector};
+use rand::Rng;
 use rand_core::RngCore;
 use rand_distr::{Distribution, Normal};
 use rustfft::{FftPlanner, num_complex::Complex};
@@ -56,15 +57,6 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
                 }
             }),
         }
-    }
-
-    fn from_slice(slice: &[f32]) -> Self {
-        let data = std::array::from_fn(|i| {
-            let re = slice.get(2 * i).copied().unwrap_or(0.0) as f64;
-            let im = slice.get(2 * i + 1).copied().unwrap_or(0.0) as f64;
-            Complex::new(re, im)
-        });
-        Self { data }
     }
 
     fn distance(&self, other: &Self) -> f32 {
@@ -157,6 +149,26 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
 }
 
 impl<const N: usize> ComplexHDV<N> {
+    pub fn from_slice(slice: &[f32]) -> Self {
+        let data = std::array::from_fn(|i| {
+            let re = slice.get(2 * i).copied().unwrap_or(0.0) as f64;
+            let im = slice.get(2 * i + 1).copied().unwrap_or(0.0) as f64;
+            Complex::new(re, im)
+        });
+        Self { data }
+    }
+
+    pub fn normalise(&mut self) {
+        let norm = self
+            .data
+            .iter()
+            .map(|e| e.norm_sqr())
+            .sum::<f64>()
+            .sqrt()
+            .max(1e-12); // avoid division by zero
+        self.data.iter_mut().for_each(|e| *e /= norm);
+    }
+
     fn _bind_circular_convolution(&self, other: &Self) -> Self {
         // Performs circular convolution using the direct, time-domain formula:
         // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]
@@ -259,17 +271,6 @@ impl<const N: usize> ComplexHDV<N> {
         self.permute(N - (by % N))
     }
 
-    pub fn normalise(&mut self) {
-        let norm = self
-            .data
-            .iter()
-            .map(|e| e.norm_sqr())
-            .sum::<f64>()
-            .sqrt()
-            .max(1e-12); // avoid division by zero
-        self.data.iter_mut().for_each(|e| *e /= norm);
-    }
-
     pub fn distance_dot(&self, other: &Self) -> f64 {
         // Hermitian dot product: z · w̅
         self.data
@@ -331,13 +332,47 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
         let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / self.n.sqrt());
         ComplexHDV { data }
     }
+
+    //fn finalize(&self) -> ComplexHDV<N> {
+    //    let mut data = [Complex::new(0.0, 0.0); N];
+    //    for i in 0..N {
+    //        let val = self.sum[i];
+    //        let mag = (val.re * val.re + val.im * val.im).sqrt();
+
+    //        if mag > 1e-12 {
+    //            // Project back to the unit circle: Phase is preserved, magnitude becomes 1.0
+    //            data[i] = Complex::new(val.re / mag, val.im / mag);
+    //        } else {
+    //            data[i] = Complex::new(0.0, 0.0);
+    //        }
+    //    }
+    //    ComplexHDV { data }
+    //}
 }
 
 #[cfg(test)]
 mod tests {
     use super::ComplexHDV;
-    use crate::HyperVector;
+    use crate::complex_hdv::ComplexAccumulator;
+    use crate::{Accumulator, HyperVector};
     use mersenne_twister_rs::MersenneTwister64;
+
+    fn test_accumulate() {
+        let mut acc = ComplexAccumulator::<5>::default();
+        let v1 = ComplexHDV::<5>::from_slice(&[1.0, -1.0, 1.0, -1.0, -1.0]);
+        let v2 = ComplexHDV::<5>::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
+        let v3 = ComplexHDV::<5>::from_slice(&[1.0, -1.0, -1.0, 1.0, -1.0]);
+        let expected = ComplexHDV::<5>::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
+
+        acc.add(&v1, 1.0);
+        acc.add(&v2, 1.0);
+        acc.add(&v3, 1.0);
+        let result = acc.finalize();
+        assert_eq!(result, expected);
+
+        let result = ComplexHDV::<5>::bundle(&[&v1, &v2, &v3]);
+        assert_eq!(result, expected);
+    }
 
     #[test]
     fn bind_random_length() {
