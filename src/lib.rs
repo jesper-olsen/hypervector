@@ -1,6 +1,7 @@
 pub mod binary_hdv;
 pub mod bipolar_hdv;
 pub mod complex_hdv;
+pub mod modular_hdv;
 pub mod real_hdv;
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;
@@ -195,9 +196,14 @@ mod tests {
         crate::example_mexican_dollar::<RealHDV<2048>>();
     }
 
-    //#[test]
+    #[test]
     //fn complex_mexican_dollar() {
     //    // fails - noisy bind-unbind
-    //    crate::example_mexican_dollar::<ComplexHDV<512>>();
+    //    crate::example_mexican_dollar::<ComplexHDV<1000>>();
     //}
+
+    #[test]
+    fn modular_mexican_dollar() {
+        crate::example_mexican_dollar::<ModularHDV<10000>>();
+    }
 }

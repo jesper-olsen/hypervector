@@ -1,5 +1,5 @@
 use crate::{Accumulator, HyperVector};
-use rand::Rng;
+//use rand::Rng;
 use rand_core::RngCore;
 use rand_distr::{Distribution, Normal};
 use rustfft::{FftPlanner, num_complex::Complex};
