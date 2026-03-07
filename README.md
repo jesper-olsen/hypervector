@@ -8,6 +8,7 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 
 - Binary (0/1) and bipolar (+1/-1) hypervector types (HDVs).
 - Real and complex hypervector types (also known as HRRs or Holographic Reduced Representations).
+- Modular Composite Representation hypervector type.
 - Trait-based design for extensibility
 - Example applications: concept inference, text image classification
 
@@ -18,6 +19,7 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 3. "A Robust and Energy-Efficient Classifier Using Brain-Inspired Hyperdimensional Computing" Abbas Rahimi, Pentti Kanerva, Jan M. Rabaey, 2016
 4. ["Hyperdimensional Computing: An Algebra for Computing with Vectors", Pentti Kanerva, 2022](https://redwood.berkeley.edu/wp-content/uploads/2022/05/kanerva2022hdmss.pdf)
 5. ["Holographic Reduced Representations", Tony Plate, IEEE Transactions on Neural Networks, February, 1995, 6(3):623-41](https://www.researchgate.net/publication/5589577_Holographic_Reduced_Representations)
+6. ["Modular Composite Representation", J. Snaider S. Franklin, 2014](https://digitalcommons.memphis.edu/ccrg_papers/32/)
 
 Run
 -----
