@@ -1,7 +1,7 @@
 use clap::Parser;
 use hypervector::{
     Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
-    complex_hdv::ComplexHDV, real_hdv::RealHDV, modular_hdv::ModularHDV, save_hypervectors_to_csv,
+    complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV, save_hypervectors_to_csv,
 };
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;

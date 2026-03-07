@@ -201,22 +201,16 @@ impl<const N: usize> ComplexHDV<N> {
             // Clone the data (already complex)
             let mut a = self.data;
             let mut b = other.data;
-            let mut result = [Complex::new(0.0, 0.0); N];
 
             fft.process(&mut a);
             fft.process(&mut b);
 
-            for i in 0..N {
-                result[i] = a[i] * b[i];
-            }
-
+            let mut result = std::array::from_fn(|i| a[i] * b[i]);
             ifft.process(&mut result);
 
             // Scale by 1/N (standard for IFFT normalization)
             let scale = 1.0 / (N as f64);
-            for x in &mut result {
-                *x *= scale;
-            }
+            result.iter_mut().for_each(|x| *x *= scale);
             Self { data: result }
         })
     }
@@ -234,15 +228,12 @@ impl<const N: usize> ComplexHDV<N> {
             fft.process(&mut a);
             fft.process(&mut b);
 
-            let mut result = vec![Complex::new(0.0, 0.0); N];
-            for i in 0..N {
-                result[i] = a[i] * b[i].conj(); // <-- conjugate here!
-            }
+            let mut data: [Complex<f64>; N] = std::array::from_fn(|i| a[i] * b[i].conj());
 
-            ifft.process(&mut result);
+            ifft.process(&mut data);
 
             let scale = 1.0 / (N as f64);
-            let data = std::array::from_fn(|i| result[i] * scale);
+            data.iter_mut().for_each(|x| *x *= scale);
 
             Self { data }
         })
@@ -260,10 +251,7 @@ impl<const N: usize> ComplexHDV<N> {
     }
 
     fn permute(&self, by: usize) -> Self {
-        let mut data = [Complex::new(0.0, 0.0); N];
-        for i in 0..N {
-            data[i] = self.data[(i + by) % N];
-        }
+        let data = std::array::from_fn(|i| self.data[(i + by) % N]);
         Self { data }
     }
 

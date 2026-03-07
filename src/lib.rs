@@ -201,7 +201,6 @@ mod tests {
     //    // fails - noisy bind-unbind
     //    crate::example_mexican_dollar::<ComplexHDV<1000>>();
     //}
-
     #[test]
     fn modular_mexican_dollar() {
         crate::example_mexican_dollar::<ModularHDV<10000>>();

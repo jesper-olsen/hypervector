@@ -168,7 +168,7 @@ impl<const DIM: usize> ModularHDV<DIM> {
                 diff as u32
             }
         }
-        dist 
+        dist
     }
 }
 
@@ -188,9 +188,9 @@ mod tests {
     #[test]
     fn test_accumulate() {
         let mut acc = ModularAccumulator::<5>::default();
-        let v1 = ModularHDV::<5>::from_slice(&[1, 255,   1, 255, 255]);
+        let v1 = ModularHDV::<5>::from_slice(&[1, 255, 1, 255, 255]);
         let v2 = ModularHDV::<5>::from_slice(&[1, 255, 255, 255, 255]);
-        let v3 = ModularHDV::<5>::from_slice(&[1, 255, 255,   1, 255]);
+        let v3 = ModularHDV::<5>::from_slice(&[1, 255, 255, 1, 255]);
         ///let expected = ModularHDV::<5>::from_slice(&[1, 255, 255, 255, 255]);
         let expected = ModularHDV::<5>::from_slice(&[1, 255, 0, 0, 255]);
 
