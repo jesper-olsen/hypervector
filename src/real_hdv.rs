@@ -73,7 +73,7 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         for v in vectors {
             sum.iter_mut().zip(v.data.iter()).for_each(|(s, d)| *s += d);
         }
-        if vectors.len() > 0 {
+        if !vectors.is_empty() {
             sum.iter_mut()
                 .for_each(|e| *e /= (vectors.len() as f64).sqrt())
         }
@@ -115,24 +115,24 @@ impl<const N: usize> RealHDV<N> {
         Self { data }
     }
 
-    fn _bind_circular_convolution(&self, other: &Self) -> Self {
-        // Performs circular convolution using the direct, time-domain formula:
-        // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]
-        let mut result_data = [0.0; N];
+    //fn _bind_circular_convolution(&self, other: &Self) -> Self {
+    //    // Performs circular convolution using the direct, time-domain formula:
+    //    // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]
+    //    let mut result_data = [0.0; N];
 
-        for j in 0..N {
-            let mut sum = 0.0;
-            for k in 0..N {
-                // circular indexing - note
-                // -3 % 10 == -3
-                // -3.rem_euclid(10) == 7
-                let idx = (j as isize - k as isize).rem_euclid(N as isize) as usize;
-                sum += other.data[k] * self.data[idx];
-            }
-            result_data[j] = sum;
-        }
-        Self { data: result_data }
-    }
+    //    for j in 0..N {
+    //        let mut sum = 0.0;
+    //        for k in 0..N {
+    //            // circular indexing - note
+    //            // -3 % 10 == -3
+    //            // -3.rem_euclid(10) == 7
+    //            let idx = (j as isize - k as isize).rem_euclid(N as isize) as usize;
+    //            sum += other.data[k] * self.data[idx];
+    //        }
+    //        result_data[j] = sum;
+    //    }
+    //    Self { data: result_data }
+    //}
 
     fn bind_fft(&self, other: &Self) -> Self {
         // time domain -> frequency domain ; multiply ; frequency domain -> time domain
@@ -180,10 +180,7 @@ impl<const N: usize> RealHDV<N> {
     }
 
     fn permute(&self, by: usize) -> Self {
-        let mut data = [0.0; N];
-        for i in 0..N {
-            data[i] = self.data[(i + by) % N];
-        }
+        let data = std::array::from_fn(|i| self.data[(i + by) % N]);
         Self { data }
     }
 

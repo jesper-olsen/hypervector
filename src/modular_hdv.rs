@@ -53,13 +53,12 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     }
 
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let mut result = [0u8; DIM];
         let p1 = pa % DIM;
         let p2 = pb % DIM;
-        for i in 0..DIM {
-            result[i] = self.data[(i + p1) % DIM].wrapping_add(other.data[(i + p2) % DIM]);
-        }
-        Self { data: result }
+        let data = std::array::from_fn(|i| {
+            self.data[(i + p1) % DIM].wrapping_add(other.data[(i + p2) % DIM])
+        });
+        Self { data }
     }
 
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
@@ -91,21 +90,19 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
 
     fn write(&self, file: &mut File) -> std::io::Result<()> {
         // Write all bytes at once
-        let bytes: &[u8] =
-            unsafe { std::slice::from_raw_parts(self.data.as_ptr() as *const u8, DIM) };
+        let bytes: &[u8] = unsafe { std::slice::from_raw_parts(self.data.as_ptr(), DIM) };
         file.write_all(bytes)
     }
 
     fn read(file: &mut File) -> std::io::Result<Self> {
         let mut data = [0u8; DIM];
-        let buffer: &mut [u8] =
-            unsafe { std::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut u8, DIM) };
+        let buffer: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(data.as_mut_ptr(), DIM) };
         file.read_exact(buffer)?;
         Ok(Self { data })
     }
 }
 
-////#[derive(Debug, PartialEq, Clone, Copy)]
+//#[derive(Debug, PartialEq, Clone, Copy)]
 #[derive(Clone)]
 pub struct ModularAccumulator<const D: usize> {
     // We track sums of Sines and Cosines to find the circular mean
@@ -149,22 +146,20 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
     //}
 
     fn finalize(&self) -> ModularHDV<D> {
-        let mut result = [0u8; D];
-        for i in 0..D {
+        let data = std::array::from_fn(|i| {
             if self.sums_sin[i].abs() < f32::EPSILON && self.sums_cos[i].abs() < f32::EPSILON {
-                result[i] = 0;
-                continue;
+                0
+            } else {
+                let angle = self.sums_sin[i].atan2(self.sums_cos[i]);
+                // Normalize -PI..PI to 0.0..1.0
+                let normalized = (angle / (2.0 * std::f32::consts::PI)).rem_euclid(1.0);
+
+                // map to the nearest discrete u8 gate
+                let val = (normalized * 256.0).round() as u32;
+                (val % 256) as u8
             }
-
-            let angle = self.sums_sin[i].atan2(self.sums_cos[i]);
-            // Normalize -PI..PI to 0.0..1.0
-            let normalized = (angle / (2.0 * std::f32::consts::PI)).rem_euclid(1.0);
-
-            // map to the nearest discrete u8 gate
-            let val = (normalized * 256.0).round() as u32;
-            result[i] = (val % 256) as u8;
-        }
-        ModularHDV { data: result }
+        });
+        ModularHDV { data }
     }
 }
 
@@ -178,16 +173,12 @@ impl<const DIM: usize> ModularHDV<DIM> {
     // Lee distance: the shorter arc on the circle [0, 255]
     // https://en.wikipedia.org/wiki/Lee_distance
     fn lee_distance(&self, other: &Self) -> u32 {
-        let mut dist = 0u32;
-        for i in 0..DIM {
-            let diff = self.data[i].wrapping_sub(other.data[i]) as u32;
-            dist += if diff > 128 {
-                256 - (diff as u32)
-            } else {
-                diff as u32
-            }
-        }
-        dist
+        self.data
+            .iter()
+            .zip(other.data.iter())
+            .map(|(x1, x2)| x1.wrapping_sub(*x2) as u32)
+            .map(|df| if df > 128 { 256 - df } else { df })
+            .sum()
     }
 }
 

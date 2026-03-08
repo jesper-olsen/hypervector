@@ -106,18 +106,12 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
     }
 
     fn finalize(&self) -> BipolarHDV<DIM> {
-        let mut data = [0i8; DIM];
-        for i in 0..DIM {
-            data[i] = if self.sum[i] > 0.0 {
-                1
-            } else if self.sum[i] < 0.0 {
-                -1
-            } else if rand::random::<bool>() {
-                1
-            } else {
-                -1
-            }
-        }
+        let data = std::array::from_fn(|i| match self.sum[i] {
+            s if s > 0.0 => 1,
+            s if s < 0.0 => -1,
+            _ if rand::random() => 1,
+            _ => -1,
+        });
         BipolarHDV { data }
     }
 }
@@ -141,19 +135,15 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 
     /// sum HDVs in l self and normalise
     pub fn bundle(l: &[&BipolarHDV<DIM>]) -> Self {
-        let mut data = [0i8; DIM];
-        for i in 0..DIM {
+        let data = std::array::from_fn(|i| {
             let s: i64 = l.iter().map(|v| v.data[i] as i64).sum();
-            data[i] = if s > 0 {
-                1
-            } else if s < 0 {
-                -1
-            } else if rand::random() {
-                1
-            } else {
-                -1
-            };
-        }
+            match s {
+                _ if s > 0 => 1,
+                _ if s < 0 => -1,
+                _ if rand::random() => 1,
+                _ => -1,
+            }
+        });
         Self { data }
     }
 
@@ -174,7 +164,7 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 #[cfg(test)]
 mod tests {
     use crate::bipolar_hdv::{BipolarAccumulator, BipolarHDV};
-    use crate::{Accumulator, HyperVector};
+    use crate::Accumulator;
 
     #[test]
     fn test_accumulate() {

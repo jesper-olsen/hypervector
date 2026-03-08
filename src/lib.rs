@@ -140,8 +140,8 @@ pub fn example_mexican_dollar<T: HyperVector>() {
 #[cfg(test)]
 mod tests {
     use crate::{
-        HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
-        complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV,
+        HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, complex_hdv::ComplexHDV,
+        modular_hdv::ModularHDV, real_hdv::RealHDV,
     };
 
     fn test_bind_unbind<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>(thr: f32) {
