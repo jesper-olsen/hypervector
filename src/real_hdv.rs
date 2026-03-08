@@ -259,8 +259,8 @@ impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
 
 #[cfg(test)]
 mod tests {
-    use super::{RealAccumulator, RealHDV};
-    use crate::{Accumulator, HyperVector};
+    use super::RealHDV;
+    use crate::HyperVector;
 
     use mersenne_twister_rs::MersenneTwister64;
 

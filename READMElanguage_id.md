@@ -20,19 +20,19 @@ cargo run --release --bin main_li -- --mode binary --dim 1024 --ngram 3
 | Kind    | NGram | HDV dim | HDV bytes | Accuracy  | Time   |  
 | ------: | ----: | ------: | --------: | -------:  | -----: |  
 | bipolar | 3     |    1024 |      1024 | 91.3%     |    41s |
-| binary  | 3     |    1024 |        16 | 91.5%     |    12s |
+| binary  | 3     |    1024 |       128 | 91.5%     |    12s |
 | real    | 3     |    1024 |      8192 | 91.3%     |  1810s |
 | complex | 3     |    1024 |     16384 | 91.8%     |  1815s |
 | modular | 3     |    1024 |      1024 | 95.8%     |        |
 | bipolar | 3     |   10048 |     10048 | 96.5%     |  3030s |
-| binary  | 3     |   10048 |       157 | 98.7%     |   120s |
+| binary  | 3     |   10048 |      1256 | 98.7%     |   120s |
 | real    | 3     |   10048 |     80384 | 91.3%     |  1810s |
 | complex | 3     |   10048 |    160768 | 91.8%     |  1815s |
 | modular | 3     |   10048 |     10048 | 97.1%     |        |
-| binary  | 3     |  100032 |      1563 | 97.1%     |   576s |
-| binary  | 4     |  100032 |      1563 | 98.1%     |   555s |
-| binary  | 5     |  100032 |      1563 | 98.2%     |   561s |
-| binary  | 6     |  100032 |      1563 | 97.9%     |   576s |
+| binary  | 3     |  100032 |     12504 | 97.1%     |   576s |
+| binary  | 4     |  100032 |     12504 | 98.1%     |   555s |
+| binary  | 5     |  100032 |     12504 | 98.2%     |   561s |
+| binary  | 6     |  100032 |     12504 | 97.9%     |   576s |
 
 View the language space - computed with [t-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding) for a particular model:
 ```

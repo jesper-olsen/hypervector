@@ -73,7 +73,7 @@ pub fn create_language_profile_bind<T: HyperVector, R: RngCore>(
     let reader = io::BufReader::new(file);
     let mut acc = T::Accumulator::default();
 
-    for line in reader.lines().flatten() {
+    for line in reader.lines().map_while(Result::ok) {
         let chars: Vec<char> = line.chars().collect();
         if chars.len() < n {
             continue;

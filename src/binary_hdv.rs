@@ -150,7 +150,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
 impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     pub const DIM: usize = N_USIZE * usize::BITS as usize;
 
-    fn from_slice(slice: &[u8]) -> Self {
+    pub fn from_slice(slice: &[u8]) -> Self {
         let dim = N_USIZE * usize::BITS as usize;
         assert!(slice.len() <= dim);
         let mut hdv = Self::zero();
@@ -393,7 +393,7 @@ pub fn save_hdvs_to_csv<const N: usize>(
 #[cfg(test)]
 mod tests {
     use crate::binary_hdv::{BinaryAccumulator, BinaryHDV};
-    use crate::{Accumulator, HyperVector};
+    use crate::Accumulator;
 
     #[test]
     fn test_accumulate() {

@@ -140,7 +140,7 @@ pub fn example_mexican_dollar<T: HyperVector>() {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
+        HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
         complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV,
     };
 
@@ -196,7 +196,7 @@ mod tests {
         crate::example_mexican_dollar::<RealHDV<2048>>();
     }
 
-    #[test]
+    //#[test]
     //fn complex_mexican_dollar() {
     //    // fails - noisy bind-unbind
     //    crate::example_mexican_dollar::<ComplexHDV<1000>>();

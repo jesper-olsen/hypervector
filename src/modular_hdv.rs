@@ -1,3 +1,7 @@
+// Modular Composite Representation", J. Snaider S. Franklin, 2014]
+// https://digitalcommons.memphis.edu/ccrg_papers/32/
+// Currently only the r=256 case
+
 use crate::{Accumulator, HyperVector};
 use rand_core::RngCore;
 use std::array;
@@ -78,11 +82,26 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         self.data.iter().map(|&e| e as f32).collect()
     }
 
+    //fn write(&self, file: &mut File) -> std::io::Result<()> {
+    //    unimplemented!()
+    //}
+    //fn read(file: &mut File) -> std::io::Result<Self> {
+    //    unimplemented!()
+    //}
+
     fn write(&self, file: &mut File) -> std::io::Result<()> {
-        unimplemented!()
+        // Write all bytes at once
+        let bytes: &[u8] =
+            unsafe { std::slice::from_raw_parts(self.data.as_ptr() as *const u8, DIM) };
+        file.write_all(bytes)
     }
+
     fn read(file: &mut File) -> std::io::Result<Self> {
-        unimplemented!()
+        let mut data = [0u8; DIM];
+        let buffer: &mut [u8] =
+            unsafe { std::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut u8, DIM) };
+        file.read_exact(buffer)?;
+        Ok(Self { data })
     }
 }
 
@@ -191,7 +210,6 @@ mod tests {
         let v1 = ModularHDV::<5>::from_slice(&[1, 255, 1, 255, 255]);
         let v2 = ModularHDV::<5>::from_slice(&[1, 255, 255, 255, 255]);
         let v3 = ModularHDV::<5>::from_slice(&[1, 255, 255, 1, 255]);
-        ///let expected = ModularHDV::<5>::from_slice(&[1, 255, 255, 255, 255]);
         let expected = ModularHDV::<5>::from_slice(&[1, 255, 0, 0, 255]);
 
         acc.add(&v1, 1.0);
