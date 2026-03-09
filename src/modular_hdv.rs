@@ -7,7 +7,7 @@ use rand_core::RngCore;
 use std::fs::File;
 use std::io::{Read, Write};
 
-const R: u8 = 4; // bits per component (1-8), e.g. R=8 => MODULUS=256, HALF=128
+const R: u8 = 8; // bits per component (1-8), e.g. R=8 => MODULUS=256, HALF=128
 const MODULUS: u32 = 1u32 << R;
 const MASK: u8 = (MODULUS - 1) as u8;
 const HALF: u32 = MODULUS >> 1;
@@ -61,7 +61,7 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         //let data = std::array::from_fn(|_| (rng.next_u32() & (MASK as u32)) as u8);
         let mut data = [0u8; DIM];
         rng.fill_bytes(&mut data);
-        let data = data.map(|b| b & MASK); 
+        let data = data.map(|b| b & MASK);
         Self { data }
     }
 
@@ -70,7 +70,9 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     }
 
     fn distance(&self, other: &Self) -> f32 {
-        self.lee_distance(other) as f32 / (DIM * HALF as usize) as f32 // Normalised to [0.0; 1.0] 
+        // Max possible Lee distance is DIM * HALF
+        // Normalise to [0.0; 1.0]
+        self.lee_distance(other) as f32 / (DIM * HALF as usize) as f32
     }
 
     fn bind(&self, other: &Self) -> Self {
@@ -127,9 +129,7 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     }
 
     fn write(&self, file: &mut File) -> std::io::Result<()> {
-        // Write all bytes at once
-        let bytes: &[u8] = unsafe { std::slice::from_raw_parts(self.data.as_ptr(), DIM) };
-        file.write_all(bytes)
+        file.write_all(&self.data)
     }
 
     fn read(file: &mut File) -> std::io::Result<Self> {
@@ -148,12 +148,9 @@ pub struct ModularAccumulator<const D: usize> {
     sums_cos: [f32; D],
 }
 
-impl<const DIM: usize> Default for ModularAccumulator<DIM> {
+impl<const D: usize> Default for ModularAccumulator<D> {
     fn default() -> Self {
-        Self {
-            sums_sin: [0.0; DIM],
-            sums_cos: [0.0; DIM],
-        }
+        ModularAccumulator::new()
     }
 }
 
@@ -177,16 +174,6 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
         }
     }
 
-    //fn finalize(&self) -> ModularHDV<D> {
-    //    let mut result = [0u8; D];
-    //    for i in 0..D {
-    //        let angle = self.sums_sin[i].atan2(self.sums_cos[i]);
-    //        let normalized = (angle / (2.0 * std::f32::consts::PI)).rem_euclid(1.0);
-    //        result[i] = (normalized * 256.0) as u8;
-    //    }
-    //    ModularHDV { data: result }
-    //}
-
     fn finalize(&self) -> ModularHDV<D> {
         let data = std::array::from_fn(|i| {
             if self.sums_sin[i].abs() < f32::EPSILON && self.sums_cos[i].abs() < f32::EPSILON {
@@ -209,7 +196,7 @@ impl<const DIM: usize> ModularHDV<DIM> {
     pub fn from_slice(slice: &[u8]) -> Self {
         assert_eq!(slice.len(), DIM);
         let data = std::array::from_fn(|i| slice[i] & MASK); // all values in [0, MODULUS)
-        ModularHDV { data }
+        Self { data }
     }
 
     // Lee distance: the shorter arc on the circle [0, MODULUS-1]
