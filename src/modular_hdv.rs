@@ -4,9 +4,13 @@
 
 use crate::{Accumulator, HyperVector};
 use rand_core::RngCore;
-use std::array;
 use std::fs::File;
 use std::io::{Read, Write};
+
+const R: u8 = 8; // bits per component (1-8), e.g. R=8 => MODULUS=256, HALF=128
+const MODULUS: u32 = 1u32 << R;
+const MASK: u8 = (MODULUS - 1) as u8;
+const HALF: u32 = MODULUS >> 1;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct ModularHDV<const D: usize> {
@@ -16,9 +20,8 @@ pub struct ModularHDV<const D: usize> {
 impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     type Accumulator = ModularAccumulator<DIM>;
 
-    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
-        let mut data = [0u8; DIM];
-        rng.fill_bytes(&mut data);
+    fn random<Rng: RngCore + ?Sized>(rng: &mut Rng) -> Self {
+        let data = std::array::from_fn(|_| (rng.next_u32() & (MASK as u32)) as u8);
         Self { data }
     }
 
@@ -27,16 +30,20 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     }
 
     fn distance(&self, other: &Self) -> f32 {
-        self.lee_distance(other) as f32 / (DIM * 128) as f32 // Normalised to [0.0; 1.0] 
+        // Max possible Lee distance is DIM * HALF
+        // Normalise to [0.0; 1.0]
+        self.lee_distance(other) as f32 / (DIM * HALF as usize) as f32
     }
 
     fn bind(&self, other: &Self) -> Self {
-        let data: [u8; DIM] = array::from_fn(|i| self.data[i].wrapping_add(other.data[i]));
+        let data: [u8; DIM] =
+            std::array::from_fn(|i| self.data[i].wrapping_add(other.data[i]) & MASK);
         Self { data }
     }
 
     fn unbind(&self, other: &Self) -> Self {
-        let data: [u8; DIM] = array::from_fn(|i| self.data[i].wrapping_sub(other.data[i]));
+        let data: [u8; DIM] =
+            std::array::from_fn(|i| self.data[i].wrapping_sub(other.data[i]) & MASK);
         Self { data }
     }
 
@@ -56,7 +63,7 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         let p1 = pa % DIM;
         let p2 = pb % DIM;
         let data = std::array::from_fn(|i| {
-            self.data[(i + p1) % DIM].wrapping_add(other.data[(i + p2) % DIM])
+            self.data[(i + p1) % DIM].wrapping_add(other.data[(i + p2) % DIM]) & MASK
         });
         Self { data }
     }
@@ -81,23 +88,14 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         self.data.iter().map(|&e| e as f32).collect()
     }
 
-    //fn write(&self, file: &mut File) -> std::io::Result<()> {
-    //    unimplemented!()
-    //}
-    //fn read(file: &mut File) -> std::io::Result<Self> {
-    //    unimplemented!()
-    //}
-
     fn write(&self, file: &mut File) -> std::io::Result<()> {
-        // Write all bytes at once
-        let bytes: &[u8] = unsafe { std::slice::from_raw_parts(self.data.as_ptr(), DIM) };
-        file.write_all(bytes)
+        file.write_all(&self.data)
     }
 
     fn read(file: &mut File) -> std::io::Result<Self> {
         let mut data = [0u8; DIM];
-        let buffer: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(data.as_mut_ptr(), DIM) };
-        file.read_exact(buffer)?;
+        file.read_exact(&mut data)?;
+        let data = data.map(|b| b & MASK); // Re-mask in case file was written with different R
         Ok(Self { data })
     }
 }
@@ -110,12 +108,9 @@ pub struct ModularAccumulator<const D: usize> {
     sums_cos: [f32; D],
 }
 
-impl<const DIM: usize> Default for ModularAccumulator<DIM> {
+impl<const D: usize> Default for ModularAccumulator<D> {
     fn default() -> Self {
-        Self {
-            sums_sin: [0.0; DIM],
-            sums_cos: [0.0; DIM],
-        }
+        ModularAccumulator::new()
     }
 }
 
@@ -129,21 +124,11 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
 
     fn add(&mut self, v: &ModularHDV<D>, _weight: f64) {
         for i in 0..D {
-            let angle = (v.data[i] as f32 / 256.0) * 2.0 * std::f32::consts::PI;
+            let angle = (v.data[i] as f32 / MODULUS as f32) * 2.0 * std::f32::consts::PI;
             self.sums_sin[i] += angle.sin();
             self.sums_cos[i] += angle.cos();
         }
     }
-
-    //fn finalize(&self) -> ModularHDV<D> {
-    //    let mut result = [0u8; D];
-    //    for i in 0..D {
-    //        let angle = self.sums_sin[i].atan2(self.sums_cos[i]);
-    //        let normalized = (angle / (2.0 * std::f32::consts::PI)).rem_euclid(1.0);
-    //        result[i] = (normalized * 256.0) as u8;
-    //    }
-    //    ModularHDV { data: result }
-    //}
 
     fn finalize(&self) -> ModularHDV<D> {
         let data = std::array::from_fn(|i| {
@@ -155,8 +140,8 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
                 let normalized = (angle / (2.0 * std::f32::consts::PI)).rem_euclid(1.0);
 
                 // map to the nearest discrete u8 gate
-                let val = (normalized * 256.0).round() as u32;
-                (val % 256) as u8
+                let val = (normalized * MODULUS as f32).round() as u32;
+                (val % MODULUS) as u8
             }
         });
         ModularHDV { data }
@@ -166,8 +151,8 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
 impl<const DIM: usize> ModularHDV<DIM> {
     pub fn from_slice(slice: &[u8]) -> Self {
         assert_eq!(slice.len(), DIM);
-        let data = std::array::from_fn(|i| slice[i]);
-        ModularHDV { data }
+        let data = std::array::from_fn(|i| slice[i] & MASK); // all values in [0, MODULUS)
+        Self { data }
     }
 
     // Lee distance: the shorter arc on the circle [0, 255]
@@ -176,8 +161,8 @@ impl<const DIM: usize> ModularHDV<DIM> {
         self.data
             .iter()
             .zip(other.data.iter())
-            .map(|(x1, x2)| x1.wrapping_sub(*x2) as u32)
-            .map(|df| if df > 128 { 256 - df } else { df })
+            .map(|(u, v)| u.wrapping_sub(*v) as u32 & (MODULUS - 1))
+            .map(|df| if df > HALF { MODULUS - df } else { df })
             .sum()
     }
 }
