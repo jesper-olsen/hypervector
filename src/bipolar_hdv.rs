@@ -163,8 +163,8 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 
 #[cfg(test)]
 mod tests {
-    use crate::bipolar_hdv::{BipolarAccumulator, BipolarHDV};
     use crate::Accumulator;
+    use crate::bipolar_hdv::{BipolarAccumulator, BipolarHDV};
 
     #[test]
     fn test_accumulate() {

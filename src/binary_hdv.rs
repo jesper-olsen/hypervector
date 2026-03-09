@@ -295,28 +295,27 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     /// that bit position to 1 in the returned vector
     /// For ties: random 1 or 0
     pub fn bundle(vectors: &[&Self]) -> Self {
-        const BITS_PER_USIZE: usize = usize::BITS as usize;
-        let mut a = vec![0usize; N_USIZE * BITS_PER_USIZE]; // vote counter per bit
-        let mut r = Self::zero(); // result vector
+        let n_bits = N_USIZE * usize::BITS as usize;
+        let threshold = vectors.len(); // votes_for + votes_against == threshold
 
-        for i in 0..N_USIZE {
-            for j in 0..BITS_PER_USIZE {
-                for v in vectors {
-                    a[i * BITS_PER_USIZE + j] += (v.data[i] >> j) & 1usize;
-                }
+        let votes: Vec<usize> = (0..n_bits)
+            .map(|i| {
+                vectors
+                    .iter()
+                    .filter(|v| {
+                        (v.data[i / usize::BITS as usize] >> (i % usize::BITS as usize)) & 1 == 1
+                    })
+                    .count()
+            })
+            .collect();
+
+        let mut result = Self::zero();
+        for (i, &v) in votes.iter().enumerate() {
+            if v * 2 > threshold || (v * 2 == threshold && rand::random::<bool>()) {
+                result.data[i / usize::BITS as usize] |= 1 << (i % usize::BITS as usize);
             }
         }
-
-        for i in 0..N_USIZE * BITS_PER_USIZE {
-            let uidx = i / BITS_PER_USIZE;
-            let bidx = i % BITS_PER_USIZE;
-            let a0 = vectors.len() - a[i];
-            if a[i] > a0 || (a[i] == a0 && rand::random::<bool>()) {
-                r.data[uidx] |= 1usize << bidx;
-            }
-        }
-
-        r
+        result
     }
 
     pub fn write_csv(&self, writer: &mut impl Write) -> io::Result<()> {
@@ -344,9 +343,9 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     /// Each Braille char encodes 8 bits (2 cols × 4 rows, column-major).
     pub fn to_braille(&self, width: usize) -> String {
         let bits = self.as_u8_vec(); // already in order: word0 lsb first
-        let total_chars = (bits.len() + 7) / 8;
+        let total_chars = bits.len().div_ceil(8);
         let width = width.max(1);
-        let height = (total_chars + width - 1) / width;
+        let height = total_chars.div_ceil(width);
 
         let mut out = String::with_capacity(height * (width * 3 + 1)); // UTF-8: braille = 3 bytes
 

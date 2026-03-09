@@ -169,24 +169,24 @@ impl<const N: usize> ComplexHDV<N> {
         self.data.iter_mut().for_each(|e| *e /= norm);
     }
 
-    fn _bind_circular_convolution(&self, other: &Self) -> Self {
-        // Performs circular convolution using the direct, time-domain formula:
-        // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]
-        let mut result_data = [Complex::new(0.0, 0.0); N];
+    //fn _bind_circular_convolution(&self, other: &Self) -> Self {
+    //    // Performs circular convolution using the direct, time-domain formula:
+    //    // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]
+    //    let mut result_data = [Complex::new(0.0, 0.0); N];
 
-        for j in 0..N {
-            let mut sum = Complex::new(0.0, 0.0);
-            for k in 0..N {
-                // circular indexing - note
-                // -3 % 10 == -3
-                // -3.rem_euclid(10) == 7
-                let idx = (j as isize - k as isize).rem_euclid(N as isize) as usize;
-                sum += other.data[k] * self.data[idx];
-            }
-            result_data[j] = sum;
-        }
-        Self { data: result_data }
-    }
+    //    for j in 0..N {
+    //        let mut sum = Complex::new(0.0, 0.0);
+    //        for k in 0..N {
+    //            // circular indexing - note
+    //            // -3 % 10 == -3
+    //            // -3.rem_euclid(10) == 7
+    //            let idx = (j as isize - k as isize).rem_euclid(N as isize) as usize;
+    //            sum += other.data[k] * self.data[idx];
+    //        }
+    //        result_data[j] = sum;
+    //    }
+    //    Self { data: result_data }
+    //}
 
     fn bind_fft(&self, other: &Self) -> Self {
         // time domain -> frequency domain ; multiply ; frequency domain -> time domain
