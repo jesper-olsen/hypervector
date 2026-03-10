@@ -140,7 +140,6 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     }
 }
 
-//#[derive(Debug, PartialEq, Clone, Copy)]
 #[derive(Clone)]
 pub struct ModularAccumulator<const D: usize> {
     // We track sums of Sines and Cosines to find the circular mean
@@ -188,6 +187,7 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
                 (val % MODULUS) as u8
             }
         });
+        let nzero = data.iter().filter(|&e| *e == 0).count();
         ModularHDV { data }
     }
 }

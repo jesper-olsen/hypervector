@@ -34,3 +34,6 @@ and examine the results with
 
 #### Complex HDV
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/complex_hdv_combined.png)
+
+#### Modular HDV (R=256)
+![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/complex_hdv_combined.png)

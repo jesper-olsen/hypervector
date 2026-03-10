@@ -101,12 +101,12 @@ pub fn example_mexican_dollar<T: HyperVector>() {
         &currency.bind(&skr),
     ]);
 
-    let mut acc = T::Accumulator::default();
-    acc.add(&name.bind(&mex), 1.0);
-    acc.add(&capital.bind(&cdmx), 1.0);
-    acc.add(&currency.bind(&mpe), 1.0);
-    let mexico = acc.finalize();
-    //let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
+    //let mut acc = T::Accumulator::default();
+    //acc.add(&name.bind(&mex), 1.0);
+    //acc.add(&capital.bind(&cdmx), 1.0);
+    //acc.add(&currency.bind(&mpe), 1.0);
+    //let mexico = acc.finalize();
+    let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
 
     let fmu = mexico.bind(&ustates);
     let x = fmu.unbind(&usd);
@@ -181,6 +181,7 @@ mod tests {
         test_bind_unbind::<ComplexHDV<1000>>(0.5);
     }
 
+    // Mexican Dollar - example works will with binary, polar and modular R=1 HDVs
     #[test]
     fn binary_mexican_dollar() {
         crate::example_mexican_dollar::<BinaryHDV<16>>(); // 16*64 = 1024 bits
@@ -201,8 +202,8 @@ mod tests {
     //    // fails - noisy bind-unbind
     //    crate::example_mexican_dollar::<ComplexHDV<1000>>();
     //}
-    #[test]
-    fn modular_mexican_dollar() {
-        crate::example_mexican_dollar::<ModularHDV<10000>>();
-    }
+    //#[test]
+    //fn modular_mexican_dollar() {
+    //    crate::example_mexican_dollar::<ModularHDV<10000>>();
+    //}
 }

@@ -22,7 +22,7 @@ def plot_side_by_side(hdv):
     plt.savefig(f"ASSETS/{hdv}_hdv_combined.png")  # Save as PNG for README
     plt.close()
 
-for hdv in ["binary", "bipolar", "real", "complex"]: 
+for hdv in ["binary", "bipolar", "real", "complex", "modular"]: 
     #plot_heatmap(f"RESULTS/hdv_{hdv}_objects.csv", f"HDV: {hdv} – Object Similarities")
     #plot_heatmap(f"RESULTS/hdv_{hdv}_sentences.csv", f"HDV: {hdv} – Sentence Similarities")
     plot_side_by_side(hdv)

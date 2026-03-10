@@ -6,6 +6,7 @@
 use hypervector::binary_hdv::BinaryHDV;
 use hypervector::bipolar_hdv::BipolarHDV;
 use hypervector::complex_hdv::ComplexHDV;
+use hypervector::modular_hdv::ModularHDV;
 use hypervector::real_hdv::RealHDV;
 use hypervector::{HyperVector, gen_vars};
 use mersenne_twister_rs::MersenneTwister64;
@@ -141,5 +142,6 @@ fn main() -> std::io::Result<()> {
     plate::<BinaryHDV<16>>("RESULTS/hdv_binary")?; // 16*64 = 1024
     plate::<RealHDV<512>>("RESULTS/hdv_real")?;
     plate::<ComplexHDV<512>>("RESULTS/hdv_complex")?;
+    plate::<ModularHDV<512>>("RESULTS/hdv_modular")?;
     Ok(())
 }
