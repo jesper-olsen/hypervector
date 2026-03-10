@@ -101,11 +101,6 @@ pub fn example_mexican_dollar<T: HyperVector>() {
         &currency.bind(&skr),
     ]);
 
-    //let mut acc = T::Accumulator::default();
-    //acc.add(&name.bind(&mex), 1.0);
-    //acc.add(&capital.bind(&cdmx), 1.0);
-    //acc.add(&currency.bind(&mpe), 1.0);
-    //let mexico = acc.finalize();
     let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
 
     let fmu = mexico.bind(&ustates);
@@ -182,6 +177,7 @@ mod tests {
     }
 
     // Mexican Dollar - example works will with binary, polar and modular R=1 HDVs
+    // Real, Complex and modular R>1 affected by crosstalk which unbind doesn't remove.
     #[test]
     fn binary_mexican_dollar() {
         crate::example_mexican_dollar::<BinaryHDV<16>>(); // 16*64 = 1024 bits
