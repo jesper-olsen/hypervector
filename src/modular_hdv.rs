@@ -187,7 +187,6 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
                 (val % MODULUS) as u8
             }
         });
-        let nzero = data.iter().filter(|&e| *e == 0).count();
         ModularHDV { data }
     }
 }
@@ -217,51 +216,4 @@ impl<const DIM: usize> ModularHDV<DIM> {
             .map(|(u, v)| LEE[(u.wrapping_sub(*v) & MASK) as usize] as u32)
             .sum()
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::modular_hdv::{MASK, ModularAccumulator, ModularHDV};
-    use crate::{Accumulator, HyperVector};
-    use mersenne_twister_rs::MersenneTwister64;
-
-    //#[test]
-    //fn test_bind() {
-    //    let v1 = ModularHDV::<2>::from_slice(&[100, 200]);
-    //    let v2 = ModularHDV::<2>::from_slice(&[120, 240]);
-    //    let v3 = v1.bind(&v2);
-    //    assert_eq!(&v3.data, &[220, 184]);
-    //}
-
-    //#[test]
-    //fn test_modular_signal_strength() {
-    //    let mut mt = MersenneTwister64::new(42);
-    //    let a = ModularHDV::<10000>::random(&mut mt);
-    //    let b = ModularHDV::<10000>::random(&mut mt);
-    //    let c = a.bind(&b).unbind(&b);
-    //    println!("distance a to bind/unbind: {}", a.distance(&c));
-    //
-    //    // Also test bundle fidelity
-    //    let d = ModularHDV::<10000>::bundle(&[&a, &b]);
-    //    println!("distance a to bundle([a,b]): {}", a.distance(&d));
-    //    assert!(false);
-    //}
-
-    //#[test]
-    //fn test_accumulate() {
-    //    let mut acc = ModularAccumulator::<5>::default();
-    //    let v1 = ModularHDV::<5>::from_slice(&[1, MASK,    1, MASK, MASK]);
-    //    let v2 = ModularHDV::<5>::from_slice(&[1, MASK, MASK, MASK, MASK]);
-    //    let v3 = ModularHDV::<5>::from_slice(&[1, MASK, MASK,    1, MASK]);
-    //    let expected = ModularHDV::<5>::from_slice(&[1, MASK,    0,    0, MASK]);
-
-    //    acc.add(&v1, 1.0);
-    //    acc.add(&v2, 1.0);
-    //    acc.add(&v3, 1.0);
-    //    let result = acc.finalize();
-    //    assert_eq!(result, expected);
-
-    //    let result = ModularHDV::<5>::bundle(&[&v1, &v2, &v3]);
-    //    assert_eq!(result, expected);
-    //}
 }
