@@ -42,6 +42,11 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV::multiply(self, other)
     }
 
+    fn inverse(&self) -> Self {
+        let data = self.data.clone();
+        Self { data }
+    }
+
     fn permute(&self, by: usize) -> Self {
         let data = std::array::from_fn(|i| self.data[(i + by) % DIM]);
         Self { data }

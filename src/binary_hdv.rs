@@ -33,6 +33,11 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         BinaryHDV::multiply(self, other)
     }
 
+    fn inverse(&self) -> Self {
+        let data = self.data.clone();
+        Self { data }
+    }
+
     fn permute(&self, by: usize) -> Self {
         let mut result = Self::zero();
         for i in 0..N_USIZE {

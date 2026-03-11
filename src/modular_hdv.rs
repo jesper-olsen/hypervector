@@ -87,6 +87,16 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         Self { data }
     }
 
+    fn inverse(&self) -> Self {
+        let m = 1u16 << R;
+        let data = std::array::from_fn(|i| {
+            let val = self.data[i] as u16;
+            // (m - val) % m handles the additive inverse in Z_m
+            ((m - val) % m) as u8
+        });
+        Self { data }
+    }
+
     fn permute(&self, by: usize) -> Self {
         let mut result = [0u8; DIM];
         let shift = by % DIM;

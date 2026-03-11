@@ -36,6 +36,7 @@ pub trait HyperVector: Sized {
     fn distance(&self, other: &Self) -> f32;
     fn bind(&self, other: &Self) -> Self;
     fn unbind(&self, other: &Self) -> Self;
+    fn inverse(&self) -> Self;
     fn permute(&self, by: usize) -> Self;
     fn unpermute(&self, by: usize) -> Self;
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
@@ -84,6 +85,7 @@ pub fn read_hypervectors<H: HyperVector>(mut file: File) -> std::io::Result<Vec<
     Ok(vec)
 }
 
+// Assumes self-inverse binding - a property BinaryHDV, BipolarHDV and ModularHDV (R=1) has.
 pub fn example_mexican_dollar<T: HyperVector>() {
     // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
     // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
@@ -117,6 +119,49 @@ pub fn example_mexican_dollar<T: HyperVector>() {
         ("mpe", mpe),
         ("skr", skr),
     ];
+    let mut ml = vocab[0].0;
+    let mut md = x.distance(&vocab[0].1);
+    println!("{ml} {md:?}");
+    for (label, v) in vocab.iter().skip(1) {
+        let d = x.distance(v);
+        println!("{label} {d:?}");
+        if d < md {
+            md = d;
+            ml = label;
+        }
+    }
+    println!("Nearest HDV is: {ml}\n\n");
+    assert_eq!(ml, "mpe", "Expected mpe");
+}
+
+// The general case - we don't assume self-inverse binding
+// See solution 2c, "Fully Distributed Representation", Pentti Kanerva, 1997
+pub fn example_mexican_dollar2<T: HyperVector>() {
+    let mut mt = MersenneTwister64::new(42);
+    gen_vars!(
+        &mut mt, T, name, capital, currency, swe, usa, mex, stockholm, wdc, cdmx, usd, mpe, skr
+    );
+
+    let ustates = T::bundle(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
+    let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
+
+    //let transformation = mexico.bind(&ustates.inverse());
+    let transformation = mexico.unbind(&ustates);
+
+    let x = transformation.bind(&usd);
+
+    let vocab = [
+        ("swe", swe),
+        ("usa", usa),
+        ("mex", mex),
+        ("stkhlm", stockholm),
+        ("wdc", wdc),
+        ("cdmx", cdmx),
+        ("usd", usd),
+        ("mpe", mpe),
+        ("skr", skr),
+    ];
+
     let mut ml = vocab[0].0;
     let mut md = x.distance(&vocab[0].1);
     println!("{ml} {md:?}");
@@ -190,16 +235,16 @@ mod tests {
 
     #[test]
     fn real_mexican_dollar() {
-        crate::example_mexican_dollar::<RealHDV<2048>>();
+        crate::example_mexican_dollar2::<RealHDV<2048>>();
     }
 
     //#[test]
     //fn complex_mexican_dollar() {
     //    // fails - noisy bind-unbind
-    //    crate::example_mexican_dollar::<ComplexHDV<1000>>();
+    //    crate::example_mexican_dollar2::<ComplexHDV<1000>>();
     //}
-    //#[test]
-    //fn modular_mexican_dollar() {
-    //    crate::example_mexican_dollar::<ModularHDV<10000>>();
-    //}
+    #[test]
+    fn modular_mexican_dollar() {
+        crate::example_mexican_dollar2::<ModularHDV<10000>>();
+    }
 }

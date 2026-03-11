@@ -81,6 +81,10 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         // h
     }
 
+    fn inverse(&self) -> Self {
+        self.approx_inverse()
+    }
+
     fn permute(&self, by: usize) -> Self {
         self.permute(by)
     }
