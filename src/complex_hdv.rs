@@ -345,8 +345,7 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
 #[cfg(test)]
 mod tests {
     use super::ComplexHDV;
-    use crate::complex_hdv::ComplexAccumulator;
-    use crate::{Accumulator, HyperVector};
+    use crate::HyperVector;
     use mersenne_twister_rs::MersenneTwister64;
 
     #[test]

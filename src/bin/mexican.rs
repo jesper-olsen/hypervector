@@ -4,7 +4,7 @@
 
 use hypervector::{
     binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, complex_hdv::ComplexHDV,
-    example_mexican_dollar, example_mexican_dollar2, modular_hdv::ModularHDV, real_hdv::RealHDV,
+    example_mexican_dollar, modular_hdv::ModularHDV, real_hdv::RealHDV,
 };
 
 fn main() {
@@ -16,11 +16,11 @@ fn main() {
     crate::example_mexican_dollar::<BipolarHDV<10000>>();
     println!("ComplexHDV");
     println!("=========");
-    crate::example_mexican_dollar2::<ComplexHDV<2048>>();
+    crate::example_mexican_dollar::<ComplexHDV<2048>>();
     println!("RealHDV");
     println!("=========");
-    crate::example_mexican_dollar2::<RealHDV<2048>>();
+    crate::example_mexican_dollar::<RealHDV<2048>>();
     println!("ModularHDV");
     println!("=========");
-    crate::example_mexican_dollar2::<ModularHDV<10000>>();
+    crate::example_mexican_dollar::<ModularHDV<10000>>();
 }

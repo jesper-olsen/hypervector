@@ -99,7 +99,6 @@ pub fn cleanup<'a, T: HyperVector>(query: &T, vocab: &'a [(&str, T)]) -> &'a str
     best_label
 }
 
-// Assumes self-inverse binding - a property BinaryHDV, BipolarHDV and ModularHDV (R=1) has.
 pub fn example_mexican_dollar<T: HyperVector>() {
     // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
     // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
@@ -111,48 +110,9 @@ pub fn example_mexican_dollar<T: HyperVector>() {
     );
 
     let ustates = T::bundle(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
-    let _sweden = T::bundle(&[
-        &name.bind(&swe),
-        &capital.bind(&stockholm),
-        &currency.bind(&skr),
-    ]);
-
     let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
 
-    let fmu = mexico.bind(&ustates);
-    let x = fmu.unbind(&usd);
-
-    let vocab = [
-        ("swe", swe),
-        ("usa", usa),
-        ("mex", mex),
-        ("stkhlm", stockholm),
-        ("wdc", wdc),
-        ("cdmx", cdmx),
-        ("usd", usd),
-        ("mpe", mpe),
-        ("skr", skr),
-    ];
-
-    let ml = cleanup(&x, &vocab);
-    println!("Nearest HDV is: {ml}\n\n");
-    assert_eq!(ml, "mpe", "Expected mpe");
-}
-
-// The general case - we don't assume self-inverse binding
-// See solution 2c, "Fully Distributed Representation", Pentti Kanerva, 1997
-pub fn example_mexican_dollar2<T: HyperVector>() {
-    let mut mt = MersenneTwister64::new(42);
-    gen_vars!(
-        &mut mt, T, name, capital, currency, swe, usa, mex, stockholm, wdc, cdmx, usd, mpe, skr
-    );
-
-    let ustates = T::bundle(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
-    let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
-
-    //let transformation = mexico.bind(&ustates.inverse());
-    let transformation = mexico.unbind(&ustates);
-
+    let transformation = mexico.bind(&ustates.inverse());
     let x = transformation.bind(&usd);
 
     let vocab = [
@@ -228,16 +188,16 @@ mod tests {
 
     #[test]
     fn real_mexican_dollar() {
-        crate::example_mexican_dollar2::<RealHDV<2048>>();
+        crate::example_mexican_dollar::<RealHDV<2048>>();
     }
 
     #[test]
     fn complex_mexican_dollar() {
-        crate::example_mexican_dollar2::<ComplexHDV<1000>>();
+        crate::example_mexican_dollar::<ComplexHDV<1000>>();
     }
 
     #[test]
     fn modular_mexican_dollar() {
-        crate::example_mexican_dollar2::<ModularHDV<10000>>();
+        crate::example_mexican_dollar::<ModularHDV<10000>>();
     }
 }
