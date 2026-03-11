@@ -3,8 +3,8 @@
 // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
 
 use hypervector::{
-    binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, example_mexican_dollar,
-    example_mexican_dollar2, modular_hdv::ModularHDV, real_hdv::RealHDV, complex_hdv::ComplexHDV,
+    binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, complex_hdv::ComplexHDV,
+    example_mexican_dollar, example_mexican_dollar2, modular_hdv::ModularHDV, real_hdv::RealHDV,
 };
 
 fn main() {

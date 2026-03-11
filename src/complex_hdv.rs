@@ -349,23 +349,6 @@ mod tests {
     use crate::{Accumulator, HyperVector};
     use mersenne_twister_rs::MersenneTwister64;
 
-    fn test_accumulate() {
-        let mut acc = ComplexAccumulator::<5>::default();
-        let v1 = ComplexHDV::<5>::from_slice(&[1.0, -1.0, 1.0, -1.0, -1.0]);
-        let v2 = ComplexHDV::<5>::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
-        let v3 = ComplexHDV::<5>::from_slice(&[1.0, -1.0, -1.0, 1.0, -1.0]);
-        let expected = ComplexHDV::<5>::from_slice(&[1.0, -1.0, -1.0, -1.0, -1.0]);
-
-        acc.add(&v1, 1.0);
-        acc.add(&v2, 1.0);
-        acc.add(&v3, 1.0);
-        let result = acc.finalize();
-        assert_eq!(result, expected);
-
-        let result = ComplexHDV::<5>::bundle(&[&v1, &v2, &v3]);
-        assert_eq!(result, expected);
-    }
-
     #[test]
     fn bind_random_length() {
         let mut mt = MersenneTwister64::new(42);

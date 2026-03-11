@@ -85,6 +85,20 @@ pub fn read_hypervectors<H: HyperVector>(mut file: File) -> std::io::Result<Vec<
     Ok(vec)
 }
 
+pub fn cleanup<'a, T: HyperVector>(query: &T, vocab: &'a [(&str, T)]) -> &'a str {
+    let mut best_label = vocab[0].0;
+    let mut min_dist = query.distance(&vocab[0].1);
+
+    for (label, v) in vocab.iter().skip(1) {
+        let d = query.distance(v);
+        if d < min_dist {
+            min_dist = d;
+            best_label = label;
+        }
+    }
+    best_label
+}
+
 // Assumes self-inverse binding - a property BinaryHDV, BipolarHDV and ModularHDV (R=1) has.
 pub fn example_mexican_dollar<T: HyperVector>() {
     // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
@@ -119,17 +133,8 @@ pub fn example_mexican_dollar<T: HyperVector>() {
         ("mpe", mpe),
         ("skr", skr),
     ];
-    let mut ml = vocab[0].0;
-    let mut md = x.distance(&vocab[0].1);
-    println!("{ml} {md:?}");
-    for (label, v) in vocab.iter().skip(1) {
-        let d = x.distance(v);
-        println!("{label} {d:?}");
-        if d < md {
-            md = d;
-            ml = label;
-        }
-    }
+
+    let ml = cleanup(&x, &vocab);
     println!("Nearest HDV is: {ml}\n\n");
     assert_eq!(ml, "mpe", "Expected mpe");
 }
@@ -162,17 +167,7 @@ pub fn example_mexican_dollar2<T: HyperVector>() {
         ("skr", skr),
     ];
 
-    let mut ml = vocab[0].0;
-    let mut md = x.distance(&vocab[0].1);
-    println!("{ml} {md:?}");
-    for (label, v) in vocab.iter().skip(1) {
-        let d = x.distance(v);
-        println!("{label} {d:?}");
-        if d < md {
-            md = d;
-            ml = label;
-        }
-    }
+    let ml = cleanup(&x, &vocab);
     println!("Nearest HDV is: {ml}\n\n");
     assert_eq!(ml, "mpe", "Expected mpe");
 }
@@ -221,8 +216,6 @@ mod tests {
         test_bind_unbind::<ComplexHDV<1000>>(0.5);
     }
 
-    // Mexican Dollar - example works will with binary, polar and modular R=1 HDVs
-    // Real, Complex and modular R>1 affected by crosstalk which unbind doesn't remove.
     #[test]
     fn binary_mexican_dollar() {
         crate::example_mexican_dollar::<BinaryHDV<16>>(); // 16*64 = 1024 bits
@@ -238,11 +231,11 @@ mod tests {
         crate::example_mexican_dollar2::<RealHDV<2048>>();
     }
 
-    //#[test]
-    //fn complex_mexican_dollar() {
-    //    // fails - noisy bind-unbind
-    //    crate::example_mexican_dollar2::<ComplexHDV<1000>>();
-    //}
+    #[test]
+    fn complex_mexican_dollar() {
+        crate::example_mexican_dollar2::<ComplexHDV<1000>>();
+    }
+
     #[test]
     fn modular_mexican_dollar() {
         crate::example_mexican_dollar2::<ModularHDV<10000>>();
