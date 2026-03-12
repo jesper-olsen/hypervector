@@ -19,6 +19,7 @@ pub struct RealHDV<const N: usize> {
 
 impl<const N: usize> HyperVector for RealHDV<N> {
     type Accumulator = RealAccumulator<N>;
+    const DIM: usize = N;
 
     fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
         let stddev = 1.0 / (N as f64).sqrt();
@@ -31,6 +32,10 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         Self {
             data: std::array::from_fn(|i| if i == 0 { 1.0 } else { 0.0 }),
         }
+    }
+
+    fn blend(&self, other: &Self, indices: &[usize]) -> Self {
+        unimplemented!()
     }
 
     fn distance(&self, other: &Self) -> f32 {

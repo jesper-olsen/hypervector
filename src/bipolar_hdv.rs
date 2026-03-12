@@ -11,6 +11,7 @@ use std::io::{Read, Write};
 
 impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     type Accumulator = BipolarAccumulator<DIM>;
+    const DIM: usize = DIM;
 
     fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
         BipolarHDV::random(rng)
@@ -18,6 +19,10 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
 
     fn ident() -> Self {
         BipolarHDV { data: [1; DIM] }
+    }
+
+    fn blend(&self, other: &Self, indices: &[usize]) -> Self {
+        unimplemented!()
     }
 
     fn distance(&self, other: &Self) -> f32 {

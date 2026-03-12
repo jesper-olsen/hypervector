@@ -3,6 +3,7 @@ pub mod bipolar_hdv;
 pub mod complex_hdv;
 pub mod modular_hdv;
 pub mod real_hdv;
+pub mod encoding;
 use mersenne_twister_rs::MersenneTwister64;
 use rand_core::RngCore;
 use std::fs::File;
@@ -27,21 +28,32 @@ pub trait Accumulator<T: HyperVector> {
 
 pub trait HyperVector: Sized {
     type Accumulator: Default + Clone + Accumulator<Self>;
+    const DIM: usize;
 
     fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self;
     /// Returns the identity element of the hypervector space:
     /// - Binary: all 0s (XOR identity)
     /// - Bipolar: all +1s (multiplicative identity)
     fn ident() -> Self;
+
+    // blend two hypervectors by coping indices from other - rest from self
+    fn blend(&self, other: &Self, indices: &[usize]) -> Self;
+
     fn distance(&self, other: &Self) -> f32;
     fn bind(&self, other: &Self) -> Self;
     fn unbind(&self, other: &Self) -> Self;
     fn inverse(&self) -> Self;
     fn permute(&self, by: usize) -> Self;
     fn unpermute(&self, by: usize) -> Self;
+
+    /// permute and bind
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
+
+    /// permute and unbind
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
+
     fn bundle(vectors: &[&Self]) -> Self;
+
     fn unpack(&self) -> Vec<f32>;
     fn write(&self, file: &mut File) -> std::io::Result<()>;
     fn read(file: &mut File) -> std::io::Result<Self>;

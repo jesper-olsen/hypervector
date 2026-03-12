@@ -20,6 +20,7 @@ pub struct ComplexHDV<const N: usize> {
 
 impl<const N: usize> HyperVector for ComplexHDV<N> {
     type Accumulator = ComplexAccumulator<N>;
+    const DIM: usize = N;
 
     fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
         // Set stddev so that E[‖z‖^2] = 1
@@ -57,6 +58,10 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
                 }
             }),
         }
+    }
+
+    fn blend(&self, other: &Self, indices: &[usize]) -> Self {
+        unimplemented!()
     }
 
     fn distance(&self, other: &Self) -> f32 {

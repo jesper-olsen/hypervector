@@ -12,6 +12,7 @@ pub struct BinaryHDV<const N_USIZE: usize> {
 
 impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     type Accumulator = BinaryAccumulator<N_USIZE>;
+    const DIM: usize = N_USIZE * usize::BITS as usize;
 
     fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
         BinaryHDV::random(rng)
@@ -19,6 +20,30 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 
     fn ident() -> Self {
         BinaryHDV { data: [0; N_USIZE] }
+    }
+
+    /// Creates a new HDV by blending `self` and `other`
+    /// `indices` are bit positions where values from `other` are used.
+    fn blend(&self, other: &Self, indices: &[usize]) -> Self {
+        // Precompute masks per usize
+        let mut masks = [0usize; N_USIZE];
+        for &idx in indices {
+            let i = idx / (usize::BITS as usize);
+            let j = idx % (usize::BITS as usize);
+            masks[i] |= 1 << j;
+        }
+
+        // Apply masks in bulk
+        let mut data = self.data.clone();
+        for i in 0..N_USIZE {
+            if masks[i] != 0 {
+                // copy bits from `other` where mask=1
+                // and keep bits from `self` where mask=0
+                data[i] = (data[i] & !masks[i]) | (other.data[i] & masks[i]);
+            }
+        }
+
+        Self { data }
     }
 
     fn distance(&self, other: &Self) -> f32 {
@@ -153,8 +178,6 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
 }
 
 impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
-    pub const DIM: usize = N_USIZE * usize::BITS as usize;
-
     pub fn from_slice(slice: &[u8]) -> Self {
         let dim = N_USIZE * usize::BITS as usize;
         assert!(slice.len() <= dim);
@@ -194,31 +217,6 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
             }
         }
         bits
-    }
-
-    /// Creates a new HDV by blending `self` and `other`
-    /// `indices` are bit positions where values from `other` are used.
-    pub fn blend(&self, other: &Self, indices: &[usize]) -> Self {
-        // 1. Precompute masks per usize
-        let mut masks = [0usize; N_USIZE];
-        for &idx in indices {
-            let i = idx / (usize::BITS as usize);
-            let j = idx % (usize::BITS as usize);
-            masks[i] |= 1 << j;
-        }
-
-        // 2. Apply masks in bulk
-        let mut data = self.data.clone();
-        for i in 0..N_USIZE {
-            let mask = masks[i];
-            if mask != 0 {
-                // copy bits from `other` where mask=1
-                // and keep bits from `self` where mask=0
-                data[i] = (data[i] & !mask) | (other.data[i] & mask);
-            }
-        }
-
-        Self { data }
     }
 
     /// Creates a new HDV by cloning `self` and flipping `nbits` unique, random bits.

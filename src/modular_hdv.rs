@@ -56,6 +56,7 @@ pub struct ModularHDV<const D: usize> {
 
 impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     type Accumulator = ModularAccumulator<DIM>;
+    const DIM: usize = DIM;
 
     fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
         //let data = std::array::from_fn(|_| (rng.next_u32() & (MASK as u32)) as u8);
@@ -67,6 +68,10 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
 
     fn ident() -> Self {
         Self { data: [0u8; DIM] } // 0 is the additive identity for modulo arithmetic
+    }
+
+    fn blend(&self, other: &Self, indices: &[usize]) -> Self {
+        unimplemented!()
     }
 
     fn distance(&self, other: &Self) -> f32 {
