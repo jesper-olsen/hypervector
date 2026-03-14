@@ -1,5 +1,5 @@
 use crate::{Accumulator, HyperVector};
-use rand_core::RngCore;
+use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::cell::RefCell;
@@ -12,7 +12,7 @@ thread_local! {
     static FFT_PLANNER: RefCell<FftPlanner<f64>> = RefCell::new(FftPlanner::new());
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RealHDV<const N: usize> {
     pub data: [f64; N],
 }
@@ -21,7 +21,7 @@ impl<const N: usize> HyperVector for RealHDV<N> {
     type Accumulator = RealAccumulator<N>;
     const DIM: usize = N;
 
-    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+    fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         let stddev = 1.0 / (N as f64).sqrt();
         let normal = Normal::new(0.0, stddev).unwrap();
         let data = std::array::from_fn(|_| normal.sample(rng));
@@ -34,8 +34,13 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         }
     }
 
+    // blend two hypervectors by coping indices from other - rest from self
     fn blend(&self, other: &Self, indices: &[usize]) -> Self {
-        unimplemented!()
+        let mut data = self.data;
+        for &i in indices {
+            data[i] = other.data[i];
+        }
+        Self { data }
     }
 
     fn distance(&self, other: &Self) -> f32 {

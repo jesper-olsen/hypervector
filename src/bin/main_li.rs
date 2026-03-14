@@ -1,10 +1,10 @@
 use clap::Parser;
 use hypervector::{
-    Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
+    Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, cleanup,
     complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV, save_hypervectors_to_csv,
 };
 use mersenne_twister_rs::MersenneTwister64;
-use rand_core::RngCore;
+use rand::Rng;
 use std::collections::hash_map::HashMap;
 use std::collections::vec_deque::VecDeque;
 use std::fs::File;
@@ -29,7 +29,7 @@ const LANGUAGES: [&str; 22] = [
     "pl", "pt", "ro", "sk", "sl", "sv",
 ];
 
-pub fn create_language_profile<T: HyperVector, R: RngCore>(
+pub fn create_language_profile<T: HyperVector, R: Rng>(
     fname: &str,
     n: usize,
     symbols: &mut HashMap<char, T>,
@@ -63,7 +63,7 @@ pub fn create_language_profile<T: HyperVector, R: RngCore>(
 
 // like create_language_profile - use unbind to update ngrams
 // unbind is noisy for real/complex HDVs
-pub fn create_language_profile_bind<T: HyperVector, R: RngCore>(
+pub fn create_language_profile_bind<T: HyperVector, R: Rng>(
     fname: &str,
     n: usize,
     symbols: &mut HashMap<char, T>,
@@ -99,10 +99,13 @@ pub fn create_language_profile_bind<T: HyperVector, R: RngCore>(
     Ok(acc.finalize())
 }
 
-fn train<T: HyperVector, R: RngCore>(
+type SymbolMap<T> = HashMap<char, T>;
+type LanguageModel<T> = Vec<(&'static str, T)>;
+
+fn train<T: HyperVector, R: Rng>(
     n: usize,
     rng: &mut R,
-) -> Result<(HashMap<char, T>, Vec<(&'static str, T)>), io::Error> {
+) -> Result<(SymbolMap<T>, LanguageModel<T>), io::Error> {
     let mut symbols: HashMap<char, T> = HashMap::new();
     let mut languages: Vec<(&str, T)> = Vec::new();
     for (i, lxx) in LANGUAGES.iter().enumerate() {
@@ -114,7 +117,7 @@ fn train<T: HyperVector, R: RngCore>(
     Ok((symbols, languages))
 }
 
-fn test<T: HyperVector, R: RngCore>(
+fn test<T: HyperVector, R: Rng>(
     symbols: &mut HashMap<char, T>,
     languages: &[(&str, T)],
     n: usize,
@@ -130,18 +133,8 @@ fn test<T: HyperVector, R: RngCore>(
         for fname in glob::glob(&pattern).expect("wrong glob pattern") {
             let fname = fname.unwrap();
             let v = create_language_profile(fname.to_str().unwrap(), n, symbols, rng)?;
-            let mut min_lang = 0;
-            let b = &languages[0].1;
-            let mut dmin = T::distance(&v, b);
-            for (j, (_lang, b)) in languages.iter().enumerate().skip(1) {
-                let d = T::distance(&v, b);
-                if d < dmin {
-                    dmin = d;
-                    min_lang = j;
-                }
-            }
-            if &languages[min_lang].0 == lxx {
-                correct += 1;
+            if cleanup(&v, &languages) == *lxx {
+                correct += 1
             }
             total += 1;
         }
@@ -154,10 +147,10 @@ fn test<T: HyperVector, R: RngCore>(
     Ok(())
 }
 
-fn run<T: HyperVector + Copy>(n: usize) -> Result<(), io::Error> {
+fn run<T: HyperVector + Clone>(n: usize) -> Result<(), io::Error> {
     let mut mt = MersenneTwister64::new(42);
     let (mut symbols, languages) = train::<T, _>(n, &mut mt).expect("Training failed");
-    let model: Vec<T> = languages.iter().map(|(_label, hdv)| *hdv).collect();
+    let model: Vec<T> = languages.iter().map(|(_label, hdv)| hdv.clone()).collect();
     save_hypervectors_to_csv("RESULTS/model.csv", &model)?;
     test(&mut symbols, &languages, n, &mut mt)
 }

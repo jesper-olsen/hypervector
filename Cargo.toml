@@ -6,13 +6,11 @@ edition = "2024"
 [dependencies]
 clap = {version = "4.4", features = ["derive"]}
 glob = "0.3.2"
-rand = {version = "0.9.1", features = []}
 quaternion-rs = {git = "https://github.com/jesper-olsen/quaternion-rs" }
 mersenne-twister-rs = {git = "https://github.com/jesper-olsen/mersenne-twister-rs"}
 num-complex = "0.4.6"
-rand_core = "0.9.3"
-rand_distr = "0.5.1"
 rustfft = "6.4.0"
-
-
+rand = { version = "0.10.0", features = ["chacha"] }
+rand_core = "0.10.0"
+rand_distr = "0.6.0"
 

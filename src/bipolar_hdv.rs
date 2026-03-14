@@ -5,15 +5,31 @@
 
 use crate::{Accumulator, HyperVector};
 use rand::Rng;
-use rand_core::RngCore;
+use rand::RngExt;
 use std::fs::File;
 use std::io::{Read, Write};
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct BipolarHDV<const DIM: usize> {
+    data: [i8; DIM], // +1 or -1
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct BipolarAccumulator<const DIM: usize> {
+    sum: [f64; DIM],
+}
+
+impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     type Accumulator = BipolarAccumulator<DIM>;
     const DIM: usize = DIM;
 
-    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+    fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         BipolarHDV::random(rng)
     }
 
@@ -21,8 +37,13 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV { data: [1; DIM] }
     }
 
+    // blend two hypervectors by coping indices from other - rest from self
     fn blend(&self, other: &Self, indices: &[usize]) -> Self {
-        unimplemented!()
+        let mut data = self.data;
+        for &i in indices {
+            data[i] = other.data[i];
+        }
+        Self { data }
     }
 
     fn distance(&self, other: &Self) -> f32 {
@@ -48,7 +69,7 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     }
 
     fn inverse(&self) -> Self {
-        let data = self.data.clone();
+        let data = self.data;
         Self { data }
     }
 
@@ -93,17 +114,6 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct BipolarAccumulator<const DIM: usize> {
-    sum: [f64; DIM],
-}
-
-impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> {
     fn new() -> Self {
         Self { sum: [0.0; DIM] }
@@ -126,13 +136,8 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub struct BipolarHDV<const DIM: usize> {
-    data: [i8; DIM], // +1 or -1
-}
-
 impl<const DIM: usize> BipolarHDV<DIM> {
-    pub fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         let data = std::array::from_fn(|_| if rng.random_bool(0.5) { 1 } else { -1 });
         Self { data }
     }

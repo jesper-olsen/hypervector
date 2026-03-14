@@ -3,7 +3,7 @@
 // Currently only the r=256 case
 
 use crate::{Accumulator, HyperVector};
-use rand_core::RngCore;
+use rand::Rng;
 use std::fs::File;
 use std::io::{Read, Write};
 
@@ -58,7 +58,7 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     type Accumulator = ModularAccumulator<DIM>;
     const DIM: usize = DIM;
 
-    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+    fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         //let data = std::array::from_fn(|_| (rng.next_u32() & (MASK as u32)) as u8);
         let mut data = [0u8; DIM];
         rng.fill_bytes(&mut data);
@@ -70,8 +70,13 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         Self { data: [0u8; DIM] } // 0 is the additive identity for modulo arithmetic
     }
 
+    // blend two hypervectors by coping indices from other - rest from self
     fn blend(&self, other: &Self, indices: &[usize]) -> Self {
-        unimplemented!()
+        let mut data = self.data;
+        for &i in indices {
+            data[i] = other.data[i];
+        }
+        Self { data }
     }
 
     fn distance(&self, other: &Self) -> f32 {

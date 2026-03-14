@@ -1,11 +1,11 @@
 use crate::{Accumulator, HyperVector};
-use rand_core::RngCore;
+use rand::Rng;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};
 use std::mem::size_of;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BinaryHDV<const N_USIZE: usize> {
     pub data: [usize; N_USIZE],
 }
@@ -14,7 +14,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     type Accumulator = BinaryAccumulator<N_USIZE>;
     const DIM: usize = N_USIZE * usize::BITS as usize;
 
-    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+    fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         BinaryHDV::random(rng)
     }
 
@@ -34,7 +34,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         }
 
         // Apply masks in bulk
-        let mut data = self.data.clone();
+        let mut data = self.data;
         for i in 0..N_USIZE {
             if masks[i] != 0 {
                 // copy bits from `other` where mask=1
@@ -59,7 +59,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 
     fn inverse(&self) -> Self {
-        let data = self.data.clone();
+        let data = self.data;
         Self { data }
     }
 
@@ -192,7 +192,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         hdv
     }
 
-    pub fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         let data = std::array::from_fn(|_| rng.next_u64() as usize);
         Self { data }
     }
@@ -220,8 +220,8 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     }
 
     /// Creates a new HDV by cloning `self` and flipping `nbits` unique, random bits.
-    pub fn flip<R: RngCore + ?Sized>(&self, nbits: usize, rng: &mut R) -> Self {
-        let mut data = self.data.clone();
+    pub fn flip<R: Rng + ?Sized>(&self, nbits: usize, rng: &mut R) -> Self {
+        let mut data = self.data;
 
         let dim = Self::DIM;
 
@@ -237,7 +237,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         // Loop until we have selected the required number of unique bits.
         while flipped_indices.len() < bits_to_flip {
             // 1. Generate a random bit index in the range [0, DIM - 1].
-            // We use next_u64() and modulo for basic random range generation from RngCore.
+            // We use next_u64() and modulo for basic random range generation from Rng.
             let idx = (rng.next_u64() as usize) % dim;
 
             // 2. Check if the index is new. If it is, insert it and proceed to flip.

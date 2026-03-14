@@ -1,11 +1,14 @@
 pub mod binary_hdv;
 pub mod bipolar_hdv;
 pub mod complex_hdv;
+pub mod data;
+pub mod encoding;
 pub mod modular_hdv;
 pub mod real_hdv;
-pub mod encoding;
+pub mod tabular_encoder;
+
 use mersenne_twister_rs::MersenneTwister64;
-use rand_core::RngCore;
+use rand::Rng;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 
@@ -30,7 +33,7 @@ pub trait HyperVector: Sized {
     type Accumulator: Default + Clone + Accumulator<Self>;
     const DIM: usize;
 
-    fn random<R: RngCore + ?Sized>(rng: &mut R) -> Self;
+    fn random<R: Rng + ?Sized>(rng: &mut R) -> Self;
     /// Returns the identity element of the hypervector space:
     /// - Binary: all 0s (XOR identity)
     /// - Bipolar: all +1s (multiplicative identity)
@@ -59,7 +62,7 @@ pub trait HyperVector: Sized {
     fn read(file: &mut File) -> std::io::Result<Self>;
 }
 
-pub fn save_hypervectors_to_csv<H: HyperVector + Copy>(
+pub fn save_hypervectors_to_csv<H: HyperVector>(
     filename: &str,
     vectors: &[H],
 ) -> Result<(), std::io::Error> {
