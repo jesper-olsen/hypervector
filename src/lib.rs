@@ -139,7 +139,7 @@ pub fn cleanup<'a, T: HyperVector>(query: &T, vocab: &'a [(&str, T)]) -> &'a str
     best_label
 }
 
-pub fn nearest<T: HyperVector>(query: &T, candidates: &[T]) -> usize {
+pub fn nearest<T: HyperVector>(query: &T, candidates: &[T]) -> (usize, f32) {
     let mut best_idx = 0;
     let mut min_dist = query.distance(&candidates[0]);
     for (idx, v) in candidates.iter().enumerate().skip(1) {
@@ -149,7 +149,7 @@ pub fn nearest<T: HyperVector>(query: &T, candidates: &[T]) -> usize {
             best_idx = idx;
         }
     }
-    best_idx
+    (best_idx, min_dist)
 }
 
 pub fn example_mexican_dollar<T: HyperVector>() {

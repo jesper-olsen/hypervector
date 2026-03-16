@@ -95,8 +95,31 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         Self::pbind(self, pa, other, pb)
     }
 
+    /// count number of 1 bits for each bit position - if more than half are 1, then set
+    /// that bit position to 1 in the returned vector
+    /// For ties: random 1 or 0
     fn bundle(vectors: &[&Self]) -> Self {
-        BinaryHDV::bundle(vectors)
+        let n_bits = N_USIZE * usize::BITS as usize;
+        let threshold = vectors.len(); // votes_for + votes_against == threshold
+
+        let votes: Vec<usize> = (0..n_bits)
+            .map(|i| {
+                vectors
+                    .iter()
+                    .filter(|v| {
+                        (v.data[i / usize::BITS as usize] >> (i % usize::BITS as usize)) & 1 == 1
+                    })
+                    .count()
+            })
+            .collect();
+
+        let mut result = Self::zero();
+        for (i, &v) in votes.iter().enumerate() {
+            if v * 2 > threshold || (v * 2 == threshold && rand::random::<bool>()) {
+                result.data[i / usize::BITS as usize] |= 1 << (i % usize::BITS as usize);
+            }
+        }
+        result
     }
 
     fn unpack(&self) -> Vec<f32> {
@@ -343,33 +366,6 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         result
     }
 
-    /// count number of 1 bits for each bit position - if more than half are 1, then set
-    /// that bit position to 1 in the returned vector
-    /// For ties: random 1 or 0
-    pub fn bundle(vectors: &[&Self]) -> Self {
-        let n_bits = N_USIZE * usize::BITS as usize;
-        let threshold = vectors.len(); // votes_for + votes_against == threshold
-
-        let votes: Vec<usize> = (0..n_bits)
-            .map(|i| {
-                vectors
-                    .iter()
-                    .filter(|v| {
-                        (v.data[i / usize::BITS as usize] >> (i % usize::BITS as usize)) & 1 == 1
-                    })
-                    .count()
-            })
-            .collect();
-
-        let mut result = Self::zero();
-        for (i, &v) in votes.iter().enumerate() {
-            if v * 2 > threshold || (v * 2 == threshold && rand::random::<bool>()) {
-                result.data[i / usize::BITS as usize] |= 1 << (i % usize::BITS as usize);
-            }
-        }
-        result
-    }
-
     pub fn write_csv(&self, writer: &mut impl Write) -> io::Result<()> {
         // Create an iterator that yields each bit ('0' or '1') as a character
         let bit_chars = self
@@ -443,16 +439,16 @@ pub fn save_hdvs_to_csv<const N: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::Accumulator;
+    use crate::{HyperVector, Accumulator};
     use crate::binary_hdv::{BinaryAccumulator, BinaryHDV};
 
     #[test]
     fn test_accumulate() {
-        let mut acc = BinaryAccumulator::<5>::default();
-        let v1 = BinaryHDV::<5>::from_slice(&[1, 0, 1, 0, 0]);
-        let v2 = BinaryHDV::<5>::from_slice(&[1, 0, 0, 0, 0]);
-        let v3 = BinaryHDV::<5>::from_slice(&[1, 0, 0, 1, 0]);
-        let expected = BinaryHDV::<5>::from_slice(&[1, 0, 0, 0, 0]);
+        let mut acc = BinaryAccumulator::<1>::default();
+        let v1 = BinaryHDV::<1>::from_slice(&[1, 0, 1, 0, 0, 0, 0, 0]);
+        let v2 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
+        let v3 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);
+        let expected = BinaryHDV::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
 
         acc.add(&v1, 1.0);
         acc.add(&v2, 1.0);
@@ -460,7 +456,7 @@ mod tests {
         let result = acc.finalize();
         assert_eq!(result, expected);
 
-        let result = BinaryHDV::<5>::bundle(&[&v1, &v2, &v3]);
+        let result = BinaryHDV::<1>::bundle(&[&v1, &v2, &v3]);
         assert_eq!(result, expected);
     }
 }

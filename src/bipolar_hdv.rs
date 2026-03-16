@@ -120,9 +120,10 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
     }
 
     fn add(&mut self, v: &BipolarHDV<DIM>, weight: f64) {
-        for i in 0..DIM {
-            self.sum[i] += weight * v.data[i] as f64;
-        }
+        self.sum
+            .iter_mut()
+            .zip(v.data.iter())
+            .for_each(|(x, v)| *x += weight * *v as f64)
     }
 
     fn finalize(&self) -> BipolarHDV<DIM> {
