@@ -122,6 +122,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 }
 
+// Consensus Accumulator
 #[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
     votes: Vec<f64>, // one vote counter per bit
@@ -173,6 +174,63 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
             }
         }
 
+        result
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GradientAccumulator<const N_USIZE: usize> {
+    votes: Vec<f64>, // one vote counter per bit
+    pub count: f64,  // total number of vectors added
+}
+
+impl<const N_USIZE: usize> Default for GradientAccumulator<N_USIZE> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N_USIZE: usize> GradientAccumulator<N_USIZE> {
+    pub const fn is_empty(&self) -> bool {
+        self.count == 0.0
+    }
+}
+
+impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for GradientAccumulator<N_USIZE> {
+    fn new() -> Self {
+        Self {
+            votes: vec![0.0; N_USIZE * usize::BITS as usize],
+            count: 0.0,
+        }
+    }
+
+    fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
+        for i in 0..N_USIZE {
+            let word = v.data[i];
+            for j in 0..usize::BITS {
+                // MAP: Binary 1 -> 1.0, Binary 0 -> -1.0
+                let bit_signal = if ((word >> j) & 1) == 1 { 1.0 } else { -1.0 };
+
+                let idx = i * (usize::BITS as usize) + j as usize;
+                self.votes[idx] += weight * bit_signal;
+            }
+        }
+        // 'count' is now strictly for metadata/normalization,
+        // it is no longer used for the threshold.
+        self.count += weight.abs();
+    }
+
+    fn finalize(&self) -> BinaryHDV<N_USIZE> {
+        let mut result = BinaryHDV::zero();
+        for i in 0..self.votes.len() {
+            // If the consensus is positive, set the bit to 1.
+            // If it's 0.0, we flip a coin to avoid bias.
+            if self.votes[i] > 0.0 || (self.votes[i] == 0.0 && rand::random::<bool>()) {
+                let uidx = i / (usize::BITS as usize);
+                let bidx = i % (usize::BITS as usize);
+                result.data[uidx] |= 1 << bidx;
+            }
+        }
         result
     }
 }
