@@ -7,6 +7,31 @@ pub mod modular_hdv;
 pub mod real_hdv;
 pub mod tabular_encoder;
 
+/// Generates hypervector types for specified dimensionality
+/// The main reason for this macro is the constraints of const generics - the bitpacked implementations for binary and bipolar 
+/// hypervectors are parameterised in terms of the number of words used, not bits.
+/// Examples:
+///     hdv!(binary,   MyBinary,   1024);
+///     hdv!(bipolar,  MyBipolar,  1024);
+///     hdv!(real,     MyReal,     1024);
+///     hdv!(complex,  MyComplex,  1024);
+///     hdv!(modular,  MyModular,  1024);
+#[macro_export]
+macro_rules! hdv {
+    (binary, $name:ident, $dim:expr) => {
+        const _: () = assert!($dim % (usize::BITS as usize) == 0, "DIM must be a multiple of usize::BITS");
+        pub type $name = BinaryHDV<{ $dim / usize::BITS as usize }>;
+    };
+    //(bipolar, $name:ident, $dim:expr) => {
+    //    const _: () = assert!($dim % (usize::BITS as usize) == 0, "DIM must be a multiple of usize::BITS");
+    //    pub type $name = BipolarHDV<{ $dim / usize::BITS as usize }>;
+    //};
+    (bipolar, $name:ident, $dim:expr) => { pub type $name = BipolarHDV<$dim>;    };
+    (real,    $name:ident, $dim:expr) => { pub type $name = RealHDV<$dim>;    };
+    (complex, $name:ident, $dim:expr) => { pub type $name = ComplexHDV<$dim>; };
+    (modular, $name:ident, $dim:expr) => { pub type $name = ModularHDV<$dim>; };
+}
+
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
 use std::fs::File;
@@ -29,7 +54,7 @@ pub trait Accumulator<T: HyperVector> {
     fn finalize(&self) -> T;
 }
 
-pub trait HyperVector: Sized {
+pub trait HyperVector: Sized + Clone {
     type Accumulator: Default + Clone + Accumulator<Self>;
     const DIM: usize;
 
