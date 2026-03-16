@@ -57,21 +57,21 @@ impl<H: HyperVector> TabularEncoder<H> {
         }
     }
 
-    pub fn encode_sample(&self, sample: &Sample) -> H {
+    pub fn encode(&self, sample: &Sample, exclude: &[usize]) -> H {
         let mut acc = H::Accumulator::default();
-
         for (i, value) in sample.iter().enumerate() {
+            if exclude.contains(&i) {
+                continue;
+            }
             let val_hv = match (value, &self.field_encoders[i]) {
                 (SampleValue::Numeric(f), FieldEncoder::Scalar(enc)) => Some(enc.encode(*f as f32)),
                 (SampleValue::String(id), FieldEncoder::Categorical(vec)) => vec.get(*id),
-                _ => None, // Skips SampleValue::None or mismatches
+                _ => None,
             };
-
             if let Some(v) = val_hv {
                 acc.add(&v.bind(&self.field_keys[i]), 1.0);
             }
         }
-
         acc.finalize()
     }
 }

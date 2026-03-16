@@ -1,8 +1,6 @@
-use rand::seq::SliceRandom;
-//use rand_chacha::ChaCha8Rng;
-//use rand_chacha::rand_core::SeedableRng;
 use rand::SeedableRng;
 use rand::rngs::ChaCha8Rng;
+use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -141,7 +139,6 @@ pub struct LoadedSplitDataset {
 /// Return: (header, target_column_index, num_rows)
 fn scan_csv(
     fname: &str,
-    vocab: &mut Vocabulary,
     target_column: Option<usize>, // None interpreted as last column
     verbose: bool,
 ) -> Result<(Vec<String>, usize, usize), Box<dyn std::error::Error>> {
@@ -170,7 +167,6 @@ fn scan_csv(
     };
 
     let mut line_number = 1; // Header was line 0
-    let mut target_labels = std::collections::HashSet::new();
 
     for line_result in lines {
         line_number += 1;
@@ -181,33 +177,17 @@ fn scan_csv(
         // Validate row length
         if values.len() != num_columns {
             return Err(format!(
-                "Line {} has {} columns, expected {} (header has {} columns)",
-                line_number,
+                "Line {line_number} has {} columns, expected {num_columns} (header has {num_columns} columns)",
                 values.len(),
-                num_columns,
-                num_columns
             )
             .into());
         }
-
-        if values[target_idx] != "?" {
-            target_labels.insert(values[target_idx].to_string());
-        }
-    }
-
-    // Sort and intern target labels to ensure consistent ordering
-    let mut sorted_labels: Vec<String> = target_labels.into_iter().collect();
-    sorted_labels.sort();
-
-    for label in &sorted_labels {
-        vocab.get_or_intern(label);
     }
 
     if verbose {
         println!("{fname}: {} data rows", line_number - 1);
         println!("header: {header:?}");
-        println!("target column: {} ('{}')", target_idx, header[target_idx]);
-        println!("class labels: {sorted_labels:?}");
+        println!("target column: {target_idx} ('{}')", header[target_idx]);
     }
 
     Ok((header, target_idx, line_number - 1))
@@ -217,7 +197,6 @@ fn scan_csv(
 fn read_csv(
     fname: &str,
     vocab: &mut Vocabulary,
-    target_idx: usize,
     expected_columns: usize,
 ) -> Result<(Vec<Sample>, Vec<ColumnType>), Box<dyn std::error::Error>> {
     let file = File::open(fname)?;
@@ -255,18 +234,6 @@ fn read_csv(
                     return SampleValue::None;
                 }
 
-                // Target column - must already be in vocabulary
-                if idx == target_idx {
-                    column_info[idx].1 = true; // has_string
-                    if let Some(id) = vocab.get_id(s) {
-                        return SampleValue::String(id);
-                    } else {
-                        // This shouldn't happen if scan_csv was run first
-                        panic!("Unknown target label '{s}' - was scan_csv run?");
-                    }
-                }
-
-                // For non-target columns
                 if let Ok(f) = s.parse::<f64>() {
                     column_info[idx].0 = true; // has_numeric
                     return SampleValue::Numeric(f);
@@ -307,11 +274,11 @@ pub fn load_single_csv(
     let mut vocab = Vocabulary::new();
 
     // First pass: scan for validation and target labels
-    let (header, target_idx, _num_rows) = scan_csv(fname, &mut vocab, target_column, verbose)?;
+    let (header, target_idx, _num_rows) = scan_csv(fname, target_column, verbose)?;
     let num_classes = vocab.len(); // Number of unique target labels
 
     // Second pass: read the data
-    let (data, column_types) = read_csv(fname, &mut vocab, target_idx, header.len())?;
+    let (data, column_types) = read_csv(fname, &mut vocab, header.len())?;
 
     if verbose {
         println!("Column types: {column_types:?}");
@@ -339,11 +306,10 @@ pub fn load_train_test_csv(
 
     // Scan both files to build complete vocabulary
     let (train_header, train_target_idx, _num_rows1) =
-        scan_csv(train_fname, &mut vocab, target_column, verbose)?;
+        scan_csv(train_fname, target_column, verbose)?;
     let num_classes = vocab.len(); // Number of unique target labels from training
 
-    let (test_header, test_target_idx, _num_rows2) =
-        scan_csv(test_fname, &mut vocab, target_column, verbose)?;
+    let (test_header, test_target_idx, _num_rows2) = scan_csv(test_fname, target_column, verbose)?;
 
     // Validate headers match
     if train_header != test_header {
@@ -365,13 +331,8 @@ pub fn load_train_test_csv(
     }
 
     // Read the actual data
-    let (train_data, column_types) = read_csv(
-        train_fname,
-        &mut vocab,
-        train_target_idx,
-        train_header.len(),
-    )?;
-    let (test_data, _) = read_csv(test_fname, &mut vocab, test_target_idx, test_header.len())?;
+    let (train_data, column_types) = read_csv(train_fname, &mut vocab, train_header.len())?;
+    let (test_data, _) = read_csv(test_fname, &mut vocab, test_header.len())?;
 
     if verbose {
         println!("Column types: {column_types:?}");

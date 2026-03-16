@@ -133,7 +133,7 @@ fn test<T: HyperVector, R: Rng>(
         for fname in glob::glob(&pattern).expect("wrong glob pattern") {
             let fname = fname.unwrap();
             let v = create_language_profile(fname.to_str().unwrap(), n, symbols, rng)?;
-            if cleanup(&v, &languages) == *lxx {
+            if cleanup(&v, languages) == *lxx {
                 correct += 1
             }
             total += 1;

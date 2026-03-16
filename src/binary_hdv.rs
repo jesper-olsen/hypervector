@@ -51,11 +51,17 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 
     fn bind(&self, other: &Self) -> Self {
-        BinaryHDV::multiply(self, other)
+        let mut result = Self::zero();
+
+        for i in 0..N_USIZE {
+            result.data[i] = self.data[i] ^ other.data[i];
+        }
+
+        result
     }
 
     fn unbind(&self, other: &Self) -> Self {
-        BinaryHDV::multiply(self, other)
+        Self::bind(self, other)
     }
 
     fn inverse(&self) -> Self {
@@ -76,11 +82,17 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        BinaryHDV::pmultiply(self, pa, other, pb)
+        let mut result = Self::zero();
+
+        for i in 0..N_USIZE {
+            result.data[i] = self.data[(i + pa) % N_USIZE] ^ other.data[(i + pb) % N_USIZE];
+        }
+
+        result
     }
 
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        BinaryHDV::pmultiply(self, pa, other, pb)
+        Self::pbind(self, pa, other, pb)
     }
 
     fn bundle(vectors: &[&Self]) -> Self {
@@ -331,27 +343,6 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         result
     }
 
-    pub fn multiply(&self, other: &Self) -> Self {
-        let mut result = Self::zero();
-
-        for i in 0..N_USIZE {
-            result.data[i] = self.data[i] ^ other.data[i];
-        }
-
-        result
-    }
-
-    /// Like multiply, but permute vectors first
-    pub fn pmultiply(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let mut result = Self::zero();
-
-        for i in 0..N_USIZE {
-            result.data[i] = self.data[(i + pa) % N_USIZE] ^ other.data[(i + pb) % N_USIZE];
-        }
-
-        result
-    }
-
     /// count number of 1 bits for each bit position - if more than half are 1, then set
     /// that bit position to 1 in the returned vector
     /// For ties: random 1 or 0
@@ -434,7 +425,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     }
 
     pub fn diff_braille(&self, other: &Self, width: usize) -> String {
-        self.multiply(other).to_braille(width)
+        self.bind(other).to_braille(width)
     }
 }
 

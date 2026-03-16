@@ -114,6 +114,19 @@ pub fn cleanup<'a, T: HyperVector>(query: &T, vocab: &'a [(&str, T)]) -> &'a str
     best_label
 }
 
+pub fn nearest<T: HyperVector>(query: &T, candidates: &[T]) -> usize {
+    let mut best_idx = 0;
+    let mut min_dist = query.distance(&candidates[0]);
+    for (idx, v) in candidates.iter().enumerate().skip(1) {
+        let d = query.distance(v);
+        if d < min_dist {
+            min_dist = d;
+            best_idx = idx;
+        }
+    }
+    best_idx
+}
+
 pub fn example_mexican_dollar<T: HyperVector>() {
     // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
     // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
