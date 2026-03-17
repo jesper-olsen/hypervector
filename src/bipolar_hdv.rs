@@ -31,7 +31,8 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     const DIM: usize = DIM;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        BipolarHDV::random(rng)
+        let data = std::array::from_fn(|_| if rng.random_bool(0.5) { 1 } else { -1 });
+        Self { data }
     }
 
     fn ident() -> Self {
@@ -147,11 +148,6 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
 }
 
 impl<const DIM: usize> BipolarHDV<DIM> {
-    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        let data = std::array::from_fn(|_| if rng.random_bool(0.5) { 1 } else { -1 });
-        Self { data }
-    }
-
     pub fn from_slice(slice: &[i8]) -> Self {
         assert_eq!(slice.len(), DIM);
         let data = std::array::from_fn(|i| if slice[i] == 1 { 1 } else { -1 });

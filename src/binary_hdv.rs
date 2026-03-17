@@ -15,7 +15,8 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     const DIM: usize = N_USIZE * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        BinaryHDV::random(rng)
+        let data = std::array::from_fn(|_| rng.next_u64() as usize);
+        Self { data }
     }
 
     fn ident() -> Self {
@@ -254,8 +255,6 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for GradientAccumulat
                 self.votes[idx] += weight * bit_signal;
             }
         }
-        // 'count' is now strictly for metadata/normalization,
-        // it is no longer used for the threshold.
         self.count += weight.abs();
     }
 
@@ -284,18 +283,13 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         assert!(slice.len() <= dim);
         let mut hdv = Self::zero();
         for (i, e) in slice.iter().enumerate() {
-            let word_idx = i / 64;
-            let bit_idx = i % 64;
+            let word_idx = i / usize::BITS as usize;
+            let bit_idx = i % usize::BITS as usize;
             if *e != 0 {
                 hdv.data[word_idx] |= 1 << bit_idx;
             }
         }
         hdv
-    }
-
-    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        let data = std::array::from_fn(|_| rng.next_u64() as usize);
-        Self { data }
     }
 
     pub fn zero() -> Self {
@@ -325,30 +319,19 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         let mut data = self.data;
 
         let dim = Self::DIM;
-
-        // Handle edge cases where no flips are needed or the dimension is zero.
         if nbits == 0 || dim == 0 {
             return Self { data };
         }
 
-        // Use a HashSet to track flipped indices and ensure we only flip each bit once.
         let mut flipped_indices = HashSet::new();
-        let bits_to_flip = nbits.min(dim); // Don't try to flip more bits than available
+        let bits_to_flip = nbits.min(dim);
 
-        // Loop until we have selected the required number of unique bits.
         while flipped_indices.len() < bits_to_flip {
-            // 1. Generate a random bit index in the range [0, DIM - 1].
-            // We use next_u64() and modulo for basic random range generation from Rng.
             let idx = (rng.next_u64() as usize) % dim;
 
-            // 2. Check if the index is new. If it is, insert it and proceed to flip.
             if flipped_indices.insert(idx) {
-                // 3. Calculate the array index (i) and the bit position (j) within the block.
                 let i = idx / (usize::BITS as usize);
                 let j = idx % (usize::BITS as usize);
-
-                // 4. Flip the bit at position j in block i using XOR (1 << j).
-                // This is safe because we check that i < N_USIZE implicitly via idx < dim.
                 data[i] ^= 1 << j;
             }
         }
@@ -368,6 +351,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
         let mut result = Self::zero();
 
         for i in 0..N_USIZE {
+            // safe because DIM is a multiple of 64 - need to mask unused bits if this is not the case
             result.data[i] = !(self.data[i] ^ other.data[i]);
         }
 
@@ -375,24 +359,17 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     }
 
     pub fn write_csv(&self, writer: &mut impl Write) -> io::Result<()> {
-        // Create an iterator that yields each bit ('0' or '1') as a character
-        let bit_chars = self
-            .data
-            .iter()
-            .flat_map(|&chunk| (0..64).map(move |i| if (chunk >> i) & 1 == 1 { '1' } else { '0' }));
-
-        let mut line = String::with_capacity(N_USIZE * 64 * 2);
-        let mut first = true;
-        for ch in bit_chars {
-            if !first {
-                line.push(',');
+        let mut buffer = Vec::with_capacity(Self::DIM * 2); // bits + commas
+        for (i, word) in self.data.iter().enumerate() {
+            for j in 0..usize::BITS {
+                if i > 0 || j > 0 {
+                    buffer.push(b',');
+                }
+                buffer.push(if (word >> j) & 1 == 1 { b'1' } else { b'0' });
             }
-            line.push(ch);
-            first = false;
         }
-        line.push('\n');
-
-        writer.write_all(line.as_bytes())
+        buffer.push(b'\n');
+        writer.write_all(&buffer)
     }
 
     /// Render the hypervector as a Braille block of `width` characters per line.

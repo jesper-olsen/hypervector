@@ -81,7 +81,9 @@ pub trait HyperVector: Sized + Clone {
 
     fn distance(&self, other: &Self) -> f32;
     fn bind(&self, other: &Self) -> Self;
+
     fn unbind(&self, other: &Self) -> Self;
+
     fn inverse(&self) -> Self;
     fn permute(&self, by: usize) -> Self;
     fn unpermute(&self, by: usize) -> Self;
@@ -126,7 +128,7 @@ pub fn write_hypervectors<H: HyperVector>(vec: &[H], mut file: File) -> std::io:
 
 pub fn read_hypervectors<H: HyperVector>(mut file: File) -> std::io::Result<Vec<H>> {
     // Read number of HDVs
-    let mut len_buf = [0u8; size_of::<usize>()];
+    let mut len_buf = [0u8; usize::BITS as usize / 8];
     file.read_exact(&mut len_buf)?;
     let len = usize::from_ne_bytes(len_buf);
     println!("read_hypervectors: reading {len} HDVs");
