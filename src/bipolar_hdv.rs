@@ -17,6 +17,7 @@ pub struct BipolarHDV<const DIM: usize> {
 #[derive(Debug, PartialEq, Clone)]
 pub struct BipolarAccumulator<const DIM: usize> {
     sum: [f64; DIM],
+    count: f64, // total number of vectors added
 }
 
 impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
@@ -116,14 +117,18 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
 
 impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> {
     fn new() -> Self {
-        Self { sum: [0.0; DIM] }
+        Self {
+            sum: [0.0; DIM],
+            count: 0.0,
+        }
     }
 
     fn add(&mut self, v: &BipolarHDV<DIM>, weight: f64) {
         self.sum
             .iter_mut()
             .zip(v.data.iter())
-            .for_each(|(x, v)| *x += weight * *v as f64)
+            .for_each(|(x, v)| *x += weight * *v as f64);
+        self.count += weight;
     }
 
     fn finalize(&self) -> BipolarHDV<DIM> {
@@ -134,6 +139,10 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
             _ => -1,
         });
         BipolarHDV { data }
+    }
+
+    fn count(&self) -> f64 {
+        self.count
     }
 }
 

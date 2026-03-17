@@ -306,7 +306,7 @@ impl<const N: usize> ComplexHDV<N> {
 #[derive(Debug, Clone)]
 pub struct ComplexAccumulator<const N: usize> {
     sum: [Complex<f64>; N],
-    n: f64,
+    count: f64, // total number of vectors added
 }
 
 impl<const N: usize> Default for ComplexAccumulator<N> {
@@ -319,7 +319,7 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
     fn new() -> Self {
         Self {
             sum: [Complex::new(0.0, 0.0); N],
-            n: 0.0,
+            count: 0.0,
         }
     }
 
@@ -327,11 +327,11 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
         for i in 0..N {
             self.sum[i] += weight * v.data[i];
         }
-        self.n += weight
+        self.count += weight
     }
 
     fn finalize(&self) -> ComplexHDV<N> {
-        let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / self.n.sqrt());
+        let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / self.count.sqrt());
         ComplexHDV { data }
     }
 
@@ -350,6 +350,10 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
     //    }
     //    ComplexHDV { data }
     //}
+
+    fn count(&self) -> f64 {
+        self.count
+    }
 }
 
 #[cfg(test)]

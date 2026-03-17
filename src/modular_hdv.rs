@@ -165,6 +165,7 @@ pub struct ModularAccumulator<const D: usize> {
     // We track sums of Sines and Cosines to find the circular mean
     sums_sin: [f32; D],
     sums_cos: [f32; D],
+    count: f64,
 }
 
 impl<const D: usize> Default for ModularAccumulator<D> {
@@ -178,10 +179,11 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
         Self {
             sums_sin: [0.0; D],
             sums_cos: [0.0; D],
+            count: 0.0,
         }
     }
 
-    fn add(&mut self, v: &ModularHDV<D>, _weight: f64) {
+    fn add(&mut self, v: &ModularHDV<D>, weight: f64) {
         let t = sincos_tables();
         for i in 0..D {
             //let angle = (v.data[i] as f32 / 256.0) * 2.0 * std::f32::consts::PI;
@@ -191,6 +193,7 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
             self.sums_sin[i] += t.sin[idx];
             self.sums_cos[i] += t.cos[idx];
         }
+        self.count += weight;
     }
 
     fn finalize(&self) -> ModularHDV<D> {
@@ -208,6 +211,10 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
             }
         });
         ModularHDV { data }
+    }
+
+    fn count(&self) -> f64 {
+        self.count
     }
 }
 

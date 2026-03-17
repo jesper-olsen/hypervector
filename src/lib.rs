@@ -8,7 +8,7 @@ pub mod real_hdv;
 pub mod tabular_encoder;
 
 /// Generates hypervector types for specified dimensionality
-/// The main reason for this macro is the constraints of const generics - the bitpacked implementations for binary and bipolar 
+/// The main reason for this macro is the constraints of const generics - the bitpacked implementations for binary and bipolar
 /// hypervectors are parameterised in terms of the number of words used, not bits.
 /// Examples:
 ///     hdv!(binary,   MyBinary,   1024);
@@ -19,17 +19,28 @@ pub mod tabular_encoder;
 #[macro_export]
 macro_rules! hdv {
     (binary, $name:ident, $dim:expr) => {
-        const _: () = assert!($dim % (usize::BITS as usize) == 0, "DIM must be a multiple of usize::BITS");
+        const _: () = assert!(
+            $dim % (usize::BITS as usize) == 0,
+            "DIM must be a multiple of usize::BITS"
+        );
         pub type $name = BinaryHDV<{ $dim / usize::BITS as usize }>;
     };
     //(bipolar, $name:ident, $dim:expr) => {
     //    const _: () = assert!($dim % (usize::BITS as usize) == 0, "DIM must be a multiple of usize::BITS");
     //    pub type $name = BipolarHDV<{ $dim / usize::BITS as usize }>;
     //};
-    (bipolar, $name:ident, $dim:expr) => { pub type $name = BipolarHDV<$dim>;    };
-    (real,    $name:ident, $dim:expr) => { pub type $name = RealHDV<$dim>;    };
-    (complex, $name:ident, $dim:expr) => { pub type $name = ComplexHDV<$dim>; };
-    (modular, $name:ident, $dim:expr) => { pub type $name = ModularHDV<$dim>; };
+    (bipolar, $name:ident, $dim:expr) => {
+        pub type $name = BipolarHDV<$dim>;
+    };
+    (real,    $name:ident, $dim:expr) => {
+        pub type $name = RealHDV<$dim>;
+    };
+    (complex, $name:ident, $dim:expr) => {
+        pub type $name = ComplexHDV<$dim>;
+    };
+    (modular, $name:ident, $dim:expr) => {
+        pub type $name = ModularHDV<$dim>;
+    };
 }
 
 use mersenne_twister_rs::MersenneTwister64;
@@ -52,6 +63,7 @@ pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
     fn add(&mut self, v: &T, weight: f64);
     fn finalize(&self) -> T;
+    fn count(&self) -> f64;
 }
 
 pub trait HyperVector: Sized + Clone {

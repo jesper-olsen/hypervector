@@ -161,7 +161,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 #[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
     votes: Vec<f64>, // one vote counter per bit
-    pub count: f64,  // total number of vectors added
+    count: f64,      // total number of vectors added
 }
 
 impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
@@ -211,12 +211,16 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
 
         result
     }
+
+    fn count(&self) -> f64 {
+        self.count
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct GradientAccumulator<const N_USIZE: usize> {
     votes: Vec<f64>, // one vote counter per bit
-    pub count: f64,  // total number of vectors added
+    count: f64,      // total number of vectors added
 }
 
 impl<const N_USIZE: usize> Default for GradientAccumulator<N_USIZE> {
@@ -267,6 +271,10 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for GradientAccumulat
             }
         }
         result
+    }
+
+    fn count(&self) -> f64 {
+        self.count
     }
 }
 
@@ -439,8 +447,8 @@ pub fn save_hdvs_to_csv<const N: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{HyperVector, Accumulator};
     use crate::binary_hdv::{BinaryAccumulator, BinaryHDV};
+    use crate::{Accumulator, HyperVector};
 
     #[test]
     fn test_accumulate() {
