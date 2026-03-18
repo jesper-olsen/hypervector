@@ -134,8 +134,8 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 // Consensus Accumulator
 #[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
-    votes: Vec<i64>, // one vote counter per bit
-    count: i64,      // total number of vectors added
+    votes: Vec<f64>, // one vote counter per bit
+    count: f64,      // total number of vectors added
 }
 
 impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
@@ -145,44 +145,28 @@ impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
 }
 
 impl<const N_USIZE: usize> BinaryAccumulator<N_USIZE> {
-    const SCALE: f64 = 1_000_000.0;
     pub const fn is_empty(&self) -> bool {
-        self.count == 0
+        self.count == 0.0
     }
 }
 
 impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator<N_USIZE> {
     fn new() -> Self {
         Self {
-            votes: vec![0; N_USIZE * usize::BITS as usize],
-            count: 0,
+            votes: vec![0.0; N_USIZE * usize::BITS as usize],
+            count: 0.0,
         }
     }
 
-    //fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
-    //    for i in 0..N_USIZE {
-    //        let word = v.data[i];
-    //        for j in 0..usize::BITS {
-    //            let flag = ((word >> j) & 1) as f64;
-    //            self.votes[i * usize::BITS as usize + j as usize] += weight * flag
-    //        }
-    //    }
-    //    self.count += weight;
-    //}
-
     fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
-        let w_fixed = (weight * Self::SCALE).round() as i64; 
-
         for i in 0..N_USIZE {
             let word = v.data[i];
-            let offset = i * usize::BITS as usize;
-            for j in 0..usize::BITS as usize {
-                if (word >> j) & 1 == 1 {
-                    self.votes[offset + j] += w_fixed;
-                }
+            for j in 0..usize::BITS {
+                let flag = ((word >> j) & 1) as f64;
+                self.votes[i * usize::BITS as usize + j as usize] += weight * flag
             }
         }
-        self.count += w_fixed.abs();
+        self.count += weight;
     }
 
     fn finalize(&self) -> BinaryHDV<N_USIZE> {
@@ -203,7 +187,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
     }
 
     fn count(&self) -> f64 {
-        self.count as f64 / Self::SCALE
+        self.count as f64 
     }
 }
 
