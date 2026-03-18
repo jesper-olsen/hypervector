@@ -96,33 +96,6 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         Self::pbind(self, pa, other, pb)
     }
 
-    /// count number of 1 bits for each bit position - if more than half are 1, then set
-    /// that bit position to 1 in the returned vector
-    /// For ties: random 1 or 0
-    fn bundle(vectors: &[&Self]) -> Self {
-        let n_bits = N_USIZE * usize::BITS as usize;
-        let threshold = vectors.len(); // votes_for + votes_against == threshold
-
-        let votes: Vec<usize> = (0..n_bits)
-            .map(|i| {
-                vectors
-                    .iter()
-                    .filter(|v| {
-                        (v.data[i / usize::BITS as usize] >> (i % usize::BITS as usize)) & 1 == 1
-                    })
-                    .count()
-            })
-            .collect();
-
-        let mut result = Self::zero();
-        for (i, &v) in votes.iter().enumerate() {
-            if v * 2 > threshold || (v * 2 == threshold && rand::random::<bool>()) {
-                result.data[i / usize::BITS as usize] |= 1 << (i % usize::BITS as usize);
-            }
-        }
-        result
-    }
-
     fn unpack(&self) -> Vec<f32> {
         let n = N_USIZE * usize::BITS as usize;
         let mut out = Vec::with_capacity(n);
@@ -161,8 +134,8 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 // Consensus Accumulator
 #[derive(Debug, Clone)]
 pub struct BinaryAccumulator<const N_USIZE: usize> {
-    votes: Vec<f64>, // one vote counter per bit
-    count: f64,      // total number of vectors added
+    votes: Vec<i64>, // one vote counter per bit
+    count: i64,      // total number of vectors added
 }
 
 impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
@@ -172,28 +145,44 @@ impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
 }
 
 impl<const N_USIZE: usize> BinaryAccumulator<N_USIZE> {
+    const SCALE: f64 = 1_000_000.0;
     pub const fn is_empty(&self) -> bool {
-        self.count == 0.0
+        self.count == 0
     }
 }
 
 impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator<N_USIZE> {
     fn new() -> Self {
         Self {
-            votes: vec![0.0; N_USIZE * usize::BITS as usize],
-            count: 0.0,
+            votes: vec![0; N_USIZE * usize::BITS as usize],
+            count: 0,
         }
     }
 
+    //fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
+    //    for i in 0..N_USIZE {
+    //        let word = v.data[i];
+    //        for j in 0..usize::BITS {
+    //            let flag = ((word >> j) & 1) as f64;
+    //            self.votes[i * usize::BITS as usize + j as usize] += weight * flag
+    //        }
+    //    }
+    //    self.count += weight;
+    //}
+
     fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
+        let w_fixed = (weight * Self::SCALE).round() as i64; 
+
         for i in 0..N_USIZE {
             let word = v.data[i];
-            for j in 0..usize::BITS {
-                let flag = ((word >> j) & 1) as f64;
-                self.votes[i * usize::BITS as usize + j as usize] += weight * flag
+            let offset = i * usize::BITS as usize;
+            for j in 0..usize::BITS as usize {
+                if (word >> j) & 1 == 1 {
+                    self.votes[offset + j] += w_fixed;
+                }
             }
         }
-        self.count += weight;
+        self.count += w_fixed.abs();
     }
 
     fn finalize(&self) -> BinaryHDV<N_USIZE> {
@@ -214,7 +203,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
     }
 
     fn count(&self) -> f64 {
-        self.count
+        self.count as f64 / Self::SCALE
     }
 }
 

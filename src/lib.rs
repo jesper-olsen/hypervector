@@ -94,7 +94,14 @@ pub trait HyperVector: Sized + Clone {
     /// permute and unbind
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
 
-    fn bundle(vectors: &[&Self]) -> Self;
+    fn bundle(vectors: &[&Self]) -> Self
+    {
+        let mut acc: Self::Accumulator = Accumulator::new();
+        for v in vectors {
+            acc.add(v, 1.0)
+        }
+        acc.finalize()
+    }
 
     fn unpack(&self) -> Vec<f32>;
     fn write(&self, file: &mut File) -> std::io::Result<()>;
