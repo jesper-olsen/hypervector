@@ -132,18 +132,6 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         self.pbind(pa, other, pb)
     }
 
-    fn bundle(vectors: &[&Self]) -> Self {
-        if vectors.is_empty() {
-            return Self::ident();
-        }
-
-        let mut acc = Self::Accumulator::new();
-        for v in vectors {
-            acc.add(v, 1.0);
-        }
-        acc.finalize()
-    }
-
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
     }

@@ -82,18 +82,6 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         unbound.unpermute(pa)
     }
 
-    fn bundle(vectors: &[&Self]) -> Self {
-        let mut sum = [0.0; N];
-        for v in vectors {
-            sum.iter_mut().zip(v.data.iter()).for_each(|(s, d)| *s += d);
-        }
-        if !vectors.is_empty() {
-            sum.iter_mut()
-                .for_each(|e| *e /= (vectors.len() as f64).sqrt())
-        }
-        RealHDV { data: sum }
-    }
-
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
     }

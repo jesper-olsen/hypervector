@@ -187,7 +187,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
     }
 
     fn count(&self) -> f64 {
-        self.count  
+        self.count
     }
 }
 

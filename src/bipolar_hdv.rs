@@ -92,10 +92,6 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         BipolarHDV::pmultiply(self, pa, other, pb)
     }
 
-    fn bundle(vectors: &[&Self]) -> Self {
-        BipolarHDV::bundle(vectors)
-    }
-
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
     }
@@ -154,20 +150,6 @@ impl<const DIM: usize> BipolarHDV<DIM> {
         BipolarHDV { data }
     }
 
-    /// sum HDVs in l self and normalise
-    pub fn bundle(l: &[&BipolarHDV<DIM>]) -> Self {
-        let data = std::array::from_fn(|i| {
-            let s: i64 = l.iter().map(|v| v.data[i] as i64).sum();
-            match s {
-                _ if s > 0 => 1,
-                _ if s < 0 => -1,
-                _ if rand::random() => 1,
-                _ => -1,
-            }
-        });
-        Self { data }
-    }
-
     pub fn multiply(&self, b: &Self) -> Self {
         let data = std::array::from_fn(|i| self.data[i] * b.data[i]);
         Self { data }
@@ -184,8 +166,8 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Accumulator;
     use crate::bipolar_hdv::{BipolarAccumulator, BipolarHDV};
+    use crate::{Accumulator, HyperVector};
 
     #[test]
     fn test_accumulate() {

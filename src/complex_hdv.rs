@@ -115,21 +115,6 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         unbound.unpermute(pa)
     }
 
-    fn bundle(vectors: &[&Self]) -> Self {
-        let mut sum = [Complex::new(0.0, 0.0); N];
-        for v in vectors {
-            sum.iter_mut().zip(v.data.iter()).for_each(|(s, d)| *s += d);
-        }
-        if !vectors.is_empty() {
-            sum.iter_mut()
-                .for_each(|e| *e /= (vectors.len() as f64).sqrt())
-        }
-        Self { data: sum }
-        // let mut h = Self { data: sum };
-        // h.normalise();
-        // h
-    }
-
     fn unpack(&self) -> Vec<f32> {
         let mut out = Vec::with_capacity(self.data.len() * 2);
         for &c in &self.data {
