@@ -1,4 +1,4 @@
-use crate::{Accumulator, HyperVector};
+use crate::{Accumulator, HyperVector, UnitAccumulate};
 use rand::Rng;
 use std::collections::HashSet;
 use std::fs::File;
@@ -12,6 +12,7 @@ pub struct BinaryHDV<const N_USIZE: usize> {
 
 impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     type Accumulator = BinaryAccumulator<N_USIZE>;
+    type UnitAccumulator = UnitAccumulator<N_USIZE>;
     const DIM: usize = N_USIZE * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -187,6 +188,67 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
     }
 
     fn count(&self) -> f64 {
+        self.count
+    }
+}
+
+type VoteCount = u32;
+
+#[derive(Debug, Clone)]
+pub struct UnitAccumulator<const N_USIZE: usize> {
+    votes: Vec<VoteCount>,
+    count: usize, // total number of vectors added
+}
+
+impl<const N_USIZE: usize> Default for UnitAccumulator<N_USIZE> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N_USIZE: usize> UnitAccumulator<N_USIZE> {
+    pub const fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+}
+
+impl<const N_USIZE: usize> UnitAccumulate<BinaryHDV<N_USIZE>> for UnitAccumulator<N_USIZE> {
+    fn new() -> Self {
+        Self {
+            votes: vec![0; N_USIZE * usize::BITS as usize],
+            count: 0,
+        }
+    }
+
+    fn add(&mut self, v: &BinaryHDV<N_USIZE>) {
+        for i in 0..N_USIZE {
+            let word = v.data[i];
+            for j in 0..usize::BITS {
+                let flag = ((word >> j) & 1) as VoteCount;
+                self.votes[i * usize::BITS as usize + j as usize] += flag;
+            }
+        }
+        self.count += 1;
+    }
+
+    fn finalize(&self) -> BinaryHDV<N_USIZE> {
+        let mut result = BinaryHDV::zero();
+        let bits_per_word = usize::BITS as usize;
+
+        for i in 0..self.votes.len() {
+            let uidx = i / bits_per_word;
+            let bidx = i % bits_per_word;
+            let n1 = self.votes[i]; // #1s
+            let n0 = (self.count - n1 as usize) as VoteCount; // #0s
+            if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
+                result.data[uidx] |= 1 << bidx;
+            }
+        }
+
+        result
+    }
+
+    fn count(&self) -> usize {
         self.count
     }
 }

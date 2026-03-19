@@ -59,6 +59,13 @@ macro_rules! gen_vars {
     };
 }
 
+pub trait UnitAccumulate<T: HyperVector> {
+    fn new() -> Self;
+    fn add(&mut self, v: &T);
+    fn finalize(&self) -> T;
+    fn count(&self) -> usize;
+}
+
 pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
     fn add(&mut self, v: &T, weight: f64);
@@ -68,6 +75,7 @@ pub trait Accumulator<T: HyperVector> {
 
 pub trait HyperVector: Sized + Clone {
     type Accumulator: Default + Clone + Accumulator<Self>;
+    type UnitAccumulator: Default + Clone + UnitAccumulate<Self>;
     const DIM: usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self;
@@ -95,9 +103,9 @@ pub trait HyperVector: Sized + Clone {
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
 
     fn bundle(vectors: &[&Self]) -> Self {
-        let mut acc: Self::Accumulator = Accumulator::new();
+        let mut acc: Self::UnitAccumulator = Self::UnitAccumulator::new();
         for v in vectors {
-            acc.add(v, 1.0)
+            acc.add(v)
         }
         acc.finalize()
     }

@@ -1,7 +1,8 @@
 use clap::Parser;
 use hypervector::{
-    Accumulator, HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, cleanup,
-    complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV, save_hypervectors_to_csv,
+    HyperVector, UnitAccumulate, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV,
+    cleanup, complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV,
+    save_hypervectors_to_csv,
 };
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
@@ -37,7 +38,7 @@ pub fn create_language_profile<T: HyperVector, R: Rng>(
 ) -> Result<T, io::Error> {
     let file = File::open(fname)?;
     let reader = io::BufReader::new(file);
-    let mut acc = T::Accumulator::default();
+    let mut acc = T::UnitAccumulator::default();
 
     for line in reader.lines().map_while(Result::ok) {
         let chars: Vec<char> = line.chars().collect();
@@ -55,7 +56,7 @@ pub fn create_language_profile<T: HyperVector, R: Rng>(
                 let sym = symbols.entry(c).or_insert_with(|| T::random(rng));
                 ngram = ngram.pbind(1, sym, 0);
             }
-            acc.add(&ngram, 1.0);
+            acc.add(&ngram);
         }
     }
     Ok(acc.finalize())
@@ -71,7 +72,7 @@ pub fn create_language_profile_bind<T: HyperVector, R: Rng>(
 ) -> Result<T, io::Error> {
     let file = File::open(fname)?;
     let reader = io::BufReader::new(file);
-    let mut acc = T::Accumulator::default();
+    let mut acc = T::UnitAccumulator::default();
 
     for line in reader.lines().map_while(Result::ok) {
         let chars: Vec<char> = line.chars().collect();
@@ -85,7 +86,7 @@ pub fn create_language_profile_bind<T: HyperVector, R: Rng>(
             block.push_front(c);
             ngram = ngram.pbind(1, sym, 0);
         }
-        acc.add(&ngram, 1.0);
+        acc.add(&ngram);
         for &c in &chars[n..] {
             let forget = block.pop_back().unwrap();
             let forget_sym = symbols.get(&forget).unwrap();
@@ -93,7 +94,7 @@ pub fn create_language_profile_bind<T: HyperVector, R: Rng>(
             let new_sym = symbols.entry(c).or_insert_with(|| T::random(rng));
             block.push_front(c);
             ngram = ngram.pbind(1, new_sym, 0); // Bind newest character (position 0)
-            acc.add(&ngram, 1.0);
+            acc.add(&ngram);
         }
     }
     Ok(acc.finalize())

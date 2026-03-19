@@ -3,7 +3,7 @@
 // However, that would make the implementation basically the same as BinaryHDV.
 // Only difference is how 0 and 1 are interpreted - ie. for bipolar 0=1 and 1=-1.
 
-use crate::{Accumulator, HyperVector};
+use crate::{Accumulator, HyperVector, UnitAccumulate};
 use rand::Rng;
 use rand::RngExt;
 use std::fs::File;
@@ -28,6 +28,7 @@ impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
 
 impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     type Accumulator = BipolarAccumulator<DIM>;
+    type UnitAccumulator = UnitAccumulator<DIM>;
     const DIM: usize = DIM;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -139,6 +140,49 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> 
     }
 
     fn count(&self) -> f64 {
+        self.count
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct UnitAccumulator<const DIM: usize> {
+    sum: [i32; DIM],
+    count: usize, // total number of vectors added
+}
+
+impl<const DIM: usize> Default for UnitAccumulator<DIM> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const DIM: usize> UnitAccumulate<BipolarHDV<DIM>> for UnitAccumulator<DIM> {
+    fn new() -> Self {
+        Self {
+            sum: [0; DIM],
+            count: 0,
+        }
+    }
+
+    fn add(&mut self, v: &BipolarHDV<DIM>) {
+        self.sum
+            .iter_mut()
+            .zip(v.data.iter())
+            .for_each(|(x, v)| *x += *v as i32);
+        self.count += 1;
+    }
+
+    fn finalize(&self) -> BipolarHDV<DIM> {
+        let data = std::array::from_fn(|i| match self.sum[i] {
+            s if s > 0 => 1,
+            s if s < 0 => -1,
+            _ if rand::random() => 1,
+            _ => -1,
+        });
+        BipolarHDV { data }
+    }
+
+    fn count(&self) -> usize {
         self.count
     }
 }

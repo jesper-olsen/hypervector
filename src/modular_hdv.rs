@@ -2,7 +2,7 @@
 // https://digitalcommons.memphis.edu/ccrg_papers/32/
 // Currently only the r=256 case
 
-use crate::{Accumulator, HyperVector};
+use crate::{Accumulator, HyperVector, UnitAccumulate};
 use rand::Rng;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -56,6 +56,7 @@ pub struct ModularHDV<const D: usize> {
 
 impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     type Accumulator = ModularAccumulator<DIM>;
+    type UnitAccumulator = UnitAccumulator<DIM>;
     const DIM: usize = DIM;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -174,6 +175,7 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
     fn add(&mut self, v: &ModularHDV<D>, weight: f64) {
         let t = sincos_tables();
         for i in 0..D {
+            // TODO - weighted
             //let angle = (v.data[i] as f32 / 256.0) * 2.0 * std::f32::consts::PI;
             //self.sums_sin[i] += angle.sin();
             //self.sums_cos[i] += angle.cos();
@@ -202,6 +204,61 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
     }
 
     fn count(&self) -> f64 {
+        self.count
+    }
+}
+
+#[derive(Clone)]
+pub struct UnitAccumulator<const D: usize> {
+    // We track sums of Sines and Cosines to find the circular mean
+    sums_sin: [f32; D],
+    sums_cos: [f32; D],
+    count: usize,
+}
+
+impl<const D: usize> Default for UnitAccumulator<D> {
+    fn default() -> Self {
+        UnitAccumulator::new()
+    }
+}
+
+impl<const D: usize> UnitAccumulate<ModularHDV<D>> for UnitAccumulator<D> {
+    fn new() -> Self {
+        Self {
+            sums_sin: [0.0; D],
+            sums_cos: [0.0; D],
+            count: 0,
+        }
+    }
+
+    fn add(&mut self, v: &ModularHDV<D>) {
+        let t = sincos_tables();
+        for i in 0..D {
+            let idx = v.data[i] as usize;
+            self.sums_sin[i] += t.sin[idx];
+            self.sums_cos[i] += t.cos[idx];
+        }
+        self.count += 1;
+    }
+
+    fn finalize(&self) -> ModularHDV<D> {
+        let data = std::array::from_fn(|i| {
+            if self.sums_sin[i].abs() < f32::EPSILON && self.sums_cos[i].abs() < f32::EPSILON {
+                0
+            } else {
+                let angle = self.sums_sin[i].atan2(self.sums_cos[i]);
+                // Normalize -PI..PI to 0.0..1.0
+                let normalized = (angle / (2.0 * std::f32::consts::PI)).rem_euclid(1.0);
+
+                // map to the nearest discrete u8 gate
+                let val = (normalized * MODULUS as f32).round() as u32;
+                (val % MODULUS) as u8
+            }
+        });
+        ModularHDV { data }
+    }
+
+    fn count(&self) -> usize {
         self.count
     }
 }
