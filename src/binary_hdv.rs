@@ -36,15 +36,7 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         }
 
         // Apply masks in bulk
-        let mut data = self.data;
-        for i in 0..N_USIZE {
-            if masks[i] != 0 {
-                // copy bits from `other` where mask=1
-                // and keep bits from `self` where mask=0
-                data[i] = (data[i] & !masks[i]) | (other.data[i] & masks[i]);
-            }
-        }
-
+        let data = std::array::from_fn(|i| (self.data[i] & !masks[i]) | (other.data[i] & masks[i]));
         Self { data }
     }
 
@@ -192,7 +184,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
     }
 }
 
-type VoteCount = u32;
+type VoteCount = u16;
 
 #[derive(Debug, Clone)]
 pub struct UnitAccumulator<const N_USIZE: usize> {
@@ -232,16 +224,19 @@ impl<const N_USIZE: usize> UnitAccumulate<BinaryHDV<N_USIZE>> for UnitAccumulato
     }
 
     fn finalize(&self) -> BinaryHDV<N_USIZE> {
+        // TODO - use bitslicing?
         let mut result = BinaryHDV::zero();
         let bits_per_word = usize::BITS as usize;
 
-        for i in 0..self.votes.len() {
-            let uidx = i / bits_per_word;
-            let bidx = i % bits_per_word;
-            let n1 = self.votes[i]; // #1s
-            let n0 = (self.count - n1 as usize) as VoteCount; // #0s
-            if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
-                result.data[uidx] |= 1 << bidx;
+        for uidx in 0..N_USIZE {
+            for bidx in 0..64 {
+                let i = uidx * bits_per_word + bidx;
+                let n1 = self.votes[i]; // #1s
+                let n0 = (self.count - n1 as usize) as VoteCount; // #0s
+                // TODO - generate a tie mask and only call random once per 64-bit word.
+                if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
+                    result.data[uidx] |= 1 << bidx;
+                }
             }
         }
 
