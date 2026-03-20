@@ -12,7 +12,8 @@ pub struct BinaryHDV<const N_USIZE: usize> {
 
 impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     type Accumulator = BinaryAccumulator<N_USIZE>;
-    type UnitAccumulator = UnitAccumulator<N_USIZE>;
+    //type UnitAccumulator = UnitAccumulator<N_USIZE>;
+    type UnitAccumulator = SlicedUnitAccumulator<N_USIZE>;
     const DIM: usize = N_USIZE * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -233,11 +234,104 @@ impl<const N_USIZE: usize> UnitAccumulate<BinaryHDV<N_USIZE>> for UnitAccumulato
                 let i = uidx * bits_per_word + bidx;
                 let n1 = self.votes[i]; // #1s
                 let n0 = (self.count - n1 as usize) as VoteCount; // #0s
-                // TODO - generate a tie mask and only call random once per 64-bit word.
+                // TODO - generate a tie mask and only call random once per 64-bit word? Or just leave out the rand...
                 if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
                     result.data[uidx] |= 1 << bidx;
                 }
             }
+        }
+
+        result
+    }
+
+    fn count(&self) -> usize {
+        self.count
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SlicedUnitAccumulator<const N: usize> {
+    // Same as UnitAccumulator, but implemented with "bit sliced counters" (aka parallel counters).
+    // Layout: 32 contiguous bit-planes, each of length N
+    // Plane 0 is at data[0..N], Plane 1 at data[N..2*N], etc.
+    data: Vec<usize>,
+    count: usize,
+}
+
+impl<const N_USIZE: usize> Default for SlicedUnitAccumulator<N_USIZE> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N_USIZE: usize> SlicedUnitAccumulator<N_USIZE> {
+    pub const fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+}
+
+impl<const N: usize> UnitAccumulate<BinaryHDV<N>> for SlicedUnitAccumulator<N> {
+    fn new() -> Self {
+        Self {
+            data: vec![0; N * 32],
+            count: 0,
+        }
+    }
+
+    fn add(&mut self, v: &BinaryHDV<N>) {
+        // We use the input vector's data as the initial "carry"
+        let mut carry_mask = v.data;
+
+        for p_idx in 0..32 {
+            let offset = p_idx * N;
+            let mut any_carry = false;
+
+            for i in 0..N {
+                let p_val = self.data[offset + i];
+                let c_in = carry_mask[i];
+
+                // Half-adder logic applied to 64 bits at once
+                self.data[offset + i] = p_val ^ c_in;
+                carry_mask[i] = p_val & c_in;
+
+                if carry_mask[i] > 0 {
+                    any_carry = true;
+                }
+            }
+
+            // If no bits are carrying over to the next plane, we can stop early
+            if !any_carry {
+                break;
+            }
+        }
+        self.count += 1;
+    }
+
+    fn finalize(&self) -> BinaryHDV<N> {
+        let mut result = BinaryHDV::zero();
+        let threshold = self.count / 2;
+        let is_even = self.count % 2 == 0;
+
+        for i in 0..N {
+            let mut word_result: usize = 0;
+
+            for bit_idx in 0..usize::BITS {
+                // Reconstruct the u32 count for this specific bit position
+                let mut n1: u32 = 0;
+                for p_idx in 0..32 {
+                    let bit = (self.data[p_idx * N + i] >> bit_idx) & 1;
+                    n1 |= (bit as u32) << p_idx;
+                }
+
+                if n1 > threshold as u32 {
+                    word_result |= 1 << bit_idx;
+                } else if is_even && n1 == threshold as u32 && rand::random::<bool>() {
+                    // random may make little difference, but it is the correct way to handle ties
+                    // computationally finalize is less important than add - assuming many adds
+                    word_result |= 1 << bit_idx;
+                }
+            }
+            result.data[i] = word_result;
         }
 
         result
