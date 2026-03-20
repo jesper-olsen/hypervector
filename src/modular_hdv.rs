@@ -1,6 +1,5 @@
-// Modular Composite Representation", J. Snaider S. Franklin, 2014]
+// Modular Composite Representation", J. Snaider S. Franklin, 2014
 // https://digitalcommons.memphis.edu/ccrg_papers/32/
-// Currently only the r=256 case
 
 use crate::{Accumulator, HyperVector, UnitAccumulate};
 use rand::Rng;
@@ -60,10 +59,7 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     const DIM: usize = DIM;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        //let data = std::array::from_fn(|_| (rng.next_u32() & (MASK as u32)) as u8);
-        let mut data = [0u8; DIM];
-        rng.fill_bytes(&mut data);
-        let data = data.map(|b| b & MASK);
+        let data = std::array::from_fn(|_| (rng.next_u32() & (MASK as u32)) as u8);
         Self { data }
     }
 
@@ -73,10 +69,13 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
 
     // blend two hypervectors by coping indices from other - rest from self
     fn blend(&self, other: &Self, indices: &[usize]) -> Self {
-        let mut data = self.data;
-        for &i in indices {
-            data[i] = other.data[i];
-        }
+        let data = std::array::from_fn(|i| {
+            if i < indices.len() {
+                other.data[i]
+            } else {
+                self.data[i]
+            }
+        });
         Self { data }
     }
 
@@ -102,7 +101,6 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         let m = 1u16 << R;
         let data = std::array::from_fn(|i| {
             let val = self.data[i] as u16;
-            // (m - val) % m handles the additive inverse in Z_m
             ((m - val) % m) as u8
         });
         Self { data }
@@ -174,15 +172,15 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
 
     fn add(&mut self, v: &ModularHDV<D>, weight: f64) {
         let t = sincos_tables();
+        let w = weight as f32;
+
         for i in 0..D {
-            // TODO - weighted
-            //let angle = (v.data[i] as f32 / 256.0) * 2.0 * std::f32::consts::PI;
-            //self.sums_sin[i] += angle.sin();
-            //self.sums_cos[i] += angle.cos();
             let idx = v.data[i] as usize;
-            self.sums_sin[i] += t.sin[idx];
-            self.sums_cos[i] += t.cos[idx];
+            // Scale the "vote" by the weight
+            self.sums_sin[i] += t.sin[idx] * w;
+            self.sums_cos[i] += t.cos[idx] * w;
         }
+
         self.count += weight;
     }
 
