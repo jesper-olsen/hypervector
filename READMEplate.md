@@ -15,7 +15,7 @@ Run
 
 Run example with
 ```
-% cargo run --release --bin main_plate
+% cargo run --release --bin plate
 ```
 
 and examine the results with

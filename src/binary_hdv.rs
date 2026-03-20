@@ -184,7 +184,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
     }
 }
 
-type VoteCount = u16;
+type VoteCount = u32;
 
 #[derive(Debug, Clone)]
 pub struct UnitAccumulator<const N_USIZE: usize> {

@@ -139,9 +139,8 @@ fn test<T: HyperVector, R: Rng>(
             total += 1;
         }
         if total > 0 {
-            println!("+{} {lxx}: Accuracy: {correct}/{total}={}", i + 1, {
-                correct as f64 / total as f64
-            })
+            let acc = 100.0 * correct as f64 / total as f64;
+            println!("+{} {lxx}: Accuracy: {correct}/{total}={acc:.2}%", i + 1)
         }
     }
     Ok(())
