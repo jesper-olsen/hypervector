@@ -1,4 +1,4 @@
-use crate::{Accumulator, HyperVector, UnitAccumulate};
+use crate::{Accumulator, HyperVector, UnitAccumulator};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rustfft::{FftPlanner, num_complex::Complex};
@@ -19,7 +19,7 @@ pub struct RealHDV<const N: usize> {
 
 impl<const N: usize> HyperVector for RealHDV<N> {
     type Accumulator = RealAccumulator<N>;
-    type UnitAccumulator = UnitAccumulator<N>;
+    type UnitAccumulator = UnitAcc<N>;
     const DIM: usize = N;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -262,18 +262,18 @@ impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
 }
 
 #[derive(Debug, Clone)]
-pub struct UnitAccumulator<const N: usize> {
+pub struct UnitAcc<const N: usize> {
     sum: [f64; N],
     count: usize,
 }
 
-impl<const N: usize> Default for UnitAccumulator<N> {
+impl<const N: usize> Default for UnitAcc<N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N: usize> UnitAccumulate<RealHDV<N>> for UnitAccumulator<N> {
+impl<const N: usize> UnitAccumulator<RealHDV<N>> for UnitAcc<N> {
     fn new() -> Self {
         Self {
             sum: [0.0; N],

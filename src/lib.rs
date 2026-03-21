@@ -1,11 +1,9 @@
 pub mod binary_hdv;
 pub mod bipolar_hdv;
 pub mod complex_hdv;
-pub mod data;
 pub mod encoding;
 pub mod modular_hdv;
 pub mod real_hdv;
-pub mod tabular_encoder;
 
 /// Generates hypervector types for specified dimensionality
 /// The main reason for this macro is the constraints of const generics - the bitpacked implementations for binary and bipolar
@@ -59,7 +57,7 @@ macro_rules! gen_vars {
     };
 }
 
-pub trait UnitAccumulate<T: HyperVector> {
+pub trait UnitAccumulator<T: HyperVector> {
     fn new() -> Self;
     fn add(&mut self, v: &T);
     fn finalize(&self) -> T;
@@ -75,7 +73,7 @@ pub trait Accumulator<T: HyperVector> {
 
 pub trait HyperVector: Sized + Clone {
     type Accumulator: Default + Clone + Accumulator<Self>;
-    type UnitAccumulator: Default + Clone + UnitAccumulate<Self>;
+    type UnitAccumulator: Default + Clone + UnitAccumulator<Self>;
     const DIM: usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self;
@@ -119,13 +117,17 @@ pub fn save_hypervectors_to_csv<H: HyperVector>(
     filename: &str,
     vectors: &[H],
 ) -> Result<(), std::io::Error> {
-    let file = File::create(filename)?;
-    let mut writer = BufWriter::new(file);
+    let mut writer = BufWriter::new(File::create(filename)?);
 
-    println!("Saving {} HDVs to {filename}", vectors.len());
     for v in vectors {
-        let row: Vec<String> = v.unpack().iter().map(|x| x.to_string()).collect();
-        writeln!(writer, "{}", row.join(","))?
+        let values = v.unpack();
+        for (i, val) in values.iter().enumerate() {
+            write!(writer, "{val}")?;
+            if i < values.len() - 1 {
+                write!(writer, ",")?;
+            }
+        }
+        writeln!(writer)?;
     }
     Ok(())
 }

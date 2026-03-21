@@ -1,4 +1,4 @@
-use crate::{Accumulator, HyperVector, UnitAccumulate};
+use crate::{Accumulator, HyperVector, UnitAccumulator};
 use rand::Rng;
 use std::collections::HashSet;
 use std::fs::File;
@@ -11,9 +11,9 @@ pub struct BinaryHDV<const N_USIZE: usize> {
 }
 
 impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
-    type Accumulator = BinaryAccumulator<N_USIZE>;
-    //type UnitAccumulator = UnitAccumulator<N_USIZE>;
-    type UnitAccumulator = SlicedUnitAccumulator<N_USIZE>;
+    type Accumulator = BinaryAcc<N_USIZE>;
+    //type UnitAccumulator = UnitAcc<N_USIZE>;
+    type UnitAccumulator = SlicedUnitAcc<N_USIZE>;
     const DIM: usize = N_USIZE * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -127,24 +127,18 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 
 // Consensus Accumulator
 #[derive(Debug, Clone)]
-pub struct BinaryAccumulator<const N_USIZE: usize> {
+pub struct BinaryAcc<const N_USIZE: usize> {
     votes: Vec<f64>, // one vote counter per bit
     count: f64,      // total number of vectors added
 }
 
-impl<const N_USIZE: usize> Default for BinaryAccumulator<N_USIZE> {
+impl<const N_USIZE: usize> Default for BinaryAcc<N_USIZE> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_USIZE: usize> BinaryAccumulator<N_USIZE> {
-    pub const fn is_empty(&self) -> bool {
-        self.count == 0.0
-    }
-}
-
-impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator<N_USIZE> {
+impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAcc<N_USIZE> {
     fn new() -> Self {
         Self {
             votes: vec![0.0; N_USIZE * usize::BITS as usize],
@@ -188,24 +182,24 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAccumulator
 type VoteCount = u32;
 
 #[derive(Debug, Clone)]
-pub struct UnitAccumulator<const N_USIZE: usize> {
+pub struct UnitAcc<const N_USIZE: usize> {
     votes: Vec<VoteCount>,
     count: usize, // total number of vectors added
 }
 
-impl<const N_USIZE: usize> Default for UnitAccumulator<N_USIZE> {
+impl<const N_USIZE: usize> Default for UnitAcc<N_USIZE> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_USIZE: usize> UnitAccumulator<N_USIZE> {
+impl<const N_USIZE: usize> UnitAcc<N_USIZE> {
     pub const fn is_empty(&self) -> bool {
         self.count == 0
     }
 }
 
-impl<const N_USIZE: usize> UnitAccumulate<BinaryHDV<N_USIZE>> for UnitAccumulator<N_USIZE> {
+impl<const N_USIZE: usize> UnitAccumulator<BinaryHDV<N_USIZE>> for UnitAcc<N_USIZE> {
     fn new() -> Self {
         Self {
             votes: vec![0; N_USIZE * usize::BITS as usize],
@@ -250,27 +244,21 @@ impl<const N_USIZE: usize> UnitAccumulate<BinaryHDV<N_USIZE>> for UnitAccumulato
 }
 
 #[derive(Debug, Clone)]
-pub struct SlicedUnitAccumulator<const N: usize> {
-    // Same as UnitAccumulator, but implemented with "bit sliced counters" (aka parallel counters).
+pub struct SlicedUnitAcc<const N: usize> {
+    // Same as UnitAcc, but implemented with "bit sliced counters" (aka parallel counters).
     // Layout: 32 contiguous bit-planes, each of length N
     // Plane 0 is at data[0..N], Plane 1 at data[N..2*N], etc.
     data: Vec<usize>,
     count: usize,
 }
 
-impl<const N_USIZE: usize> Default for SlicedUnitAccumulator<N_USIZE> {
+impl<const N_USIZE: usize> Default for SlicedUnitAcc<N_USIZE> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_USIZE: usize> SlicedUnitAccumulator<N_USIZE> {
-    pub const fn is_empty(&self) -> bool {
-        self.count == 0
-    }
-}
-
-impl<const N: usize> UnitAccumulate<BinaryHDV<N>> for SlicedUnitAccumulator<N> {
+impl<const N: usize> UnitAccumulator<BinaryHDV<N>> for SlicedUnitAcc<N> {
     fn new() -> Self {
         Self {
             data: vec![0; N * 32],
@@ -548,12 +536,12 @@ pub fn save_hdvs_to_csv<const N: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::binary_hdv::{BinaryAccumulator, BinaryHDV};
+    use crate::binary_hdv::{BinaryAcc, BinaryHDV};
     use crate::{Accumulator, HyperVector};
 
     #[test]
     fn test_accumulate() {
-        let mut acc = BinaryAccumulator::<1>::default();
+        let mut acc = BinaryAcc::default();
         let v1 = BinaryHDV::<1>::from_slice(&[1, 0, 1, 0, 0, 0, 0, 0]);
         let v2 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
         let v3 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);

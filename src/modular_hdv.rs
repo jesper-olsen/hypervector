@@ -1,7 +1,7 @@
 // Modular Composite Representation", J. Snaider S. Franklin, 2014
 // https://digitalcommons.memphis.edu/ccrg_papers/32/
 
-use crate::{Accumulator, HyperVector, UnitAccumulate};
+use crate::{Accumulator, HyperVector, UnitAccumulator};
 use rand::Rng;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -55,7 +55,7 @@ pub struct ModularHDV<const D: usize> {
 
 impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     type Accumulator = ModularAccumulator<DIM>;
-    type UnitAccumulator = UnitAccumulator<DIM>;
+    type UnitAccumulator = UnitAcc<DIM>;
     const DIM: usize = DIM;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -207,20 +207,20 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
 }
 
 #[derive(Clone)]
-pub struct UnitAccumulator<const D: usize> {
+pub struct UnitAcc<const D: usize> {
     // We track sums of Sines and Cosines to find the circular mean
     sums_sin: [f32; D],
     sums_cos: [f32; D],
     count: usize,
 }
 
-impl<const D: usize> Default for UnitAccumulator<D> {
+impl<const D: usize> Default for UnitAcc<D> {
     fn default() -> Self {
-        UnitAccumulator::new()
+        UnitAcc::new()
     }
 }
 
-impl<const D: usize> UnitAccumulate<ModularHDV<D>> for UnitAccumulator<D> {
+impl<const D: usize> UnitAccumulator<ModularHDV<D>> for UnitAcc<D> {
     fn new() -> Self {
         Self {
             sums_sin: [0.0; D],

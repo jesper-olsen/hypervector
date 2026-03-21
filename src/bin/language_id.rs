@@ -1,6 +1,6 @@
 use clap::Parser;
 use hypervector::{
-    HyperVector, UnitAccumulate, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, cleanup,
+    HyperVector, UnitAccumulator, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, cleanup,
     complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV, save_hypervectors_to_csv,
 };
 use mersenne_twister_rs::MersenneTwister64;
