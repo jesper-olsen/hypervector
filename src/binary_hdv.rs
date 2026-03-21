@@ -11,7 +11,7 @@ pub struct BinaryHDV<const N_WORDS: usize> {
 }
 
 impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
-    type Accumulator = BinaryAcc<N_WORDS>;
+    type Accumulator = WeightedAcc<N_WORDS>;
     //type UnitAccumulator = UnitAcc<N_WORDS>;
     type UnitAccumulator = SlicedUnitAcc<N_WORDS>;
     const DIM: usize = N_WORDS * usize::BITS as usize;
@@ -41,18 +41,14 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
         Self { data }
     }
 
+    #[inline]
     fn distance(&self, other: &Self) -> f32 {
         self.hamming_distance(other) as f32 / (N_WORDS * usize::BITS as usize) as f32
     }
 
     fn bind(&self, other: &Self) -> Self {
-        let mut result = Self::zero();
-
-        for i in 0..N_WORDS {
-            result.data[i] = self.data[i] ^ other.data[i];
-        }
-
-        result
+        let data = std::array::from_fn(|i| self.data[i] ^ other.data[i]);
+        Self { data }
     }
 
     fn unbind(&self, other: &Self) -> Self {
@@ -97,13 +93,9 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     }
 
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let mut result = Self::zero();
-
-        for i in 0..N_WORDS {
-            result.data[i] = self.data[(i + pa) % N_WORDS] ^ other.data[(i + pb) % N_WORDS];
-        }
-
-        result
+        let data =
+            std::array::from_fn(|i| self.data[(i + pa) % N_WORDS] ^ other.data[(i + pb) % N_WORDS]);
+        Self { data }
     }
 
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
@@ -147,18 +139,18 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
 
 // Consensus Accumulator
 #[derive(Debug, Clone)]
-pub struct BinaryAcc<const N_WORDS: usize> {
+pub struct WeightedAcc<const N_WORDS: usize> {
     votes: Vec<f64>, // one vote counter per bit
     count: f64,      // total number of vectors added
 }
 
-impl<const N_WORDS: usize> Default for BinaryAcc<N_WORDS> {
+impl<const N_WORDS: usize> Default for WeightedAcc<N_WORDS> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for BinaryAcc<N_WORDS> {
+impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WORDS> {
     fn new() -> Self {
         Self {
             votes: vec![0.0; N_WORDS * usize::BITS as usize],
@@ -471,6 +463,7 @@ impl<const N_WORDS: usize> BinaryHDV<N_WORDS> {
         Self { data }
     }
 
+    #[inline]
     pub fn hamming_distance(&self, other: &Self) -> u32 {
         self.data
             .iter()
@@ -556,22 +549,27 @@ pub fn save_hdvs_to_csv<const N: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::binary_hdv::{BinaryAcc, BinaryHDV};
-    use crate::{Accumulator, HyperVector};
+    use crate::binary_hdv::{BinaryHDV, UnitAcc, WeightedAcc};
+    use crate::{Accumulator, HyperVector, UnitAccumulator};
 
     #[test]
     fn test_accumulate() {
-        let mut acc = BinaryAcc::default();
         let v1 = BinaryHDV::<1>::from_slice(&[1, 0, 1, 0, 0, 0, 0, 0]);
         let v2 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
         let v3 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);
         let expected = BinaryHDV::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
 
+        let mut acc = WeightedAcc::default();
         acc.add(&v1, 1.0);
         acc.add(&v2, 1.0);
         acc.add(&v3, 1.0);
-        let result = acc.finalize();
-        assert_eq!(result, expected);
+        assert_eq!(acc.finalize(), expected);
+
+        let mut acc = UnitAcc::default();
+        acc.add(&v1);
+        acc.add(&v2);
+        acc.add(&v3);
+        assert_eq!(acc.finalize(), expected);
 
         let result = BinaryHDV::<1>::bundle(&[&v1, &v2, &v3]);
         assert_eq!(result, expected);

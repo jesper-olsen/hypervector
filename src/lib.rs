@@ -228,8 +228,8 @@ mod tests {
         let a = T::random(&mut rng);
         let b = a.permute(1);
         let c = b.unpermute(1);
-        assert!(a!=b);
-        assert!(a==c)
+        assert!(a != b);
+        assert!(a == c)
     }
 
     #[test]
@@ -237,10 +237,12 @@ mod tests {
         test_permute_unpermute::<BinaryHDV<157>>();
     }
 
+    #[test]
     fn test_bipolar_permute_unpermute() {
         test_permute_unpermute::<BipolarHDV<1024>>();
     }
 
+    #[test]
     fn test_modular_permute_unpermute() {
         test_permute_unpermute::<ModularHDV<256>>();
     }

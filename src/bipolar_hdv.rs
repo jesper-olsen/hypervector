@@ -15,19 +15,19 @@ pub struct BipolarHDV<const DIM: usize> {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct BipolarAccumulator<const DIM: usize> {
+pub struct WeightedAcc<const DIM: usize> {
     sum: [f64; DIM],
     count: f64, // total number of vectors added
 }
 
-impl<const DIM: usize> Default for BipolarAccumulator<DIM> {
+impl<const DIM: usize> Default for WeightedAcc<DIM> {
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
-    type Accumulator = BipolarAccumulator<DIM>;
+    type Accumulator = WeightedAcc<DIM>;
     type UnitAccumulator = UnitAcc<DIM>;
     const DIM: usize = DIM;
 
@@ -113,7 +113,7 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     }
 }
 
-impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for BipolarAccumulator<DIM> {
+impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for WeightedAcc<DIM> {
     fn new() -> Self {
         Self {
             sum: [0.0; DIM],
@@ -210,12 +210,12 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 
 #[cfg(test)]
 mod tests {
-    use crate::bipolar_hdv::{BipolarAccumulator, BipolarHDV};
+    use crate::bipolar_hdv::{BipolarHDV, WeightedAcc};
     use crate::{Accumulator, HyperVector};
 
     #[test]
     fn test_accumulate() {
-        let mut acc = BipolarAccumulator::<5>::default();
+        let mut acc = WeightedAcc::<5>::default();
         let v1 = BipolarHDV::<5>::from_slice(&[1, -1, 1, -1, -1]);
         let v2 = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
         let v3 = BipolarHDV::<5>::from_slice(&[1, -1, -1, 1, -1]);
