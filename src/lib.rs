@@ -222,6 +222,29 @@ mod tests {
         modular_hdv::ModularHDV, real_hdv::RealHDV,
     };
 
+    fn test_permute_unpermute<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>() {
+        //let mut rng = MersenneTwister64::new(42);
+        let mut rng = rand::rng();
+        let a = T::random(&mut rng);
+        let b = a.permute(1);
+        let c = b.unpermute(1);
+        assert!(a!=b);
+        assert!(a==c)
+    }
+
+    #[test]
+    fn test_binary_permute_unpermute() {
+        test_permute_unpermute::<BinaryHDV<157>>();
+    }
+
+    fn test_bipolar_permute_unpermute() {
+        test_permute_unpermute::<BipolarHDV<1024>>();
+    }
+
+    fn test_modular_permute_unpermute() {
+        test_permute_unpermute::<ModularHDV<256>>();
+    }
+
     fn test_bind_unbind<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>(thr: f32) {
         //let mut rng = MersenneTwister64::new(42);
         let mut rng = rand::rng();

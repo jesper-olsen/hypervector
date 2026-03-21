@@ -6,15 +6,15 @@ use std::io::{self, BufWriter, Read, Write};
 use std::mem::size_of;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct BinaryHDV<const N_USIZE: usize> {
-    pub data: [usize; N_USIZE],
+pub struct BinaryHDV<const N_WORDS: usize> {
+    pub data: [usize; N_WORDS],
 }
 
-impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
-    type Accumulator = BinaryAcc<N_USIZE>;
-    //type UnitAccumulator = UnitAcc<N_USIZE>;
-    type UnitAccumulator = SlicedUnitAcc<N_USIZE>;
-    const DIM: usize = N_USIZE * usize::BITS as usize;
+impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
+    type Accumulator = BinaryAcc<N_WORDS>;
+    //type UnitAccumulator = UnitAcc<N_WORDS>;
+    type UnitAccumulator = SlicedUnitAcc<N_WORDS>;
+    const DIM: usize = N_WORDS * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         let data = std::array::from_fn(|_| rng.next_u64() as usize);
@@ -22,14 +22,14 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 
     fn ident() -> Self {
-        BinaryHDV { data: [0; N_USIZE] }
+        BinaryHDV { data: [0; N_WORDS] }
     }
 
     /// Creates a new HDV by blending `self` and `other`
     /// `indices` are bit positions where values from `other` are used.
     fn blend(&self, other: &Self, indices: &[usize]) -> Self {
         // Precompute masks per usize
-        let mut masks = [0usize; N_USIZE];
+        let mut masks = [0usize; N_WORDS];
         for &idx in indices {
             let i = idx / (usize::BITS as usize);
             let j = idx % (usize::BITS as usize);
@@ -42,13 +42,13 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 
     fn distance(&self, other: &Self) -> f32 {
-        self.hamming_distance(other) as f32 / (N_USIZE * usize::BITS as usize) as f32
+        self.hamming_distance(other) as f32 / (N_WORDS * usize::BITS as usize) as f32
     }
 
     fn bind(&self, other: &Self) -> Self {
         let mut result = Self::zero();
 
-        for i in 0..N_USIZE {
+        for i in 0..N_WORDS {
             result.data[i] = self.data[i] ^ other.data[i];
         }
 
@@ -66,8 +66,8 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 
     //fn permute(&self, by: usize) -> Self {
     //    let mut result = Self::zero();
-    //    for i in 0..N_USIZE {
-    //        result.data[i] = self.data[(i + by) % N_USIZE];
+    //    for i in 0..N_WORDS {
+    //        result.data[i] = self.data[(i + by) % N_WORDS];
     //    }
     //    result
     //}
@@ -78,9 +78,9 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         let word_shift = shift / usize::BITS as usize;
         let bit_shift = shift % usize::BITS as usize;
 
-        for i in 0..N_USIZE {
-            let target_idx = (i + word_shift) % N_USIZE;
-            let next_idx = (target_idx + 1) % N_USIZE;
+        for i in 0..N_WORDS {
+            let target_idx = (i + word_shift) % N_WORDS;
+            let next_idx = (target_idx + 1) % N_WORDS;
 
             // Carry bits from this word to the next to simulate a global circular shift
             result.data[target_idx] |= self.data[i] << bit_shift;
@@ -92,15 +92,15 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 
     fn unpermute(&self, by: usize) -> Self {
-        //self.permute(N_USIZE - (by % N_USIZE))
+        //self.permute(N_WORDS - (by % N_WORDS))
         self.permute(Self::DIM - (by % Self::DIM))
     }
 
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
         let mut result = Self::zero();
 
-        for i in 0..N_USIZE {
-            result.data[i] = self.data[(i + pa) % N_USIZE] ^ other.data[(i + pb) % N_USIZE];
+        for i in 0..N_WORDS {
+            result.data[i] = self.data[(i + pa) % N_WORDS] ^ other.data[(i + pb) % N_WORDS];
         }
 
         result
@@ -111,9 +111,9 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     }
 
     fn unpack(&self) -> Vec<f32> {
-        let n = N_USIZE * usize::BITS as usize;
+        let n = N_WORDS * usize::BITS as usize;
         let mut out = Vec::with_capacity(n);
-        for i in 0..N_USIZE {
+        for i in 0..N_WORDS {
             for j in 0..usize::BITS {
                 let bit = (self.data[i] >> j) & 1;
                 out.push(if bit == 1 { 1.0 } else { 0.0 });
@@ -132,10 +132,10 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
     fn read(file: &mut File) -> io::Result<Self> {
         // println!(
         //     "Reading HDV of {} usize elements = {} bits",
-        //     N_USIZE,
-        //     N_USIZE as u32 * usize::BITS
+        //     N_WORDS,
+        //     N_WORDS as u32 * usize::BITS
         // );
-        let mut data = [0usize; N_USIZE];
+        let mut data = [0usize; N_WORDS];
         for slot in &mut data {
             let mut buf = [0u8; size_of::<usize>()];
             file.read_exact(&mut buf)?;
@@ -147,27 +147,27 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
 
 // Consensus Accumulator
 #[derive(Debug, Clone)]
-pub struct BinaryAcc<const N_USIZE: usize> {
+pub struct BinaryAcc<const N_WORDS: usize> {
     votes: Vec<f64>, // one vote counter per bit
     count: f64,      // total number of vectors added
 }
 
-impl<const N_USIZE: usize> Default for BinaryAcc<N_USIZE> {
+impl<const N_WORDS: usize> Default for BinaryAcc<N_WORDS> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAcc<N_USIZE> {
+impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for BinaryAcc<N_WORDS> {
     fn new() -> Self {
         Self {
-            votes: vec![0.0; N_USIZE * usize::BITS as usize],
+            votes: vec![0.0; N_WORDS * usize::BITS as usize],
             count: 0.0,
         }
     }
 
-    fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
-        for i in 0..N_USIZE {
+    fn add(&mut self, v: &BinaryHDV<N_WORDS>, weight: f64) {
+        for i in 0..N_WORDS {
             let word = v.data[i];
             for j in 0..usize::BITS {
                 let flag = ((word >> j) & 1) as f64;
@@ -177,7 +177,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAcc<N_USIZE
         self.count += weight;
     }
 
-    fn finalize(&self) -> BinaryHDV<N_USIZE> {
+    fn finalize(&self) -> BinaryHDV<N_WORDS> {
         let mut result = BinaryHDV::zero();
         let bits_per_word = usize::BITS as usize;
 
@@ -202,33 +202,33 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for BinaryAcc<N_USIZE
 type VoteCount = u32;
 
 #[derive(Debug, Clone)]
-pub struct UnitAcc<const N_USIZE: usize> {
+pub struct UnitAcc<const N_WORDS: usize> {
     votes: Vec<VoteCount>,
     count: usize, // total number of vectors added
 }
 
-impl<const N_USIZE: usize> Default for UnitAcc<N_USIZE> {
+impl<const N_WORDS: usize> Default for UnitAcc<N_WORDS> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_USIZE: usize> UnitAcc<N_USIZE> {
+impl<const N_WORDS: usize> UnitAcc<N_WORDS> {
     pub const fn is_empty(&self) -> bool {
         self.count == 0
     }
 }
 
-impl<const N_USIZE: usize> UnitAccumulator<BinaryHDV<N_USIZE>> for UnitAcc<N_USIZE> {
+impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WORDS> {
     fn new() -> Self {
         Self {
-            votes: vec![0; N_USIZE * usize::BITS as usize],
+            votes: vec![0; N_WORDS * usize::BITS as usize],
             count: 0,
         }
     }
 
-    fn add(&mut self, v: &BinaryHDV<N_USIZE>) {
-        for i in 0..N_USIZE {
+    fn add(&mut self, v: &BinaryHDV<N_WORDS>) {
+        for i in 0..N_WORDS {
             let word = v.data[i];
             for j in 0..usize::BITS {
                 let flag = ((word >> j) & 1) as VoteCount;
@@ -238,12 +238,12 @@ impl<const N_USIZE: usize> UnitAccumulator<BinaryHDV<N_USIZE>> for UnitAcc<N_USI
         self.count += 1;
     }
 
-    fn finalize(&self) -> BinaryHDV<N_USIZE> {
+    fn finalize(&self) -> BinaryHDV<N_WORDS> {
         // TODO - use bitslicing?
         let mut result = BinaryHDV::zero();
         let bits_per_word = usize::BITS as usize;
 
-        for uidx in 0..N_USIZE {
+        for uidx in 0..N_WORDS {
             for bidx in 0..64 {
                 let i = uidx * bits_per_word + bidx;
                 let n1 = self.votes[i]; // #1s
@@ -272,7 +272,7 @@ pub struct SlicedUnitAcc<const N: usize> {
     count: usize,
 }
 
-impl<const N_USIZE: usize> Default for SlicedUnitAcc<N_USIZE> {
+impl<const N_WORDS: usize> Default for SlicedUnitAcc<N_WORDS> {
     fn default() -> Self {
         Self::new()
     }
@@ -351,33 +351,33 @@ impl<const N: usize> UnitAccumulator<BinaryHDV<N>> for SlicedUnitAcc<N> {
 }
 
 #[derive(Debug, Clone)]
-pub struct GradientAccumulator<const N_USIZE: usize> {
+pub struct GradientAccumulator<const N_WORDS: usize> {
     votes: Vec<f64>, // one vote counter per bit
     count: f64,      // total number of vectors added
 }
 
-impl<const N_USIZE: usize> Default for GradientAccumulator<N_USIZE> {
+impl<const N_WORDS: usize> Default for GradientAccumulator<N_WORDS> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_USIZE: usize> GradientAccumulator<N_USIZE> {
+impl<const N_WORDS: usize> GradientAccumulator<N_WORDS> {
     pub const fn is_empty(&self) -> bool {
         self.count == 0.0
     }
 }
 
-impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for GradientAccumulator<N_USIZE> {
+impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for GradientAccumulator<N_WORDS> {
     fn new() -> Self {
         Self {
-            votes: vec![0.0; N_USIZE * usize::BITS as usize],
+            votes: vec![0.0; N_WORDS * usize::BITS as usize],
             count: 0.0,
         }
     }
 
-    fn add(&mut self, v: &BinaryHDV<N_USIZE>, weight: f64) {
-        for i in 0..N_USIZE {
+    fn add(&mut self, v: &BinaryHDV<N_WORDS>, weight: f64) {
+        for i in 0..N_WORDS {
             let word = v.data[i];
             for j in 0..usize::BITS {
                 // MAP: Binary 1 -> 1.0, Binary 0 -> -1.0
@@ -390,7 +390,7 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for GradientAccumulat
         self.count += weight.abs();
     }
 
-    fn finalize(&self) -> BinaryHDV<N_USIZE> {
+    fn finalize(&self) -> BinaryHDV<N_WORDS> {
         let mut result = BinaryHDV::zero();
         for i in 0..self.votes.len() {
             // If the consensus is positive, set the bit to 1.
@@ -409,9 +409,9 @@ impl<const N_USIZE: usize> Accumulator<BinaryHDV<N_USIZE>> for GradientAccumulat
     }
 }
 
-impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
+impl<const N_WORDS: usize> BinaryHDV<N_WORDS> {
     pub fn from_slice(slice: &[u8]) -> Self {
-        let dim = N_USIZE * usize::BITS as usize;
+        let dim = N_WORDS * usize::BITS as usize;
         assert!(slice.len() <= dim);
         let mut hdv = Self::zero();
         for (i, e) in slice.iter().enumerate() {
@@ -426,7 +426,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
 
     pub fn zero() -> Self {
         Self {
-            data: [0usize; N_USIZE],
+            data: [0usize; N_WORDS],
         }
     }
 
@@ -436,7 +436,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
 
     /// Returns a Vec<u8> with one entry per bit (0 or 1).
     pub fn as_u8_vec(&self) -> Vec<u8> {
-        let mut bits = Vec::with_capacity(N_USIZE * usize::BITS as usize);
+        let mut bits = Vec::with_capacity(N_WORDS * usize::BITS as usize);
         for word in self.data {
             for i in 0..usize::BITS {
                 let bit = (word >> i) & 1;
@@ -482,7 +482,7 @@ impl<const N_USIZE: usize> BinaryHDV<N_USIZE> {
     pub fn xnor(&self, other: &Self) -> Self {
         let mut result = Self::zero();
 
-        for i in 0..N_USIZE {
+        for i in 0..N_WORDS {
             // safe because DIM is a multiple of 64 - need to mask unused bits if this is not the case
             result.data[i] = !(self.data[i] ^ other.data[i]);
         }
