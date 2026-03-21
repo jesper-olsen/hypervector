@@ -98,11 +98,8 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     }
 
     fn inverse(&self) -> Self {
-        let m = 1u16 << R;
-        let data = std::array::from_fn(|i| {
-            let val = self.data[i] as u16;
-            ((m - val) % m) as u8
-        });
+        let data: [u8; DIM] =
+            std::array::from_fn(|i| self.data[i].wrapping_sub(self.data[i]) & MASK);
         Self { data }
     }
 
@@ -128,7 +125,12 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
     }
 
     fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        self.pbind(pa, other, pb)
+        let p1 = pa % DIM;
+        let p2 = pb % DIM;
+        let data = std::array::from_fn(|i| {
+            self.data[(i + p1) % DIM].wrapping_sub(other.data[(i + p2) % DIM]) & MASK
+        });
+        Self { data }
     }
 
     fn unpack(&self) -> Vec<f32> {
