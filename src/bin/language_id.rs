@@ -9,6 +9,7 @@ use std::collections::hash_map::HashMap;
 use std::collections::vec_deque::VecDeque;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::path::Path;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -30,7 +31,7 @@ const LANGUAGES: [&str; 22] = [
 ];
 
 pub fn create_language_profile<T: HyperVector, R: Rng>(
-    fname: &str,
+    fname: &Path,
     n: usize,
     symbols: &mut HashMap<char, T>,
     rng: &mut R,
@@ -64,7 +65,7 @@ pub fn create_language_profile<T: HyperVector, R: Rng>(
 // like create_language_profile - use unbind to update ngrams
 // unbind is noisy for real/complex HDVs
 pub fn create_language_profile_bind<T: HyperVector, R: Rng>(
-    fname: &str,
+    fname: &Path,
     n: usize,
     symbols: &mut HashMap<char, T>,
     rng: &mut R,
@@ -111,7 +112,7 @@ fn train<T: HyperVector, R: Rng>(
     for (i, lxx) in LANGUAGES.iter().enumerate() {
         let fname = format!("DATA/LANG_ID/training_texts/{lxx}.txt");
         println!("{i}/{}: Processing training file {fname}", LANGUAGES.len());
-        let v = create_language_profile(&fname, n, &mut symbols, rng)?;
+        let v = create_language_profile(Path::new(&fname), n, &mut symbols, rng)?;
         languages.push((lxx, v));
     }
     Ok((symbols, languages))
@@ -131,8 +132,8 @@ fn test<T: HyperVector, R: Rng>(
 
         let pattern = format!("DATA/LANG_ID/testing_texts/{lxx}_*.txt");
         for fname in glob::glob(&pattern).expect("wrong glob pattern") {
-            let fname = fname.unwrap();
-            let v = create_language_profile(fname.to_str().unwrap(), n, symbols, rng)?;
+            let fname = fname.map_err(io::Error::other)?;
+            let v = create_language_profile(&fname, n, symbols, rng)?;
             if cleanup(&v, languages) == *lxx {
                 correct += 1
             }

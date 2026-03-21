@@ -64,16 +64,36 @@ impl<const N_USIZE: usize> HyperVector for BinaryHDV<N_USIZE> {
         Self { data }
     }
 
+    //fn permute(&self, by: usize) -> Self {
+    //    let mut result = Self::zero();
+    //    for i in 0..N_USIZE {
+    //        result.data[i] = self.data[(i + by) % N_USIZE];
+    //    }
+    //    result
+    //}
+
     fn permute(&self, by: usize) -> Self {
         let mut result = Self::zero();
+        let shift = by % Self::DIM;
+        let word_shift = shift / usize::BITS as usize;
+        let bit_shift = shift % usize::BITS as usize;
+
         for i in 0..N_USIZE {
-            result.data[i] = self.data[(i + by) % N_USIZE];
+            let target_idx = (i + word_shift) % N_USIZE;
+            let next_idx = (target_idx + 1) % N_USIZE;
+
+            // Carry bits from this word to the next to simulate a global circular shift
+            result.data[target_idx] |= self.data[i] << bit_shift;
+            if bit_shift > 0 {
+                result.data[next_idx] |= self.data[i] >> (usize::BITS as usize - bit_shift);
+            }
         }
         result
     }
 
     fn unpermute(&self, by: usize) -> Self {
-        self.permute(N_USIZE - (by % N_USIZE))
+        //self.permute(N_USIZE - (by % N_USIZE))
+        self.permute(Self::DIM - (by % Self::DIM))
     }
 
     fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {

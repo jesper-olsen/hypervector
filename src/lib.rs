@@ -135,7 +135,7 @@ pub fn save_hypervectors_to_csv<H: HyperVector>(
 pub fn write_hypervectors<H: HyperVector>(vec: &[H], mut file: File) -> std::io::Result<()> {
     // Write number of HDVs
     let len = vec.len();
-    file.write_all(&len.to_ne_bytes())?;
+    file.write_all(&len.to_le_bytes())?;
     for hdv in vec {
         hdv.write(&mut file)?;
     }
@@ -146,7 +146,7 @@ pub fn read_hypervectors<H: HyperVector>(mut file: File) -> std::io::Result<Vec<
     // Read number of HDVs
     let mut len_buf = [0u8; usize::BITS as usize / 8];
     file.read_exact(&mut len_buf)?;
-    let len = usize::from_ne_bytes(len_buf);
+    let len = usize::from_le_bytes(len_buf);
     println!("read_hypervectors: reading {len} HDVs");
     let mut vec = Vec::with_capacity(len);
     for _ in 0..len {
