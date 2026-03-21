@@ -115,24 +115,6 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
         self.permute(DIM - (by % DIM))
     }
 
-    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let p1 = pa % DIM;
-        let p2 = pb % DIM;
-        let data = std::array::from_fn(|i| {
-            self.data[(i + p1) % DIM].wrapping_add(other.data[(i + p2) % DIM]) & MASK
-        });
-        Self { data }
-    }
-
-    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let p1 = pa % DIM;
-        let p2 = pb % DIM;
-        let data = std::array::from_fn(|i| {
-            self.data[(i + p1) % DIM].wrapping_sub(other.data[(i + p2) % DIM]) & MASK
-        });
-        Self { data }
-    }
-
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
     }

@@ -94,12 +94,6 @@ pub trait HyperVector: Sized + Clone {
     fn permute(&self, by: usize) -> Self;
     fn unpermute(&self, by: usize) -> Self;
 
-    /// permute and bind
-    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
-
-    /// permute and unbind
-    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self;
-
     fn bundle(vectors: &[&Self]) -> Self {
         let mut acc: Self::UnitAccumulator = Self::UnitAccumulator::new();
         for v in vectors {

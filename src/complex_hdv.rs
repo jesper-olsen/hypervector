@@ -103,18 +103,6 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         self.unpermute(by)
     }
 
-    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let perm_a = self.permute(pa);
-        let perm_b = other.permute(pb);
-        perm_a.bind(&perm_b)
-    }
-
-    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let perm_b = other.permute(pb);
-        let unbound = self.unbind(&perm_b);
-        unbound.unpermute(pa)
-    }
-
     fn unpack(&self) -> Vec<f32> {
         let mut out = Vec::with_capacity(self.data.len() * 2);
         for &c in &self.data {

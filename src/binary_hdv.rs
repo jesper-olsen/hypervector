@@ -88,18 +88,12 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     }
 
     fn unpermute(&self, by: usize) -> Self {
-        //self.permute(N_WORDS - (by % N_WORDS))
-        self.permute(Self::DIM - (by % Self::DIM))
-    }
-
-    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        let data =
-            std::array::from_fn(|i| self.data[(i + pa) % N_WORDS] ^ other.data[(i + pb) % N_WORDS]);
-        Self { data }
-    }
-
-    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        Self::pbind(self, pa, other, pb)
+        let shift = by % Self::DIM;
+        if shift == 0 {
+            return self.clone();
+        }
+        // Moving backwards 'shift' is the same as moving forwards 'DIM - shift'
+        self.permute(Self::DIM - shift)
     }
 
     fn unpack(&self) -> Vec<f32> {

@@ -85,14 +85,6 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
         self.permute(DIM - (by % DIM))
     }
 
-    fn pbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        BipolarHDV::pmultiply(self, pa, other, pb)
-    }
-
-    fn punbind(&self, pa: usize, other: &Self, pb: usize) -> Self {
-        BipolarHDV::pmultiply(self, pa, other, pb)
-    }
-
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
     }

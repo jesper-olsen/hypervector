@@ -54,7 +54,7 @@ pub fn create_language_profile<T: HyperVector, R: Rng>(
             let mut ngram = T::ident();
             for &c in window.iter() {
                 let sym = symbols.entry(c).or_insert_with(|| T::random(rng));
-                ngram = ngram.pbind(1, sym, 0);
+                ngram = ngram.permute(1).bind(sym);
             }
             acc.add(&ngram);
         }
@@ -84,16 +84,24 @@ pub fn create_language_profile_bind<T: HyperVector, R: Rng>(
         for &c in &chars[..n] {
             let sym = symbols.entry(c).or_insert_with(|| T::random(rng));
             block.push_front(c);
-            ngram = ngram.pbind(1, sym, 0);
+            ngram = ngram.permute(1).bind(sym);
         }
+
         acc.add(&ngram);
         for &c in &chars[n..] {
             let forget = block.pop_back().unwrap();
             let forget_sym = symbols.get(&forget).unwrap();
-            ngram = ngram.punbind(0, forget_sym, n - 1); // Unbind oldest character (position n-1)
+
+            // Unbind the oldest symbol - it has been permuted (n-1) times
+            let to_remove = forget_sym.permute(n - 1);
+            ngram = ngram.unbind(&to_remove);
+
             let new_sym = symbols.entry(c).or_insert_with(|| T::random(rng));
             block.push_front(c);
-            ngram = ngram.pbind(1, new_sym, 0); // Bind newest character (position 0)
+
+            // Shift the remaining (n-1) symbols and bind the new one at position 0
+            ngram = ngram.permute(1).bind(new_sym);
+
             acc.add(&ngram);
         }
     }
