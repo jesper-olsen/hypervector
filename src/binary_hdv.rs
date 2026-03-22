@@ -13,7 +13,7 @@ pub struct BinaryHDV<const N_WORDS: usize> {
 impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     type Accumulator = WeightedAcc<N_WORDS>;
     //type UnitAccumulator = UnitAcc<N_WORDS>;
-    type UnitAccumulator = SlicedUnitAcc<N_WORDS>;
+    type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>;   // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -250,51 +250,42 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
 }
 
 #[derive(Debug, Clone)]
-pub struct SlicedUnitAcc<const N: usize> {
-    // Same as UnitAcc, but implemented with "bit sliced counters" (aka parallel counters).
-    // Layout: 32 contiguous bit-planes, each of length N
-    // Plane 0 is at data[0..N], Plane 1 at data[N..2*N], etc.
-    data: Vec<usize>,
+pub struct SlicedUnitAcc<const N: usize, const PLANES: usize> {
+    // Each plane is a bit-level of the parallel counters.
+    // Plane 0 = Least Significant Bit, Plane PLANES-1 = Most Significant Bit.
+    data: [[usize; N]; PLANES],
     count: usize,
 }
 
-impl<const N_WORDS: usize> Default for SlicedUnitAcc<N_WORDS> {
+impl<const N_WORDS: usize, const PLANES: usize> Default for SlicedUnitAcc<N_WORDS, PLANES> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N: usize> UnitAccumulator<BinaryHDV<N>> for SlicedUnitAcc<N> {
+impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
+    for SlicedUnitAcc<N, PLANES>
+{
     fn new() -> Self {
         Self {
-            data: vec![0; N * 32],
+            data: [[0; N]; PLANES],
             count: 0,
         }
     }
 
+    #[inline]
     fn add(&mut self, v: &BinaryHDV<N>) {
-        // We use the input vector's data as the initial "carry"
-        let mut carry_mask = v.data;
+        let mut carry = v.data; // Start with the bits of the new vector
 
-        for p_idx in 0..32 {
-            let offset = p_idx * N;
-            let mut any_carry = false;
-
+        for p in 0..PLANES {
             for i in 0..N {
-                let p_val = self.data[offset + i];
-                let c_in = carry_mask[i];
-
-                // Half-adder logic applied to 64 bits at once
-                self.data[offset + i] = p_val ^ c_in;
-                carry_mask[i] = p_val & c_in;
-
-                if carry_mask[i] > 0 {
-                    any_carry = true;
-                }
+                let old_val = self.data[p][i];
+                // Half-adder logic: Sum bit = XOR, Carry bit = AND
+                self.data[p][i] = old_val ^ carry[i];
+                carry[i] &= old_val;
             }
-
-            // If no bits are carrying over to the next plane, we can stop early
-            if !any_carry {
+            // Optimization: if no carries left, we can exit early
+            if carry.iter().all(|&c| c == 0) {
                 break;
             }
         }
@@ -302,32 +293,29 @@ impl<const N: usize> UnitAccumulator<BinaryHDV<N>> for SlicedUnitAcc<N> {
     }
 
     fn finalize(&self) -> BinaryHDV<N> {
-        let mut result = BinaryHDV::zero();
-        let threshold = self.count / 2;
+        let mut result = BinaryHDV::<N>::zero();
+        let threshold = (self.count / 2) as u64;
         let is_even = self.count % 2 == 0;
 
         for i in 0..N {
-            let mut word_result: usize = 0;
-
-            for bit_idx in 0..usize::BITS {
-                // Reconstruct the u32 count for this specific bit position
-                let mut n1: u32 = 0;
-                for p_idx in 0..32 {
-                    let bit = (self.data[p_idx * N + i] >> bit_idx) & 1;
-                    n1 |= (bit as u32) << p_idx;
+            let tie_breaker: usize = rand::random::<u64>() as usize;
+            let mut word_acc = 0usize;
+            // We process all 64 bits of the word simultaneously for each bit-position
+            for bit_pos in 0..usize::BITS as usize {
+                let mut bit_count = 0u64;
+                for p in 0..PLANES {
+                    let bit = (self.data[p][i] >> bit_pos) & 1;
+                    bit_count |= (bit as u64) << p;
                 }
 
-                if n1 > threshold as u32 {
-                    word_result |= 1 << bit_idx;
-                } else if is_even && n1 == threshold as u32 && rand::random::<bool>() {
-                    // random may make little difference, but it is the correct way to handle ties
-                    // computationally finalize is less important than add - assuming many adds
-                    word_result |= 1 << bit_idx;
+                if bit_count > threshold {
+                    word_acc |= 1 << bit_pos;
+                } else if is_even && bit_count == threshold {
+                    word_acc |= tie_breaker & (1 << bit_pos);
                 }
             }
-            result.data[i] = word_result;
+            result.data[i] = word_acc;
         }
-
         result
     }
 

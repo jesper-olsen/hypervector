@@ -18,7 +18,7 @@ pub struct RealHDV<const N: usize> {
 }
 
 impl<const N: usize> HyperVector for RealHDV<N> {
-    type Accumulator = RealAccumulator<N>;
+    type Accumulator = WeightedAccumulator<N>;
     type UnitAccumulator = UnitAcc<N>;
     const DIM: usize = N;
 
@@ -213,18 +213,18 @@ impl<const N: usize> RealHDV<N> {
 }
 
 #[derive(Debug, Clone)]
-pub struct RealAccumulator<const N: usize> {
+pub struct WeightedAccumulator<const N: usize> {
     sum: [f64; N],
     count: f64,
 }
 
-impl<const N: usize> Default for RealAccumulator<N> {
+impl<const N: usize> Default for WeightedAccumulator<N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N: usize> Accumulator<RealHDV<N>> for RealAccumulator<N> {
+impl<const N: usize> Accumulator<RealHDV<N>> for WeightedAccumulator<N> {
     fn new() -> Self {
         Self {
             sum: [0.0; N],

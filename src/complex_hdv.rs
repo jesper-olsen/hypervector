@@ -18,7 +18,7 @@ pub struct ComplexHDV<const N: usize> {
 }
 
 impl<const N: usize> HyperVector for ComplexHDV<N> {
-    type Accumulator = ComplexAccumulator<N>;
+    type Accumulator = WeightedAccumulator<N>;
     type UnitAccumulator = UnitAcc<N>;
     const DIM: usize = N;
 
@@ -96,11 +96,12 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
     }
 
     fn permute(&self, by: usize) -> Self {
-        self.permute(by)
+        let data = std::array::from_fn(|i| self.data[(i + by) % N]);
+        Self { data }
     }
 
     fn unpermute(&self, by: usize) -> Self {
-        self.unpermute(by)
+        self.permute(N - (by % N))
     }
 
     fn unpack(&self) -> Vec<f32> {
@@ -237,15 +238,6 @@ impl<const N: usize> ComplexHDV<N> {
         Self { data }
     }
 
-    fn permute(&self, by: usize) -> Self {
-        let data = std::array::from_fn(|i| self.data[(i + by) % N]);
-        Self { data }
-    }
-
-    fn unpermute(&self, by: usize) -> Self {
-        self.permute(N - (by % N))
-    }
-
     pub fn distance_dot(&self, other: &Self) -> f64 {
         // Hermitian dot product: z · w̅
         self.data
@@ -277,18 +269,18 @@ impl<const N: usize> ComplexHDV<N> {
 }
 
 #[derive(Debug, Clone)]
-pub struct ComplexAccumulator<const N: usize> {
+pub struct WeightedAccumulator<const N: usize> {
     sum: [Complex<f64>; N],
     count: f64, // total number of vectors added
 }
 
-impl<const N: usize> Default for ComplexAccumulator<N> {
+impl<const N: usize> Default for WeightedAccumulator<N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N: usize> Accumulator<ComplexHDV<N>> for ComplexAccumulator<N> {
+impl<const N: usize> Accumulator<ComplexHDV<N>> for WeightedAccumulator<N> {
     fn new() -> Self {
         Self {
             sum: [Complex::new(0.0, 0.0); N],
