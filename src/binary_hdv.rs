@@ -13,7 +13,7 @@ pub struct BinaryHDV<const N_WORDS: usize> {
 impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     type Accumulator = WeightedAcc<N_WORDS>;
     //type UnitAccumulator = UnitAcc<N_WORDS>;
-    type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>;   // 1-64 bit PLANES
+    type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -132,16 +132,10 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
 }
 
 // Consensus Accumulator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct WeightedAcc<const N_WORDS: usize> {
     votes: Vec<f64>, // one vote counter per bit
     count: f64,      // total number of vectors added
-}
-
-impl<const N_WORDS: usize> Default for WeightedAcc<N_WORDS> {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WORDS> {
@@ -187,16 +181,10 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
 
 type VoteCount = u32;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UnitAcc<const N_WORDS: usize> {
     votes: Vec<VoteCount>,
     count: usize, // total number of vectors added
-}
-
-impl<const N_WORDS: usize> Default for UnitAcc<N_WORDS> {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 impl<const N_WORDS: usize> UnitAcc<N_WORDS> {
@@ -259,7 +247,10 @@ pub struct SlicedUnitAcc<const N: usize, const PLANES: usize> {
 
 impl<const N_WORDS: usize, const PLANES: usize> Default for SlicedUnitAcc<N_WORDS, PLANES> {
     fn default() -> Self {
-        Self::new()
+        Self {
+            data: [[0; N_WORDS]; PLANES],
+            count: 0,
+        }
     }
 }
 
@@ -284,7 +275,6 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
                 self.data[p][i] = old_val ^ carry[i];
                 carry[i] &= old_val;
             }
-            // Optimization: if no carries left, we can exit early
             if carry.iter().all(|&c| c == 0) {
                 break;
             }
