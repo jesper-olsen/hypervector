@@ -149,38 +149,34 @@ impl<const N_WORDS: usize> Default for WeightedAcc<N_WORDS> {
 
 impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WORDS> {
     fn new() -> Self {
-        Self {
-            votes: [[0.0; usize::BITS as usize]; N_WORDS],
-            count: 0.0,
-        }
+        Self::default()
     }
 
     fn add(&mut self, v: &BinaryHDV<N_WORDS>, weight: f64) {
         for i in 0..N_WORDS {
             let word = v.data[i];
-            for j in 0..usize::BITS {
-                let flag = ((word >> j) & 1) as f64;
-                self.votes[i][j as usize] += weight * flag
+            for j in 0..usize::BITS as usize {
+                if (word >> j) & 1 == 1 {
+                    self.votes[i][j] += weight
+                }
             }
         }
         self.count += weight;
     }
 
     fn finalize(&self) -> BinaryHDV<N_WORDS> {
-        let mut result = BinaryHDV::zero();
-        let bits_per_word = usize::BITS as usize;
-
-        for uidx in 0..N_WORDS {
-            for bidx in 0..bits_per_word {
-                let n1 = self.votes[uidx][bidx]; // #1s
-                let n0 = self.count - n1;        // #0s
-                
+        let data = std::array::from_fn(|uidx| {
+            let mut word_acc = 0usize;
+            for bidx in 0..usize::BITS as usize {
+                let n1 = self.votes[uidx][bidx]; 
+                let n0 = self.count - n1; 
                 if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
-                    result.data[uidx] |= 1 << bidx;
+                    word_acc |= 1 << bidx;
                 }
             }
-        }
-        result
+            word_acc
+        });
+        BinaryHDV::<N_WORDS> { data }
     }
 
     fn count(&self) -> f64 {
@@ -235,7 +231,7 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
         let mut result = BinaryHDV::zero();
 
         for uidx in 0..N_WORDS {
-            for bidx in 0..64 {
+            for bidx in 0..usize::BITS as usize {
                 let n1 = self.votes[uidx][bidx]; // #1s
                 let n0 = (self.count - n1 as usize) as VoteCount; // #0s
                 // TODO - generate a tie mask and only call random once per 64-bit word? Or just leave out the rand...
