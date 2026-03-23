@@ -170,16 +170,16 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
         let mut result = BinaryHDV::zero();
         let bits_per_word = usize::BITS as usize;
 
-        for i in 0..self.votes.len() {
-            let uidx = i / bits_per_word;
-            let bidx = i % bits_per_word;
-            let n1 = self.votes[uidx][bidx]; // #1s
-            let n0 = self.count - n1; // #0s
-            if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
-                result.data[uidx] |= 1 << bidx;
+        for uidx in 0..N_WORDS {
+            for bidx in 0..bits_per_word {
+                let n1 = self.votes[uidx][bidx]; // #1s
+                let n0 = self.count - n1;        // #0s
+                
+                if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
+                    result.data[uidx] |= 1 << bidx;
+                }
             }
         }
-
         result
     }
 
