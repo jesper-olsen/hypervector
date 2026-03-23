@@ -132,16 +132,25 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
 }
 
 // Consensus Accumulator
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct WeightedAcc<const N_WORDS: usize> {
-    votes: Vec<f64>, // one vote counter per bit
-    count: f64,      // total number of vectors added
+    votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
+    count: f64,                                    // total number of vectors added
+}
+
+impl<const N_WORDS: usize> Default for WeightedAcc<N_WORDS> {
+    fn default() -> Self {
+        Self {
+            votes: [[0.0; usize::BITS as usize]; N_WORDS],
+            count: 0.0,
+        }
+    }
 }
 
 impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WORDS> {
     fn new() -> Self {
         Self {
-            votes: vec![0.0; N_WORDS * usize::BITS as usize],
+            votes: [[0.0; usize::BITS as usize]; N_WORDS],
             count: 0.0,
         }
     }
@@ -151,7 +160,7 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
             let word = v.data[i];
             for j in 0..usize::BITS {
                 let flag = ((word >> j) & 1) as f64;
-                self.votes[i * usize::BITS as usize + j as usize] += weight * flag
+                self.votes[i][j as usize] += weight * flag
             }
         }
         self.count += weight;
@@ -164,7 +173,7 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
         for i in 0..self.votes.len() {
             let uidx = i / bits_per_word;
             let bidx = i % bits_per_word;
-            let n1 = self.votes[i]; // #1s
+            let n1 = self.votes[uidx][bidx]; // #1s
             let n0 = self.count - n1; // #0s
             if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
                 result.data[uidx] |= 1 << bidx;
@@ -181,10 +190,19 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
 
 type VoteCount = u32;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct UnitAcc<const N_WORDS: usize> {
-    votes: Vec<VoteCount>,
+    votes: [[VoteCount; usize::BITS as usize]; N_WORDS],
     count: usize, // total number of vectors added
+}
+
+impl<const N_WORDS: usize> Default for UnitAcc<N_WORDS> {
+    fn default() -> Self {
+        Self {
+            votes: [[0; usize::BITS as usize]; N_WORDS],
+            count: 0,
+        }
+    }
 }
 
 impl<const N_WORDS: usize> UnitAcc<N_WORDS> {
@@ -196,7 +214,7 @@ impl<const N_WORDS: usize> UnitAcc<N_WORDS> {
 impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WORDS> {
     fn new() -> Self {
         Self {
-            votes: vec![0; N_WORDS * usize::BITS as usize],
+            votes: [[0; usize::BITS as usize]; N_WORDS],
             count: 0,
         }
     }
@@ -206,7 +224,7 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
             let word = v.data[i];
             for j in 0..usize::BITS {
                 let flag = ((word >> j) & 1) as VoteCount;
-                self.votes[i * usize::BITS as usize + j as usize] += flag;
+                self.votes[i][j as usize] += flag;
             }
         }
         self.count += 1;
@@ -215,12 +233,10 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
     fn finalize(&self) -> BinaryHDV<N_WORDS> {
         // TODO - use bitslicing?
         let mut result = BinaryHDV::zero();
-        let bits_per_word = usize::BITS as usize;
 
         for uidx in 0..N_WORDS {
             for bidx in 0..64 {
-                let i = uidx * bits_per_word + bidx;
-                let n1 = self.votes[i]; // #1s
+                let n1 = self.votes[uidx][bidx]; // #1s
                 let n0 = (self.count - n1 as usize) as VoteCount; // #0s
                 // TODO - generate a tie mask and only call random once per 64-bit word? Or just leave out the rand...
                 if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
@@ -266,14 +282,13 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
 
     #[inline]
     fn add(&mut self, v: &BinaryHDV<N>) {
-        let mut carry = v.data; // Start with the bits of the new vector
+        let mut carry = v.data;
 
         for p in 0..PLANES {
-            for i in 0..N {
-                let old_val = self.data[p][i];
-                // Half-adder logic: Sum bit = XOR, Carry bit = AND
-                self.data[p][i] = old_val ^ carry[i];
-                carry[i] &= old_val;
+            for (old_val_ref, carry_word) in self.data[p].iter_mut().zip(carry.iter_mut()) {
+                let old_val = *old_val_ref;
+                *old_val_ref = old_val ^ *carry_word;
+                *carry_word &= old_val;
             }
             if carry.iter().all(|&c| c == 0) {
                 break;
@@ -285,7 +300,7 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
     fn finalize(&self) -> BinaryHDV<N> {
         let mut result = BinaryHDV::<N>::zero();
         let threshold = (self.count / 2) as u64;
-        let is_even = self.count % 2 == 0;
+        let is_even = self.count.is_multiple_of(2);
 
         for i in 0..N {
             let tie_breaker: usize = rand::random::<u64>() as usize;
