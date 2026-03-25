@@ -60,38 +60,13 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
         Self { data }
     }
 
-    //fn permute(&self, by: usize) -> Self {
-    //    let mut result = Self::zero();
-    //    for i in 0..N_WORDS {
-    //        result.data[i] = self.data[(i + by) % N_WORDS];
-    //    }
-    //    result
-    //}
-
     fn permute(&self, by: usize) -> Self {
-        let mut result = Self::zero();
-        let shift = by % Self::DIM;
-        let word_shift = shift / usize::BITS as usize;
-        let bit_shift = shift % usize::BITS as usize;
-
-        for i in 0..N_WORDS {
-            let target_idx = (i + word_shift) % N_WORDS;
-            let next_idx = (target_idx + 1) % N_WORDS;
-
-            // Carry bits from this word to the next to simulate a global circular shift
-            result.data[target_idx] |= self.data[i] << bit_shift;
-            if bit_shift > 0 {
-                result.data[next_idx] |= self.data[i] >> (usize::BITS as usize - bit_shift);
-            }
-        }
-        result
+        self.permute_idx(by)
+        //self.permute_bit(by)
     }
 
     fn unpermute(&self, by: usize) -> Self {
         let shift = by % Self::DIM;
-        if shift == 0 {
-            return self.clone();
-        }
         // Moving backwards 'shift' is the same as moving forwards 'DIM - shift'
         self.permute(Self::DIM - shift)
     }
@@ -168,8 +143,8 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
         let data = std::array::from_fn(|uidx| {
             let mut word_acc = 0usize;
             for bidx in 0..usize::BITS as usize {
-                let n1 = self.votes[uidx][bidx]; 
-                let n0 = self.count - n1; 
+                let n1 = self.votes[uidx][bidx];
+                let n0 = self.count - n1;
                 if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
                     word_acc |= 1 << bidx;
                 }
@@ -419,6 +394,33 @@ impl<const N_WORDS: usize> BinaryHDV<N_WORDS> {
             }
         }
         bits
+    }
+
+    pub fn permute_idx(&self, by: usize) -> Self {
+        let data = std::array::from_fn(|i| self.data[(i + by) % N_WORDS]);
+        Self { data }
+    }
+
+    pub fn permute_bit(&self, by: usize) -> Self {
+        let shift = by % Self::DIM;
+        if shift == 0 {
+            return self.clone();
+        }
+        let mut result = Self::zero();
+        let word_shift = shift / usize::BITS as usize;
+        let bit_shift = shift % usize::BITS as usize;
+
+        for i in 0..N_WORDS {
+            let target_idx = (i + word_shift) % N_WORDS;
+            let next_idx = (target_idx + 1) % N_WORDS;
+
+            // Carry bits from this word to the next to simulate a global circular shift
+            result.data[target_idx] |= self.data[i] << bit_shift;
+            if bit_shift > 0 {
+                result.data[next_idx] |= self.data[i] >> (usize::BITS as usize - bit_shift);
+            }
+        }
+        result
     }
 
     /// Creates a new HDV by cloning `self` and flipping `nbits` unique, random bits.
