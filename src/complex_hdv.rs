@@ -348,7 +348,7 @@ impl<const N: usize> UnitAccumulator<ComplexHDV<N>> for UnitAcc<N> {
         self.count += 1
     }
 
-    fn finalize(&self) -> ComplexHDV<N> {
+    fn finalize(&mut self) -> ComplexHDV<N> {
         let data: [Complex<f64>; N] =
             std::array::from_fn(|i| self.sum[i] / (self.count as f64).sqrt());
         ComplexHDV { data }

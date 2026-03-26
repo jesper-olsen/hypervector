@@ -276,7 +276,7 @@ impl<const N: usize> UnitAccumulator<RealHDV<N>> for UnitAcc<N> {
         self.count += 1;
     }
 
-    fn finalize(&self) -> RealHDV<N> {
+    fn finalize(&mut self) -> RealHDV<N> {
         let data: [f64; N] = std::array::from_fn(|i| self.sum[i] / (self.count as f64).sqrt());
         RealHDV { data }
     }

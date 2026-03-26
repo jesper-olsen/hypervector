@@ -223,7 +223,7 @@ impl<const D: usize> UnitAccumulator<ModularHDV<D>> for UnitAcc<D> {
         self.count += 1;
     }
 
-    fn finalize(&self) -> ModularHDV<D> {
+    fn finalize(&mut self) -> ModularHDV<D> {
         let data = std::array::from_fn(|i| {
             if self.sums_sin[i].abs() < f32::EPSILON && self.sums_cos[i].abs() < f32::EPSILON {
                 0

@@ -1,9 +1,10 @@
 use crate::{Accumulator, HyperVector, UnitAccumulator};
-use rand::Rng;
+use rand::{Rng,SeedableRng};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};
 use std::mem::size_of;
+use mersenne_twister_rs::MersenneTwister64;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryHDV<const N_WORDS: usize> {
@@ -201,7 +202,7 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
         self.count += 1;
     }
 
-    fn finalize(&self) -> BinaryHDV<N_WORDS> {
+    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
         // TODO - use bitslicing?
         let mut result = BinaryHDV::zero();
 
@@ -224,30 +225,29 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SlicedUnitAcc<const N: usize, const PLANES: usize> {
+pub struct SlicedUnitAcc<const N: usize, const PLANES: usize, R: Rng = MersenneTwister64> {
     // Each plane is a bit-level of the parallel counters.
     // Plane 0 = Least Significant Bit, Plane PLANES-1 = Most Significant Bit.
     data: [[usize; N]; PLANES],
     count: usize,
+    rng: R,
 }
 
-impl<const N_WORDS: usize, const PLANES: usize> Default for SlicedUnitAcc<N_WORDS, PLANES> {
+impl<const N_WORDS: usize, const PLANES: usize, R: Rng + SeedableRng + Default> Default for SlicedUnitAcc<N_WORDS, PLANES, R> {
     fn default() -> Self {
-        Self {
-            data: [[0; N_WORDS]; PLANES],
-            count: 0,
-        }
+        Self::new()
     }
 }
 
-impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
-    for SlicedUnitAcc<N, PLANES>
+
+impl<const N: usize, const PLANES: usize, R: Rng + SeedableRng + Default> UnitAccumulator<BinaryHDV<N>>
+    for SlicedUnitAcc<N, PLANES, R>
 {
     fn new() -> Self {
         Self {
             data: [[0; N]; PLANES],
             count: 0,
+            rng: R::from_rng(&mut rand::rng()),
         }
     }
 
@@ -268,13 +268,13 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
         self.count += 1;
     }
 
-    fn finalize(&self) -> BinaryHDV<N> {
+    fn finalize(&mut self) -> BinaryHDV<N> {
         let mut result = BinaryHDV::<N>::zero();
         let threshold = (self.count / 2) as u64;
         let is_even = self.count.is_multiple_of(2);
 
         for i in 0..N {
-            let tie_breaker: usize = rand::random::<u64>() as usize;
+            let tie_breaker: usize = self.rng.next_u64() as usize;
             let mut word_acc = 0usize;
             // We process all 64 bits of the word simultaneously for each bit-position
             for bit_pos in 0..usize::BITS as usize {

@@ -164,7 +164,7 @@ impl<const DIM: usize> UnitAccumulator<BipolarHDV<DIM>> for UnitAcc<DIM> {
         self.count += 1;
     }
 
-    fn finalize(&self) -> BipolarHDV<DIM> {
+    fn finalize(&mut self) -> BipolarHDV<DIM> {
         let data = std::array::from_fn(|i| match self.sum[i] {
             s if s > 0 => 1,
             s if s < 0 => -1,
