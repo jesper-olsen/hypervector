@@ -1,10 +1,10 @@
 use crate::{Accumulator, HyperVector, UnitAccumulator};
-use rand::{Rng,SeedableRng};
+use mersenne_twister_rs::MersenneTwister64;
+use rand::{Rng, SeedableRng};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};
 use std::mem::size_of;
-use mersenne_twister_rs::MersenneTwister64;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryHDV<const N_WORDS: usize> {
@@ -233,15 +233,16 @@ pub struct SlicedUnitAcc<const N: usize, const PLANES: usize, R: Rng = MersenneT
     rng: R,
 }
 
-impl<const N_WORDS: usize, const PLANES: usize, R: Rng + SeedableRng + Default> Default for SlicedUnitAcc<N_WORDS, PLANES, R> {
+impl<const N_WORDS: usize, const PLANES: usize, R: Rng + SeedableRng + Default> Default
+    for SlicedUnitAcc<N_WORDS, PLANES, R>
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-
-impl<const N: usize, const PLANES: usize, R: Rng + SeedableRng + Default> UnitAccumulator<BinaryHDV<N>>
-    for SlicedUnitAcc<N, PLANES, R>
+impl<const N: usize, const PLANES: usize, R: Rng + SeedableRng + Default>
+    UnitAccumulator<BinaryHDV<N>> for SlicedUnitAcc<N, PLANES, R>
 {
     fn new() -> Self {
         Self {
