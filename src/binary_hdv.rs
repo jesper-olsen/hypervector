@@ -138,8 +138,8 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
                 }
             }
         }
-        //self.count += weight.abs();
-        self.count += weight;
+        self.count += weight.abs();
+        //self.count += weight;
     }
 
     fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
