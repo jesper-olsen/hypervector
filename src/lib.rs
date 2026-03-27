@@ -71,7 +71,7 @@ pub trait Accumulator<T: HyperVector> {
     fn count(&self) -> f64;
 }
 
-pub trait HyperVector: Sized {
+pub trait HyperVector: Sized + Clone {
     type Accumulator: Default + Accumulator<Self>;
     type UnitAccumulator: Default + UnitAccumulator<Self>;
     const DIM: usize;
