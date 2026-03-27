@@ -24,13 +24,14 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 Run
 -----
 
-Three examples of problems that can be solved with hypervectors:
+Four examples of problems that can be solved with hypervectors:
 
 * Kanerva's Mexican Dollar [1] inferencing example - run it with:
   ```
-  % cargo run --release --bin main_mexican
+  cargo run --release --bin mexican
   ```
 * Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
 * [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
 * [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
+* [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
 
