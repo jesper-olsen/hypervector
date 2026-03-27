@@ -12,7 +12,8 @@ pub struct BinaryHDV<const N_WORDS: usize> {
 }
 
 impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
-    type Accumulator = WeightedAcc<N_WORDS>;
+    //type Accumulator = WeightedAcc<N_WORDS>;
+    type Accumulator = GradientAccumulator<N_WORDS>;
     //type UnitAccumulator = UnitAcc<N_WORDS>;
     type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
@@ -107,7 +108,6 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     }
 }
 
-// Consensus Accumulator
 #[derive(Debug, Clone)]
 pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
     votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
@@ -156,6 +156,71 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
             word_acc
         });
         BinaryHDV::<N_WORDS> { data }
+    }
+
+    fn count(&self) -> f64 {
+        self.count
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GradientAccumulator<const N_WORDS: usize, R: Rng = MersenneTwister64> {
+    votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
+    count: f64,                                    // total number of vectors added
+    rng: R,
+}
+
+impl<const N_WORDS: usize> Default for GradientAccumulator<N_WORDS> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N_WORDS: usize> GradientAccumulator<N_WORDS> {
+    pub const fn is_empty(&self) -> bool {
+        self.count == 0.0
+    }
+}
+
+impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV<N_WORDS>>
+    for GradientAccumulator<N_WORDS, R>
+{
+    fn new() -> Self {
+        Self {
+            votes: [[0.0; usize::BITS as usize]; N_WORDS],
+            count: 0.0,
+            rng: R::from_rng(&mut rand::rng()),
+        }
+    }
+
+    fn add(&mut self, v: &BinaryHDV<N_WORDS>, weight: f64) {
+        for i in 0..N_WORDS {
+            let word = v.data[i];
+            for j in 0..usize::BITS as usize {
+                // MAP: Binary 1 -> 1.0, Binary 0 -> -1.0
+                let bit_signal = if ((word >> j) & 1) == 1 { 1.0 } else { -1.0 };
+                self.votes[i][j] += weight * bit_signal;
+            }
+        }
+        self.count += weight.abs();
+    }
+
+    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
+        let data = std::array::from_fn(|i| {
+            let mut acc_word = 0usize;
+            let tie_breaker: usize = self.rng.next_u64() as usize;
+            for bidx in 0..usize::BITS as usize {
+                // If the consensus is positive, set the bit to 1.
+                // If it's 0.0, we flip a coin to avoid bias.
+                if self.votes[i][bidx] > 0.0
+                    || (self.votes[i][bidx] == 0.0 && (tie_breaker & (1 << bidx)) != 0)
+                {
+                    acc_word |= 1 << bidx;
+                }
+            }
+            acc_word
+        });
+        BinaryHDV { data }
     }
 
     fn count(&self) -> f64 {
@@ -300,65 +365,6 @@ impl<const N: usize, const PLANES: usize, R: Rng + SeedableRng + Default>
     }
 
     fn count(&self) -> usize {
-        self.count
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct GradientAccumulator<const N_WORDS: usize> {
-    votes: Vec<f64>, // one vote counter per bit
-    count: f64,      // total number of vectors added
-}
-
-impl<const N_WORDS: usize> Default for GradientAccumulator<N_WORDS> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<const N_WORDS: usize> GradientAccumulator<N_WORDS> {
-    pub const fn is_empty(&self) -> bool {
-        self.count == 0.0
-    }
-}
-
-impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for GradientAccumulator<N_WORDS> {
-    fn new() -> Self {
-        Self {
-            votes: vec![0.0; N_WORDS * usize::BITS as usize],
-            count: 0.0,
-        }
-    }
-
-    fn add(&mut self, v: &BinaryHDV<N_WORDS>, weight: f64) {
-        for i in 0..N_WORDS {
-            let word = v.data[i];
-            for j in 0..usize::BITS {
-                // MAP: Binary 1 -> 1.0, Binary 0 -> -1.0
-                let bit_signal = if ((word >> j) & 1) == 1 { 1.0 } else { -1.0 };
-
-                let idx = i * (usize::BITS as usize) + j as usize;
-                self.votes[idx] += weight * bit_signal;
-            }
-        }
-        self.count += weight.abs();
-    }
-
-    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
-        let mut result = BinaryHDV::zero();
-        for i in 0..self.votes.len() {
-            // If the consensus is positive, set the bit to 1.
-            // If it's 0.0, we flip a coin to avoid bias.
-            if self.votes[i] > 0.0 || (self.votes[i] == 0.0 && rand::random::<bool>()) {
-                let uidx = i / (usize::BITS as usize);
-                let bidx = i % (usize::BITS as usize);
-                result.data[uidx] |= 1 << bidx;
-            }
-        }
-        result
-    }
-
-    fn count(&self) -> f64 {
         self.count
     }
 }
