@@ -6,9 +6,8 @@
 // Plot the results with plot_kv.py
 
 use hypervector::{
-    HyperVector, UnitAccumulator, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, cleanup,
-    complex_hdv::ComplexHDV, hdv, modular_hdv::ModularHDV, nearest, real_hdv::RealHDV,
-    save_hypervectors_to_csv,
+    HyperVector, UnitAccumulator, binary_hdv::BinaryHDV, 
+    complex_hdv::ComplexHDV, hdv, modular_hdv::ModularHDV, nearest, real_hdv::RealHDV
 };
 use mersenne_twister_rs::MersenneTwister64;
 use std::io::{self, Write};

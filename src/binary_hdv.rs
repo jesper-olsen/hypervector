@@ -13,7 +13,6 @@ pub struct BinaryHDV<const N_WORDS: usize> {
 
 impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     type Accumulator = WeightedAcc<N_WORDS>;
-    //type UnitAccumulator = UnitAcc<N_WORDS>;
     type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
 
@@ -29,7 +28,6 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     /// Creates a new HDV by blending `self` and `other`
     /// `indices` are bit positions where values from `other` are used.
     fn blend(&self, other: &Self, indices: &[usize]) -> Self {
-        // Precompute masks per usize
         let mut masks = [0usize; N_WORDS];
         for &idx in indices {
             let i = idx / (usize::BITS as usize);
@@ -37,7 +35,6 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
             masks[i] |= 1 << j;
         }
 
-        // Apply masks in bulk
         let data = std::array::from_fn(|i| (self.data[i] & !masks[i]) | (other.data[i] & masks[i]));
         Self { data }
     }
@@ -73,15 +70,10 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     }
 
     fn unpack(&self) -> Vec<f32> {
-        let n = N_WORDS * usize::BITS as usize;
-        let mut out = Vec::with_capacity(n);
-        for i in 0..N_WORDS {
-            for j in 0..usize::BITS {
-                let bit = (self.data[i] >> j) & 1;
-                out.push(if bit == 1 { 1.0 } else { 0.0 });
-            }
-        }
-        out
+        self.data
+            .iter()
+            .flat_map(|&word| (0..usize::BITS).map(move |j| ((word >> j) & 1) as f32))
+            .collect()
     }
 
     fn write(&self, file: &mut File) -> io::Result<()> {
@@ -174,17 +166,20 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV
 
 type VoteCount = u32;
 
+// simple, but SlicedUnitAcc is typically faster
 #[derive(Debug, Clone)]
-pub struct UnitAcc<const N_WORDS: usize> {
+pub struct UnitAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
     votes: [[VoteCount; usize::BITS as usize]; N_WORDS],
     count: usize, // total number of vectors added
+    rng: R,
 }
 
-impl<const N_WORDS: usize> Default for UnitAcc<N_WORDS> {
+impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Default for UnitAcc<N_WORDS, R> {
     fn default() -> Self {
         Self {
             votes: [[0; usize::BITS as usize]; N_WORDS],
             count: 0,
+            rng: R::from_rng(&mut rand::rng()),
         }
     }
 }
@@ -197,10 +192,7 @@ impl<const N_WORDS: usize> UnitAcc<N_WORDS> {
 
 impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WORDS> {
     fn new() -> Self {
-        Self {
-            votes: [[0; usize::BITS as usize]; N_WORDS],
-            count: 0,
-        }
+        Self::default()
     }
 
     fn add(&mut self, v: &BinaryHDV<N_WORDS>) {
@@ -215,21 +207,19 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
     }
 
     fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
-        // TODO - use bitslicing?
-        let mut result = BinaryHDV::zero();
-
-        for uidx in 0..N_WORDS {
+        let data = std::array::from_fn(|uidx| {
+            let tie_breaker: usize = self.rng.next_u64() as usize;
+            let mut acc_word = 0usize;
             for bidx in 0..usize::BITS as usize {
                 let n1 = self.votes[uidx][bidx]; // #1s
                 let n0 = (self.count - n1 as usize) as VoteCount; // #0s
-                // TODO - generate a tie mask and only call random once per 64-bit word? Or just leave out the rand...
-                if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
-                    result.data[uidx] |= 1 << bidx;
+                if n1 > n0 || (n1 == n0 && (tie_breaker & (1 << bidx)) != 0) {
+                    acc_word |= 1 << bidx;
                 }
             }
-        }
-
-        result
+            acc_word
+        });
+        BinaryHDV { data }
     }
 
     fn count(&self) -> usize {
@@ -249,19 +239,19 @@ impl<const N_WORDS: usize, const PLANES: usize, R: Rng + SeedableRng + Default> 
     for SlicedUnitAcc<N_WORDS, PLANES, R>
 {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<const N: usize, const PLANES: usize, R: Rng + SeedableRng + Default>
-    UnitAccumulator<BinaryHDV<N>> for SlicedUnitAcc<N, PLANES, R>
-{
-    fn new() -> Self {
         Self {
-            data: [[0; N]; PLANES],
+            data: [[0; N_WORDS]; PLANES],
             count: 0,
             rng: R::from_rng(&mut rand::rng()),
         }
+    }
+}
+
+impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
+    for SlicedUnitAcc<N, PLANES>
+{
+    fn new() -> Self {
+        Self::default()
     }
 
     #[inline]
