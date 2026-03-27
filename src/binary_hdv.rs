@@ -12,8 +12,7 @@ pub struct BinaryHDV<const N_WORDS: usize> {
 }
 
 impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
-    //type Accumulator = WeightedAcc<N_WORDS>;
-    type Accumulator = GradientAccumulator<N_WORDS>;
+    type Accumulator = WeightedAcc<N_WORDS>;
     //type UnitAccumulator = UnitAcc<N_WORDS>;
     type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
@@ -115,76 +114,20 @@ pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
     rng: R,
 }
 
-impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Default for WeightedAcc<N_WORDS, R> {
-    fn default() -> Self {
-        Self {
-            votes: [[0.0; usize::BITS as usize]; N_WORDS],
-            count: 0.0,
-            rng: R::from_rng(&mut rand::rng()),
-        }
-    }
-}
-
-impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WORDS> {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn add(&mut self, v: &BinaryHDV<N_WORDS>, weight: f64) {
-        for i in 0..N_WORDS {
-            let word = v.data[i];
-            for j in 0..usize::BITS as usize {
-                if (word >> j) & 1 == 1 {
-                    self.votes[i][j] += weight
-                }
-            }
-        }
-        self.count += weight.abs();
-        //self.count += weight;
-    }
-
-    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
-        let data = std::array::from_fn(|uidx| {
-            let mut word_acc = 0usize;
-            let tie_breaker: usize = self.rng.next_u64() as usize;
-            for bidx in 0..usize::BITS as usize {
-                let n1 = self.votes[uidx][bidx];
-                let n0 = self.count - n1;
-                if n1 > n0 || (n1 == n0 && (tie_breaker & (1 << bidx)) != 0) {
-                    word_acc |= 1 << bidx;
-                }
-            }
-            word_acc
-        });
-        BinaryHDV::<N_WORDS> { data }
-    }
-
-    fn count(&self) -> f64 {
-        self.count
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct GradientAccumulator<const N_WORDS: usize, R: Rng = MersenneTwister64> {
-    votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
-    count: f64,                                    // total number of vectors added
-    rng: R,
-}
-
-impl<const N_WORDS: usize> Default for GradientAccumulator<N_WORDS> {
+impl<const N_WORDS: usize> Default for WeightedAcc<N_WORDS> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_WORDS: usize> GradientAccumulator<N_WORDS> {
+impl<const N_WORDS: usize> WeightedAcc<N_WORDS> {
     pub const fn is_empty(&self) -> bool {
         self.count == 0.0
     }
 }
 
 impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV<N_WORDS>>
-    for GradientAccumulator<N_WORDS, R>
+    for WeightedAcc<N_WORDS, R>
 {
     fn new() -> Self {
         Self {
