@@ -295,7 +295,7 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for WeightedAccumulator<N> {
         self.count += weight
     }
 
-    fn finalize(&self) -> ComplexHDV<N> {
+    fn finalize(&mut self) -> ComplexHDV<N> {
         let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / self.count.sqrt());
         ComplexHDV { data }
     }

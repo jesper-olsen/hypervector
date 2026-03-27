@@ -67,7 +67,7 @@ pub trait UnitAccumulator<T: HyperVector> {
 pub trait Accumulator<T: HyperVector> {
     fn new() -> Self;
     fn add(&mut self, v: &T, weight: f64);
-    fn finalize(&self) -> T;
+    fn finalize(&mut self) -> T;
     fn count(&self) -> f64;
 }
 

@@ -109,16 +109,18 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
 
 // Consensus Accumulator
 #[derive(Debug, Clone)]
-pub struct WeightedAcc<const N_WORDS: usize> {
+pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
     votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
     count: f64,                                    // total number of vectors added
+    rng: R,
 }
 
-impl<const N_WORDS: usize> Default for WeightedAcc<N_WORDS> {
+impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Default for WeightedAcc<N_WORDS, R> {
     fn default() -> Self {
         Self {
             votes: [[0.0; usize::BITS as usize]; N_WORDS],
             count: 0.0,
+            rng: R::from_rng(&mut rand::rng()),
         }
     }
 }
@@ -140,13 +142,14 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for WeightedAcc<N_WOR
         self.count += weight;
     }
 
-    fn finalize(&self) -> BinaryHDV<N_WORDS> {
+    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
         let data = std::array::from_fn(|uidx| {
             let mut word_acc = 0usize;
+            let tie_breaker: usize = self.rng.next_u64() as usize;
             for bidx in 0..usize::BITS as usize {
                 let n1 = self.votes[uidx][bidx];
                 let n0 = self.count - n1;
-                if n1 > n0 || (n1 == n0 && rand::random::<bool>()) {
+                if n1 > n0 || (n1 == n0 && (tie_breaker & (1 << bidx)) != 0) {
                     word_acc |= 1 << bidx;
                 }
             }
@@ -341,7 +344,7 @@ impl<const N_WORDS: usize> Accumulator<BinaryHDV<N_WORDS>> for GradientAccumulat
         self.count += weight.abs();
     }
 
-    fn finalize(&self) -> BinaryHDV<N_WORDS> {
+    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
         let mut result = BinaryHDV::zero();
         for i in 0..self.votes.len() {
             // If the consensus is positive, set the bit to 1.

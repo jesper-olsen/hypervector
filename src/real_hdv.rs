@@ -239,7 +239,7 @@ impl<const N: usize> Accumulator<RealHDV<N>> for WeightedAccumulator<N> {
         self.count += weight;
     }
 
-    fn finalize(&self) -> RealHDV<N> {
+    fn finalize(&mut self) -> RealHDV<N> {
         let data: [f64; N] = std::array::from_fn(|i| self.sum[i] / self.count.sqrt());
         RealHDV { data }
     }

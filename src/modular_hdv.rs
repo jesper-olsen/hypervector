@@ -168,7 +168,7 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
         self.count += weight;
     }
 
-    fn finalize(&self) -> ModularHDV<D> {
+    fn finalize(&mut self) -> ModularHDV<D> {
         let data = std::array::from_fn(|i| {
             if self.sums_sin[i].abs() < f32::EPSILON && self.sums_cos[i].abs() < f32::EPSILON {
                 0
