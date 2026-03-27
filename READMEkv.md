@@ -5,7 +5,7 @@ HDV types are compared at equal total bit-width to give a fair capacity comparis
 
 ## Run
 ```
-cargo run --release --bin kv_store > results.csv
+cargo run --release --bin kv_store > kv_results.csv
 python plot_kv.py          # pip install pandas matplotlib
 ```
 
