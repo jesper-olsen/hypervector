@@ -13,4 +13,5 @@ rustfft = "6.4.0"
 rand = { version = "0.10.0", features = ["chacha"] }
 rand_core = "0.10.0"
 rand_distr = "0.6.0"
+rayon = "1.11.0"
 
