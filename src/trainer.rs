@@ -57,30 +57,17 @@ impl<T: HyperVector, const N: usize> PrototypeModel<T, N> {
 ///
 /// # Example
 /// ```rust
-/// let trainer = PerceptronTrainer::<HDV, _, u8, 10>::new(
+/// let trainer = PerceptronTrainer::<HDV, u8, _, 10>::new(
 ///     samples.into_iter().map(|(img_hdv, label)| (img_hdv, label)),
 ///     StdRng::seed_from_u64(42),
 /// );
 /// let model = trainer.fit(100);
 /// ```
-//pub struct PerceptronTrainer<T, R, L, const N: usize>
-//where
-//    T: HyperVector + Send + Sync,
-//    R: Rng,
-//    L: Into<usize> + Copy,
-//{
-//    accumulators: [T::Accumulator; N],
-//    prototypes: [T; N],
-//    samples: Vec<(T, L)>,
-//    indices: Vec<usize>,
-//    rng: R,
-//}
-
-pub struct PerceptronTrainer<T, R, L, const N: usize> 
+pub struct PerceptronTrainer<T, L, R, const N: usize> 
 where
     T: HyperVector + Send + Sync,
-    R: Rng,
     L: Into<usize> + Copy + Send + Sync,
+    R: Rng,
 {
     accumulators: [T::Accumulator; N],
     prototypes: [T; N],
@@ -90,11 +77,11 @@ where
     rng: R,
 }
 
-impl<T, R, L, const N: usize> PerceptronTrainer<T, R, L, N>
+impl<T, L, R, const N: usize> PerceptronTrainer<T, L, R, N>
 where
     T: HyperVector + Send + Sync,
-    R: Rng,
     L: Into<usize> + Copy + Send + Sync,
+    R: Rng,
 {
     /// Create a new trainer from an iterator of `(encoded_hdv, label)` pairs.
     ///
