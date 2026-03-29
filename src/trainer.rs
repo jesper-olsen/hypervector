@@ -176,4 +176,9 @@ where
     pub fn prototypes(&self) -> &[T; N] {
         &self.prototypes
     }
+
+    /// Consume the trainer and return the final trained model.
+    pub fn into_model(self) -> PrototypeModel<T, N> {
+        PrototypeModel { prototypes: self.prototypes }
+    }
 }
