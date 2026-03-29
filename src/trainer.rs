@@ -63,15 +63,29 @@ impl<T: HyperVector, const N: usize> PrototypeModel<T, N> {
 /// );
 /// let model = trainer.fit(100);
 /// ```
-pub struct PerceptronTrainer<T, R, L, const N: usize>
+//pub struct PerceptronTrainer<T, R, L, const N: usize>
+//where
+//    T: HyperVector + Send + Sync,
+//    R: Rng,
+//    L: Into<usize> + Copy,
+//{
+//    accumulators: [T::Accumulator; N],
+//    prototypes: [T; N],
+//    samples: Vec<(T, L)>,
+//    indices: Vec<usize>,
+//    rng: R,
+//}
+
+pub struct PerceptronTrainer<T, R, L, const N: usize> 
 where
     T: HyperVector + Send + Sync,
     R: Rng,
-    L: Into<usize> + Copy,
+    L: Into<usize> + Copy + Send + Sync,
 {
     accumulators: [T::Accumulator; N],
     prototypes: [T; N],
-    samples: Vec<(T, L)>,
+    samples: Vec<T>, 
+    labels: Vec<L>,
     indices: Vec<usize>,
     rng: R,
 }
@@ -86,15 +100,14 @@ where
     ///
     /// The iterator is consumed and the samples are stored internally for
     /// repeated shuffled passes during training.
-    pub fn new(data: impl IntoIterator<Item = (T, L)>, rng: R) -> Self {
-        let samples: Vec<(T, L)> = data.into_iter().collect();
-        let n = samples.len();
+    pub fn new(hvs: Vec<T>, labels: Vec<L>, rng: R) -> Self {
+        let n = hvs.len();
+        assert_eq!(n, labels.len());
 
         let mut accumulators: [T::Accumulator; N] =
             core::array::from_fn(|_| T::Accumulator::new());
 
-        // Initial bundling: one pass to form starting prototypes
-        for (hdv, label) in &samples {
+        for (hdv, label) in hvs.iter().zip(labels.iter()) {
             accumulators[(*label).into()].add(hdv, 1.0);
         }
 
@@ -103,11 +116,13 @@ where
         Self {
             accumulators,
             prototypes,
-            samples,
+            samples: hvs,      // owned directly, no tuple packing
+            labels,
             indices: (0..n).collect(),
             rng,
         }
     }
+
 
     /// Run a single training epoch (perceptron update rule).
     ///
@@ -124,12 +139,9 @@ where
             .indices
             .par_iter()
             .filter_map(|&idx| {
-                let (hdv, label) = &self.samples[idx];
-                let true_class = (*label).into();
-                let predicted = {
-                    let (i, _) = nearest(hdv, &self.prototypes);
-                    i
-                };
+                let hdv = &self.samples[idx];
+                let true_class = self.labels[idx].into();
+                let (predicted, _) = nearest(hdv, &self.prototypes);
                 if predicted != true_class {
                     Some((idx, true_class, predicted))
                 } else {
@@ -142,7 +154,7 @@ where
 
         // Sequential: apply updates (accumulators not thread-safe)
         for (idx, true_class, predicted) in errors {
-            let (hdv, _) = &self.samples[idx];
+            let hdv = &self.samples[idx];
             self.accumulators[true_class].add(hdv, lr);
             self.accumulators[predicted].add(hdv, -lr);
         }
