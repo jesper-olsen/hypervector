@@ -268,6 +268,13 @@ where
             errors: error_count,
         }
     }
+
+    /// Consume the trainer and return the final trained model.
+    pub fn into_model(self) -> PrototypeModel<T, N> {
+        PrototypeModel {
+            prototypes: self.prototypes,
+        }
+    }
 }
 
 /// Standalone helper to find the top two closest prototypes.
