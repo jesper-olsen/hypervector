@@ -281,9 +281,17 @@ where
             // Multiclass hinge loss: margin of true class vs best rival.
             // With cosine similarity this is bounded in [-2, 0] when violated.
             // Loss > 0 iff the margin constraint is not satisfied.
-            let sim_true = 1.0 - hdv.distance(&self.prototypes[true_class]);
-            let sim_rival = 1.0 - hdv.distance(&self.prototypes[predicted]);
-            let loss = (1.0 - sim_true + sim_rival).max(0.0);
+
+            let margin = 0.1;
+            //let sim_true = 1.0 - hdv.distance(&self.prototypes[true_class]);
+            //let sim_rival = 1.0 - hdv.distance(&self.prototypes[predicted]);
+            //let loss = (1.0 - sim_true + sim_rival).max(0.0);
+
+            // violation if dist_true > dist_rival + margin
+            let dist_true  = hdv.distance(&self.prototypes[true_class]) as f64;
+            let dist_rival = hdv.distance(&self.prototypes[predicted]) as f64;
+            let loss = (dist_true - dist_rival + margin).max(0.0);
+
 
             if loss > 0.0 {
                 let norm_sq = 1.0; // TODO - true for binary and bipolar HDVs
