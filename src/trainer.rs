@@ -283,8 +283,8 @@ fn find_top_two<T: HyperVector, const N: usize>(
     h: &T,
     prototypes: &[T; N],
 ) -> (usize, f64, usize, f64) {
-    let mut best = (0, f32::MIN);
-    let mut second = (0, f32::MIN);
+    let mut best = (0, f32::MAX);
+    let mut second = (0, f32::MAX);
 
     for (i, proto) in prototypes.iter().enumerate() {
         let sim = h.distance(proto);
