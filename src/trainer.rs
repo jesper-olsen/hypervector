@@ -177,3 +177,116 @@ where
         }
     }
 }
+
+/// Margin-based Perceptron trainer.
+pub struct MarginTrainer<T, L, R, const N: usize>
+where
+    T: HyperVector + Send + Sync,
+    L: Into<usize> + Copy + Send + Sync,
+    R: Rng,
+{
+    accumulators: [T::Accumulator; N],
+    prototypes: [T; N],
+    samples: Vec<T>,
+    labels: Vec<L>,
+    indices: Vec<usize>,
+    rng: R,
+    pub margin: f64, // Threshold for confidence
+}
+
+impl<T, L, R, const N: usize> MarginTrainer<T, L, R, N>
+where
+    T: HyperVector + Send + Sync,
+    L: Into<usize> + Copy + Send + Sync,
+    R: Rng,
+{
+    pub fn new(hvs: Vec<T>, labels: Vec<L>, rng: R, margin: f64) -> Self {
+        let n = hvs.len();
+        let mut accumulators: [T::Accumulator; N] = core::array::from_fn(|_| T::Accumulator::new());
+
+        for (hdv, label) in hvs.iter().zip(labels.iter()) {
+            accumulators[(*label).into()].add(hdv, 1.0);
+        }
+
+        let prototypes: [T; N] = core::array::from_fn(|i| accumulators[i].finalize());
+
+        Self {
+            accumulators,
+            prototypes,
+            samples: hvs,
+            labels,
+            indices: (0..n).collect(),
+            rng,
+            margin,
+        }
+    }
+
+    pub fn step(&mut self, epoch: usize) -> EpochResult {
+        self.indices.shuffle(&mut self.rng);
+        let lr = 1.0 / (epoch as f64).sqrt();
+
+        // Destructure to local references to avoid capturing `&self` in par_iter
+        let prototypes = &self.prototypes;
+        let samples = &self.samples;
+        let labels = &self.labels;
+        let margin = self.margin;
+
+        let violations: Vec<(usize, usize, usize)> = self
+            .indices
+            .par_iter()
+            .filter_map(|&idx| {
+                let hdv = &samples[idx];
+                let true_class = labels[idx].into();
+
+                // Use the standalone helper function
+                let (best_idx, best_sim, second_idx, second_sim) = find_top_two(hdv, prototypes);
+
+                if best_idx != true_class {
+                    Some((idx, true_class, best_idx))
+                } else if (best_sim - second_sim) < margin {
+                    // Update even if correct, because the gap is too small
+                    Some((idx, true_class, second_idx))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let error_count = violations.len();
+
+        for (idx, true_class, competitor) in violations {
+            let hdv = &self.samples[idx];
+            self.accumulators[true_class].add(hdv, lr);
+            self.accumulators[competitor].add(hdv, -lr);
+        }
+
+        self.prototypes = core::array::from_fn(|i| self.accumulators[i].finalize());
+
+        EpochResult {
+            epoch,
+            correct: self.indices.len() - error_count,
+            errors: error_count,
+        }
+    }
+}
+
+/// Standalone helper to find the top two closest prototypes.
+/// This is outside the impl block so it doesn't need to capture `self`.
+fn find_top_two<T: HyperVector, const N: usize>(
+    h: &T,
+    prototypes: &[T; N],
+) -> (usize, f64, usize, f64) {
+    let mut best = (0, f32::MIN);
+    let mut second = (0, f32::MIN);
+
+    for (i, proto) in prototypes.iter().enumerate() {
+        let sim = h.distance(proto);
+        if sim < best.1 {
+            second = best;
+            best = (i, sim);
+        } else if sim < second.1 {
+            second = (i, sim);
+        }
+    }
+    (best.0, best.1.into(), second.0, second.1.into())
+}
