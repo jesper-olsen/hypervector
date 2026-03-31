@@ -35,13 +35,17 @@ impl<T: HyperVector, const N: usize> PrototypeModel<T, N> {
     }
 
     /// Measure accuracy over a set of pre-encoded samples.
-    pub fn accuracy<L>(&self, samples: &[(T, L)]) -> f64
+    pub fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
     where
         L: Into<usize> + Copy,
     {
+        assert!(samples.len()==labels.len());
+        assert!(samples.len()>0);
+        //if samples.is_empty() { return 0.0; }
         let correct = samples
             .iter()
-            .filter(|(h, label)| self.predict(h) == (*label).into())
+            .zip(labels.iter())
+            .filter(|(h, label)| self.predict(h) == (**label).into()) 
             .count();
         correct as f64 / samples.len() as f64
     }
@@ -74,10 +78,6 @@ where
     L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
-    /// Create a new trainer from an iterator of `(encoded_hdv, label)` pairs.
-    ///
-    /// The iterator is consumed and the samples are stored internally for
-    /// repeated shuffled passes during training.
     pub fn new(hvs: Vec<T>, labels: Vec<L>, rng: R) -> Self {
         let n = hvs.len();
         assert_eq!(n, labels.len());
@@ -107,10 +107,11 @@ where
     ///
     /// `epoch` is 1-based and used to compute the learning rate `1/sqrt(epoch)`.
     pub fn step(&mut self, epoch: usize) -> EpochResult {
-        self.indices.shuffle(&mut self.rng);
+        self.indices.shuffle(&mut self.rng); // not needed for batch training...
         let lr = 1.0 / (epoch as f64).sqrt();
 
         // Parallel: collect misclassifications
+        // batch training rather than online where we update after every sample
         let errors: Vec<(usize, usize, usize)> = self
             .indices
             .par_iter()
@@ -200,9 +201,9 @@ pub enum PaVariant {
 impl PaVariant {
     fn tau(&self, loss: f64, norm_sq: f64) -> f64 {
         match self {
-            PaVariant::Pa           => loss / norm_sq,
-            PaVariant::PaI  { c }  => (loss / norm_sq).min(*c),
-            PaVariant::PaII { c }  => loss / (norm_sq + 1.0 / (2.0 * c)),
+            PaVariant::Pa => loss / norm_sq,
+            PaVariant::PaI { c } => (loss / norm_sq).min(*c),
+            PaVariant::PaII { c } => loss / (norm_sq + 1.0 / (2.0 * c)),
         }
     }
 }
@@ -232,8 +233,7 @@ where
         let n = hvs.len();
         assert_eq!(n, labels.len());
 
-        let mut accumulators: [T::Accumulator; N] =
-            core::array::from_fn(|_| T::Accumulator::new());
+        let mut accumulators: [T::Accumulator; N] = core::array::from_fn(|_| T::Accumulator::new());
 
         for (hdv, label) in hvs.iter().zip(labels.iter()) {
             accumulators[(*label).into()].add(hdv, 1.0);
@@ -263,40 +263,42 @@ where
     /// Passive on correct margin-satisfying predictions — w is unchanged.
     pub fn step(&mut self, epoch: usize) -> EpochResult {
         self.indices.shuffle(&mut self.rng);
-        let mut error_count = 0;
 
-        for &idx in &self.indices {
-            let hdv = &self.samples[idx];
-            let true_class = self.labels[idx].into();
-            let (predicted, _) = nearest(hdv, &self.prototypes);
+        // TODO - batch training like PerceptronTrainer - allows parallel iteration
+        let errors = self
+            .indices
+            .iter()
+            .filter(|&&idx| {
+                let hdv = &self.samples[idx];
+                let true_class = self.labels[idx].into();
+                let (predicted, _) = nearest(hdv, &self.prototypes);
 
-            // Multiclass hinge loss: margin of true class vs best rival.
-            // With cosine similarity this is bounded in [-2, 0] when violated.
-            // Loss > 0 iff the margin constraint is not satisfied.
-            let sim_true  = 1.0-hdv.distance(&self.prototypes[true_class]);
-            let sim_rival = 1.0-hdv.distance(&self.prototypes[predicted]);
-            let loss = (1.0 - sim_true + sim_rival).max(0.0);
+                // Multiclass hinge loss: margin of true class vs best rival.
+                // With cosine similarity this is bounded in [-2, 0] when violated.
+                // Loss > 0 iff the margin constraint is not satisfied.
+                let sim_true = hdv.similarity(&self.prototypes[true_class]);
+                let sim_rival =hdv.similarity(&self.prototypes[predicted]);
+                let loss = (1.0 - sim_true + sim_rival).max(0.0);
 
-            if loss > 0.0 {
-                let norm_sq = 1.0; // normalised Hamming: ‖x‖² = 1 in [0,1] space
-                let tau = self.variant.tau(loss.into(), norm_sq);
+                if loss > 0.0 {
+                    let norm_sq = 1.0; // true for binary, bipolar and normalised real/complex vectors ...
+                    let tau = self.variant.tau(loss.into(), norm_sq);
 
-                self.accumulators[true_class].add(hdv, tau);
-                self.accumulators[predicted].add(hdv, -tau);
+                    self.accumulators[true_class].add(hdv, tau);
+                    self.accumulators[predicted].add(hdv, -tau);
 
-                self.prototypes[true_class]  = self.accumulators[true_class].finalize();
-                self.prototypes[predicted]   = self.accumulators[predicted].finalize();
-
-                if true_class!=predicted {
-                    error_count += 1;
+                    self.prototypes[true_class] = self.accumulators[true_class].finalize();
+                    self.prototypes[predicted] = self.accumulators[predicted].finalize();
                 }
-            }
-        }
+
+                true_class != predicted
+            })
+            .count();
 
         EpochResult {
             epoch,
-            correct: self.indices.len() - error_count,
-            errors: error_count,
+            correct: self.indices.len() - errors,
+            errors,
         }
     }
 
@@ -305,11 +307,17 @@ where
         for epoch in 1..=max_epochs {
             let result = self.step(epoch);
             history.push(result);
-            if result.errors == 0 {  // TODO - can still increase the margin...
+            if result.errors == 0 {
+                // TODO - can still increase the margin...
                 break;
             }
         }
-        (PrototypeModel { prototypes: self.prototypes }, history)
+        (
+            PrototypeModel {
+                prototypes: self.prototypes,
+            },
+            history,
+        )
     }
 
     pub fn prototypes(&self) -> &[T; N] {
@@ -317,6 +325,8 @@ where
     }
 
     pub fn into_model(self) -> PrototypeModel<T, N> {
-        PrototypeModel { prototypes: self.prototypes }
+        PrototypeModel {
+            prototypes: self.prototypes,
+        }
     }
 }
