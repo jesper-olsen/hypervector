@@ -3,6 +3,55 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
 
+//pub trait Classifier<T: HyperVector + Send + Sync>: Sync {
+//    fn predict(&self, h: &T) -> usize;
+//    
+//    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
+//    where
+//        L: Into<usize> + Copy + Send + Sync,
+//    {
+//        assert!(!samples.is_empty() && samples.len() == labels.len());
+//        let correct: usize = samples
+//            .par_iter()
+//            .zip(labels.par_iter().copied())
+//            .filter(|(h, label)| self.predict(h) == (*label).into())
+//            .count();
+//        correct as f64 / samples.len() as f64
+//    }
+//}
+
+pub trait Classifier<T: HyperVector> {
+    fn predict(&self, h: &T) -> usize;
+
+//    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
+//    where
+//        L: Into<usize> + Copy,
+//    {
+//        assert!(!samples.is_empty() && samples.len() == labels.len());
+//        let correct = samples
+//            .iter()
+//            .zip(labels.iter().copied())
+//            .filter(|(h, label)| self.predict(h) == (*label).into())
+//            .count();
+//        correct as f64 / samples.len() as f64
+//    }
+//
+    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
+    where
+        L: Into<usize> + Copy + Send + Sync,
+        T: Send + Sync,
+        Self: Sync,
+    {
+        assert!(!samples.is_empty() && samples.len() == labels.len());
+        let correct: usize = samples
+            .par_iter()
+            .zip(labels.par_iter().copied())
+            .filter(|(h, label)| self.predict(h) == (*label).into())
+            .count();
+        correct as f64 / samples.len() as f64
+    }
+}
+
 /// Result of a single training epoch.
 #[derive(Debug, Clone, Copy)]
 pub struct EpochResult {
@@ -19,6 +68,7 @@ impl EpochResult {
     pub fn accuracy(&self) -> f64 {
         self.correct as f64 / self.total() as f64
     }
+
 }
 
 /// A trained set of prototype hypervectors, one per class.
@@ -27,29 +77,29 @@ pub struct PrototypeModel<T: HyperVector, const N: usize> {
     pub prototypes: [T; N],
 }
 
-impl<T: HyperVector, const N: usize> PrototypeModel<T, N> {
-    /// Predict the class index for an already-encoded hypervector.
-    pub fn predict(&self, h: &T) -> usize {
+impl<T: HyperVector, const N: usize> Classifier<T> for PrototypeModel<T, N> {
+    fn predict(&self, h: &T) -> usize {
         let (idx, _) = nearest(h, &self.prototypes);
         idx
     }
-
-    /// Measure accuracy over a set of pre-encoded samples.
-    pub fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
-    where
-        L: Into<usize> + Copy,
-    {
-        assert!(samples.len()==labels.len());
-        assert!(samples.len()>0);
-        //if samples.is_empty() { return 0.0; }
-        let correct = samples
-            .iter()
-            .zip(labels.iter())
-            .filter(|(h, label)| self.predict(h) == (**label).into()) 
-            .count();
-        correct as f64 / samples.len() as f64
-    }
 }
+
+//impl<T: HyperVector, const N: usize> PrototypeModel<T, N> {
+//    /// Measure accuracy over a set of pre-encoded samples.
+//    pub fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
+//    where
+//        L: Into<usize> + Copy,
+//    {
+//        assert!(samples.len()==labels.len());
+//        assert!(samples.len()>0);
+//        let correct = samples
+//            .iter()
+//            .zip(labels.iter())
+//            .filter(|(h, label)| self.predict(h) == (**label).into()) 
+//            .count();
+//        correct as f64 / samples.len() as f64
+//    }
+//}
 
 /// Perceptron trainer for HDV prototype classifiers.
 ///
