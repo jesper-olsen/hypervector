@@ -3,23 +3,6 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
 
-//pub trait Classifier<T: HyperVector + Send + Sync>: Sync {
-//    fn predict(&self, h: &T) -> usize;
-//    
-//    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
-//    where
-//        L: Into<usize> + Copy + Send + Sync,
-//    {
-//        assert!(!samples.is_empty() && samples.len() == labels.len());
-//        let correct: usize = samples
-//            .par_iter()
-//            .zip(labels.par_iter().copied())
-//            .filter(|(h, label)| self.predict(h) == (*label).into())
-//            .count();
-//        correct as f64 / samples.len() as f64
-//    }
-//}
-
 pub trait Classifier<T: HyperVector> {
     fn predict(&self, h: &T) -> usize;
 
@@ -36,7 +19,8 @@ pub trait Classifier<T: HyperVector> {
 //        correct as f64 / samples.len() as f64
 //    }
 //
-    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
+    /// returns tuple: number of correct, accuracy 
+    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> (usize,f64)
     where
         L: Into<usize> + Copy + Send + Sync,
         T: Send + Sync,
@@ -48,7 +32,8 @@ pub trait Classifier<T: HyperVector> {
             .zip(labels.par_iter().copied())
             .filter(|(h, label)| self.predict(h) == (*label).into())
             .count();
-        correct as f64 / samples.len() as f64
+        let acc = correct as f64 / samples.len() as f64;
+        (correct, acc)
     }
 }
 
