@@ -191,19 +191,10 @@ pub struct MultiPrototypeModel<T: HyperVector> {
     pub proto_per_class: usize,
 }
 
-impl<T: HyperVector + Send + Sync> MultiPrototypeModel<T> {
-    /// Predict class for an encoded hypervector.
-    /// Finds nearest prototype across all classes, returns its class label.
-    pub fn predict(&self, h: &T) -> usize {
-        let (idx, _) = nearest(h, &self.prototypes);
-        self.proto_labels[idx].into()
-    }
-}
-
 impl<T: HyperVector> Classifier<T> for MultiPrototypeModel<T> {
     fn predict(&self, h: &T) -> usize {
         let (idx, _) = nearest(h, &self.prototypes);
-        idx
+        idx / self.proto_per_class
     }
 }
 
