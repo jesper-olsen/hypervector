@@ -184,14 +184,14 @@ where
     }
 }
 
-pub struct MultiPrototypeModel<T: HyperVector, L: Into<usize> + Copy + Send + Sync> {
+pub struct MultiPrototypeModel<T: HyperVector + Send + Sync> {
     pub prototypes: Vec<T>,
-    pub proto_labels: Vec<L>, // class for each prototype, len = n_classes * proto_per_class
+    pub proto_labels: Vec<usize>, // class for each prototype, len = n_classes * proto_per_class
     pub n_classes: usize,
     pub proto_per_class: usize,
 }
 
-impl<T: HyperVector + Send + Sync, L: Into<usize> + Copy + Send + Sync> MultiPrototypeModel<T, L> {
+impl<T: HyperVector + Send + Sync> MultiPrototypeModel<T> {
     /// Predict class for an encoded hypervector.
     /// Finds nearest prototype across all classes, returns its class label.
     pub fn predict(&self, h: &T) -> usize {
@@ -216,7 +216,7 @@ where
     prototypes: Vec<T>,
     samples: Vec<T>,
     class_labels: Vec<L>,
-    proto_labels: Vec<L>,
+    proto_labels: Vec<usize>,
     n_classes: usize,
     proto_per_class: usize,
     indices: Vec<usize>,
@@ -226,7 +226,7 @@ where
 impl<T, L, R> PerceptronMultiTrainer<T, L, R>
 where
     T: HyperVector + Send + Sync,
-    L: Into<usize> + Copy + Send + Sync + std::convert::From<usize>,
+    L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
     pub fn new(
@@ -257,7 +257,7 @@ where
 
         // Assign each sample to nearest prototype within its class
         // and compute new prototype-scoped label
-        let mut proto_labels: Vec<L> = Vec::with_capacity(samples.len());
+        let mut proto_labels: Vec<usize> = Vec::with_capacity(samples.len());
         for (hdv, class_label) in samples.iter().zip(class_labels.iter()) {
             let class = (*class_label).into();
             let class_start = class * proto_per_class;
@@ -265,7 +265,7 @@ where
                 nearest(hdv, &prototypes[class_start..class_start + proto_per_class]);
             let proto_label = class_start + nearest_idx;
             accumulators[proto_label].add(hdv, 1.0);
-            proto_labels.push(proto_label.into());
+            proto_labels.push(proto_label);
         }
 
         let indices = (0..samples.len()).collect();
@@ -331,7 +331,7 @@ where
     /// Run up to `max_epochs` training steps, stopping early if zero errors.
     ///
     /// Returns the results of each epoch and the trained model.
-    pub fn fit(mut self, max_epochs: usize) -> (MultiPrototypeModel<T, L>, Vec<EpochResult>) {
+    pub fn fit(mut self, max_epochs: usize) -> (MultiPrototypeModel<T>, Vec<EpochResult>) {
         let mut history = Vec::with_capacity(max_epochs);
         for epoch in 1..=max_epochs {
             let result = self.step(epoch);
@@ -352,7 +352,7 @@ where
     }
 
     /// Consume the trainer and return the final trained model.
-    pub fn into_model(self) -> MultiPrototypeModel<T, L> {
+    pub fn into_model(self) -> MultiPrototypeModel<T> {
         MultiPrototypeModel {
             prototypes: self.prototypes,
             proto_labels: self.proto_labels,
