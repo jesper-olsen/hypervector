@@ -6,19 +6,6 @@ use rayon::prelude::*;
 pub trait Classifier<T: HyperVector> {
     fn predict(&self, h: &T) -> usize;
 
-//    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
-//    where
-//        L: Into<usize> + Copy,
-//    {
-//        assert!(!samples.is_empty() && samples.len() == labels.len());
-//        let correct = samples
-//            .iter()
-//            .zip(labels.iter().copied())
-//            .filter(|(h, label)| self.predict(h) == (*label).into())
-//            .count();
-//        correct as f64 / samples.len() as f64
-//    }
-//
     /// returns tuple: number of correct, accuracy 
     fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> (usize,f64)
     where
@@ -69,23 +56,6 @@ impl<T: HyperVector, const N: usize> Classifier<T> for PrototypeModel<T, N> {
     }
 }
 
-//impl<T: HyperVector, const N: usize> PrototypeModel<T, N> {
-//    /// Measure accuracy over a set of pre-encoded samples.
-//    pub fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> f64
-//    where
-//        L: Into<usize> + Copy,
-//    {
-//        assert!(samples.len()==labels.len());
-//        assert!(samples.len()>0);
-//        let correct = samples
-//            .iter()
-//            .zip(labels.iter())
-//            .filter(|(h, label)| self.predict(h) == (**label).into()) 
-//            .count();
-//        correct as f64 / samples.len() as f64
-//    }
-//}
-
 /// Perceptron trainer for HDV prototype classifiers.
 ///
 /// # Type parameters
@@ -113,24 +83,24 @@ where
     L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
-    pub fn new(hvs: Vec<T>, labels: Vec<L>, rng: R) -> Self {
-        let n = hvs.len();
-        assert_eq!(n, labels.len());
+    pub fn new(samples: Vec<T>, labels: Vec<L>, rng: R) -> Self {
+        assert_eq!(samples.len(), labels.len());
 
         let mut accumulators: [T::Accumulator; N] = core::array::from_fn(|_| T::Accumulator::new());
 
-        for (hdv, label) in hvs.iter().zip(labels.iter()) {
+        for (hdv, label) in samples.iter().zip(labels.iter()) {
             accumulators[(*label).into()].add(hdv, 1.0);
         }
 
         let prototypes: [T; N] = core::array::from_fn(|i| accumulators[i].finalize());
+        let indices = (0..samples.len()).collect();
 
         Self {
             accumulators,
             prototypes,
-            samples: hvs, // owned directly, no tuple packing
+            samples, 
             labels,
-            indices: (0..n).collect(),
+            indices,
             rng,
         }
     }
@@ -227,9 +197,9 @@ where
 pub enum PaVariant {
     /// PA: unconstrained step. No hyperparameter. Can be large on outliers.
     Pa,
-    /// PA-I: step capped at C. Larger C = more aggressive.
+    /// PA-I: step capped at C (e.g. 0.1). Larger C = more aggressive.
     PaI { c: f64 },
-    /// PA-II: step softened by quadratic slack. Smoother than PA-I.
+    /// PA-II: step softened by quadratic slack. Smoother than PA-I. Use e.g. c=1.0
     PaII { c: f64 },
 }
 
