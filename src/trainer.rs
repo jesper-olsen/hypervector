@@ -1,3 +1,4 @@
+use crate::kmeans::KMeans;
 use crate::{Accumulator, HyperVector, nearest};
 use rand::Rng;
 use rand::seq::SliceRandom;
@@ -6,8 +7,8 @@ use rayon::prelude::*;
 pub trait Classifier<T: HyperVector> {
     fn predict(&self, h: &T) -> usize;
 
-    /// returns tuple: number of correct, accuracy 
-    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> (usize,f64)
+    /// returns tuple: number of correct, accuracy
+    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> (usize, f64)
     where
         L: Into<usize> + Copy + Send + Sync,
         T: Send + Sync,
@@ -40,7 +41,6 @@ impl EpochResult {
     pub fn accuracy(&self) -> f64 {
         self.correct as f64 / self.total() as f64
     }
-
 }
 
 /// A trained set of prototype hypervectors, one per class.
@@ -98,7 +98,7 @@ where
         Self {
             accumulators,
             prototypes,
-            samples, 
+            samples,
             labels,
             indices,
             rng,
@@ -180,6 +180,184 @@ where
     pub fn into_model(self) -> PrototypeModel<T, N> {
         PrototypeModel {
             prototypes: self.prototypes,
+        }
+    }
+}
+
+pub struct MultiPrototypeModel<T: HyperVector, L: Into<usize> + Copy + Send + Sync> {
+    pub prototypes: Vec<T>,
+    pub proto_labels: Vec<L>, // class for each prototype, len = n_classes * proto_per_class
+    pub n_classes: usize,
+    pub proto_per_class: usize,
+}
+
+impl<T: HyperVector + Send + Sync, L: Into<usize> + Copy + Send + Sync> MultiPrototypeModel<T, L> {
+    /// Predict class for an encoded hypervector.
+    /// Finds nearest prototype across all classes, returns its class label.
+    pub fn predict(&self, h: &T) -> usize {
+        let (idx, _) = nearest(h, &self.prototypes);
+        self.proto_labels[idx].into()
+    }
+}
+
+/// Perceptron trainer for HDV multi prototype classifiers.
+///
+/// # Type parameters
+/// - `T`: HyperVector type
+/// - `R`: RNG (used for per-epoch shuffling)
+/// - `L`: Label type — must be convertible to `usize` as a class index
+pub struct PerceptronMultiTrainer<T, L, R>
+where
+    T: HyperVector + Send + Sync,
+    L: Into<usize> + Copy + Send + Sync,
+    R: Rng,
+{
+    accumulators: Vec<T::Accumulator>,
+    prototypes: Vec<T>,
+    samples: Vec<T>,
+    class_labels: Vec<L>,
+    proto_labels: Vec<L>,
+    n_classes: usize,
+    proto_per_class: usize,
+    indices: Vec<usize>,
+    rng: R,
+}
+
+impl<T, L, R> PerceptronMultiTrainer<T, L, R>
+where
+    T: HyperVector + Send + Sync,
+    L: Into<usize> + Copy + Send + Sync + std::convert::From<usize>,
+    R: Rng,
+{
+    pub fn new(
+        samples: Vec<T>,
+        class_labels: Vec<L>,
+        n_classes: usize,
+        proto_per_class: usize,
+        mut rng: R,
+    ) -> Self {
+        let total_prototypes = n_classes * proto_per_class;
+        let mut accumulators: Vec<T::Accumulator> = (0..total_prototypes)
+            .map(|_| T::Accumulator::new())
+            .collect();
+
+        // Build kmeans per class to get initial prototypes
+        let mut prototypes: Vec<T> = Vec::with_capacity(total_prototypes);
+        for class in 0..n_classes {
+            let class_samples: Vec<&T> = samples
+                .iter()
+                .zip(class_labels.iter().copied())
+                .filter(|(_, l)| (*l).into() == class)
+                .map(|(h, _)| h)
+                .collect();
+            let mut km = KMeans::new(&class_samples, proto_per_class, &mut rng);
+            km.train(&class_samples, 100, false);
+            prototypes.extend(km.centroids);
+        }
+
+        // Assign each sample to nearest prototype within its class
+        // and compute new prototype-scoped label
+        let mut proto_labels: Vec<L> = Vec::with_capacity(samples.len());
+        for (hdv, class_label) in samples.iter().zip(class_labels.iter()) {
+            let class = (*class_label).into();
+            let class_start = class * proto_per_class;
+            let (nearest_idx, _) =
+                nearest(hdv, &prototypes[class_start..class_start + proto_per_class]);
+            let proto_label = class_start + nearest_idx;
+            accumulators[proto_label].add(hdv, 1.0);
+            proto_labels.push(proto_label.into());
+        }
+
+        let indices = (0..samples.len()).collect();
+        Self {
+            accumulators,
+            prototypes,
+            samples,
+            proto_labels, // replaces original class labels for training
+            class_labels,
+            n_classes,
+            proto_per_class,
+            indices,
+            rng,
+        }
+    }
+
+    /// Run a single training epoch (perceptron update rule).
+    ///
+    /// Shuffles the sample order, finds all misclassifications in parallel,
+    /// then applies weight updates sequentially.
+    ///
+    /// `epoch` is 1-based and used to compute the learning rate `1/sqrt(epoch)`.
+    pub fn step(&mut self, epoch: usize) -> EpochResult {
+        self.indices.shuffle(&mut self.rng); // not needed for batch training...
+        let lr = 1.0 / (epoch as f64).sqrt();
+
+        // Parallel: collect misclassifications
+        // batch training rather than online where we update after every sample
+        let errors: Vec<(usize, usize, usize)> = self
+            .indices
+            .par_iter()
+            .filter_map(|&idx| {
+                let hdv = &self.samples[idx];
+                let true_class = self.proto_labels[idx].into();
+                let (predicted, _) = nearest(hdv, &self.prototypes);
+                if predicted != true_class {
+                    Some((idx, true_class, predicted))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let error_count = errors.len();
+
+        // Sequential: apply updates (accumulators not thread-safe)
+        for (idx, true_class, predicted) in errors {
+            let hdv = &self.samples[idx];
+            self.accumulators[true_class].add(hdv, lr);
+            self.accumulators[predicted].add(hdv, -lr);
+        }
+
+        self.prototypes = self.accumulators.iter_mut().map(|a| a.finalize()).collect();
+        //self.prototypes = core::array::from_fn(|i| self.accumulators[i].finalize()).to_vec();
+
+        EpochResult {
+            epoch,
+            correct: self.indices.len() - error_count,
+            errors: error_count,
+        }
+    }
+
+    /// Run up to `max_epochs` training steps, stopping early if zero errors.
+    ///
+    /// Returns the results of each epoch and the trained model.
+    pub fn fit(mut self, max_epochs: usize) -> (MultiPrototypeModel<T, L>, Vec<EpochResult>) {
+        let mut history = Vec::with_capacity(max_epochs);
+        for epoch in 1..=max_epochs {
+            let result = self.step(epoch);
+            history.push(result);
+            if result.errors == 0 {
+                break;
+            }
+        }
+        (
+            MultiPrototypeModel {
+                prototypes: self.prototypes,
+                proto_labels: self.proto_labels,
+                n_classes: self.n_classes,
+                proto_per_class: self.proto_per_class,
+            },
+            history,
+        )
+    }
+
+    /// Consume the trainer and return the final trained model.
+    pub fn into_model(self) -> MultiPrototypeModel<T, L> {
+        MultiPrototypeModel {
+            prototypes: self.prototypes,
+            proto_labels: self.proto_labels,
+            n_classes: self.n_classes,
+            proto_per_class: self.proto_per_class,
         }
     }
 }
@@ -282,7 +460,7 @@ where
                 // With cosine similarity this is bounded in [-2, 0] when violated.
                 // Loss > 0 iff the margin constraint is not satisfied.
                 let sim_true = hdv.similarity(&self.prototypes[true_class]);
-                let sim_rival =hdv.similarity(&self.prototypes[predicted]);
+                let sim_rival = hdv.similarity(&self.prototypes[predicted]);
                 let loss = (1.0 - sim_true + sim_rival).max(0.0);
 
                 if loss > 0.0 {

@@ -1,6 +1,6 @@
 use crate::{HyperVector, UnitAccumulator, nearest};
-use rand::prelude::IndexedRandom;
 use rand::Rng;
+use rand::prelude::IndexedRandom;
 //use rayon::prelude::*;
 use std::borrow::Borrow;
 
@@ -18,10 +18,7 @@ impl<H: HyperVector> KMeans<H> {
 
         // Simple random initialization.
         // TODO: implement K-Means++ initialisation.
-        let centroids: Vec<H> = data
-            .sample(rng, k)
-            .map(|v| v.borrow().clone())
-            .collect();
+        let centroids: Vec<H> = data.sample(rng, k).map(|v| v.borrow().clone()).collect();
         Self {
             k,
             centroids,

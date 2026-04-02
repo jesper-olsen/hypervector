@@ -2,10 +2,10 @@ pub mod binary_hdv;
 pub mod bipolar_hdv;
 pub mod complex_hdv;
 pub mod encoding;
+pub mod kmeans;
 pub mod modular_hdv;
 pub mod real_hdv;
 pub mod trainer;
-pub mod kmeans;
 
 /// Generates hypervector types for specified dimensionality
 /// The main reason for this macro is the constraints of const generics - the bitpacked implementations for binary and bipolar
@@ -87,7 +87,7 @@ pub trait HyperVector: Sized + Clone {
     // blend two hypervectors by coping indices from other - rest from self
     fn blend(&self, other: &Self, indices: &[usize]) -> Self;
 
-    fn distance(&self, other: &Self) -> f32;   // 0..1
+    fn distance(&self, other: &Self) -> f32; // 0..1
     fn similarity(&self, other: &Self) -> f32 {
         1.0 - self.distance(other)
     }
