@@ -184,7 +184,7 @@ where
     }
 }
 
-pub struct MultiPrototypeModel<T: HyperVector + Send + Sync> {
+pub struct MultiPrototypeModel<T: HyperVector> {
     pub prototypes: Vec<T>,
     pub proto_labels: Vec<usize>, // class for each prototype, len = n_classes * proto_per_class
     pub n_classes: usize,
@@ -197,6 +197,13 @@ impl<T: HyperVector + Send + Sync> MultiPrototypeModel<T> {
     pub fn predict(&self, h: &T) -> usize {
         let (idx, _) = nearest(h, &self.prototypes);
         self.proto_labels[idx].into()
+    }
+}
+
+impl<T: HyperVector> Classifier<T> for MultiPrototypeModel<T> {
+    fn predict(&self, h: &T) -> usize {
+        let (idx, _) = nearest(h, &self.prototypes);
+        idx
     }
 }
 
