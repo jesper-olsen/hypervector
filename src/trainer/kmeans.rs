@@ -1,7 +1,6 @@
 use crate::{HyperVector, UnitAccumulator, nearest};
 use rand::Rng;
 use rand::prelude::IndexedRandom;
-//use rayon::prelude::*;
 use std::borrow::Borrow;
 
 pub struct KMeans<H: HyperVector> {

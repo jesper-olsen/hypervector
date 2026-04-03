@@ -2,7 +2,6 @@ pub mod binary_hdv;
 pub mod bipolar_hdv;
 pub mod complex_hdv;
 pub mod encoding;
-pub mod kmeans;
 pub mod modular_hdv;
 pub mod real_hdv;
 pub mod trainer;
