@@ -181,6 +181,22 @@ pub fn nearest<T: HyperVector>(query: &T, candidates: &[T]) -> (usize, f32) {
     (best_idx, min_dist)
 }
 
+pub fn nearest_two<T: HyperVector>(query: &T, candidates: &[T]) -> ((usize, f32), (usize, f32)) {
+    assert!(candidates.len() >= 2);
+    let mut first = (0, f32::MAX);
+    let mut second = (0, f32::MAX);
+    for (idx, v) in candidates.iter().enumerate() {
+        let d = query.distance(v);
+        if d < first.1 {
+            second = first;
+            first = (idx, d);
+        } else if d < second.1 {
+            second = (idx, d);
+        }
+    }
+    (first, second)
+}
+
 pub fn example_mexican_dollar<T: HyperVector>() {
     // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
     // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf

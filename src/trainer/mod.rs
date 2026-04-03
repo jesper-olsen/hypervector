@@ -2,6 +2,7 @@ use crate::{HyperVector, nearest};
 use rayon::prelude::*;
 
 pub mod kmeans;
+pub mod lvq;
 pub mod multi_perceptron;
 pub mod pa;
 pub mod perceptron;
@@ -55,5 +56,19 @@ impl<T: HyperVector, const N: usize> Classifier<T> for PrototypeModel<T, N> {
     fn predict(&self, h: &T) -> usize {
         let (idx, _) = nearest(h, &self.prototypes);
         idx
+    }
+}
+
+pub struct MultiPrototypeModel<T: HyperVector> {
+    pub prototypes: Vec<T>,
+    pub proto_labels: Vec<usize>, // class for each prototype, len = n_classes * proto_per_class
+    pub n_classes: usize,
+    pub proto_per_class: usize,
+}
+
+impl<T: HyperVector> Classifier<T> for MultiPrototypeModel<T> {
+    fn predict(&self, h: &T) -> usize {
+        let (idx, _) = nearest(h, &self.prototypes);
+        idx / self.proto_per_class
     }
 }

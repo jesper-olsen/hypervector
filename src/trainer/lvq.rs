@@ -1,5 +1,5 @@
 use crate::trainer::{EpochResult, MultiPrototypeModel, kmeans::KMeans};
-use crate::{Accumulator, HyperVector, nearest};
+use crate::{Accumulator, HyperVector, nearest, nearest_two};
 use rand::Rng;
 use rand::prelude::SliceRandom;
 use rayon::prelude::*;
@@ -10,7 +10,7 @@ use rayon::prelude::*;
 /// - `T`: HyperVector type
 /// - `R`: RNG (used for per-epoch shuffling)
 /// - `L`: Label type — must be convertible to `usize` as a class index
-pub struct PerceptronMultiTrainer<T, R>
+pub struct LvqTrainer<T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,
@@ -23,9 +23,10 @@ where
     proto_per_class: usize,
     indices: Vec<usize>,
     rng: R,
+    window: f32, // typically from the range 0.2 - 0.3
 }
 
-impl<T, R> PerceptronMultiTrainer<T, R>
+impl<T, R> LvqTrainer<T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,
@@ -36,6 +37,7 @@ where
         n_classes: usize,
         proto_per_class: usize,
         mut rng: R,
+        window: f32,
     ) -> Self
     where
         L: Into<usize> + Copy + Send + Sync,
@@ -82,10 +84,11 @@ where
             proto_per_class,
             indices,
             rng,
+            window,
         }
     }
 
-    /// Run a single training epoch (perceptron update rule).
+    /// Run a single training epoch (LVQ2.1).
     ///
     /// Shuffles the sample order, finds all misclassifications in parallel,
     /// then applies weight updates sequentially.
@@ -97,28 +100,42 @@ where
 
         // Parallel: collect misclassifications
         // batch training rather than online where we update after every sample
-        let errors: Vec<(usize, usize, usize)> = self
+        let one_correct: Vec<(usize, usize, usize, usize)> = self
             .indices
             .par_iter()
             .filter_map(|&idx| {
                 let hdv = &self.samples[idx];
-                let true_class = self.proto_labels[idx];
-                let (predicted, _) = nearest(hdv, &self.prototypes);
-                if predicted != true_class {
-                    Some((idx, true_class, predicted))
+                let true_class = self.proto_labels[idx] / self.proto_per_class;
+
+                let ((p1_idx, d1), (p2_idx, d2)) = nearest_two(hdv, &self.prototypes);
+                let p1_class = p1_idx / self.proto_per_class;
+                let p2_class = p2_idx / self.proto_per_class;
+                // window condition: sample must be near the boundary between p1 and p2,
+                // and exactly one of them must be the correct class
+                let in_window = (d1 / d2).min(d2 / d1) > (1.0 - self.window) / (1.0 + self.window);
+                let one_correct = (p1_class == true_class) != (p2_class == true_class);
+
+                if in_window && one_correct {
+                    // move correct prototype toward sample, wrong prototype away
+                    let (correct_idx, wrong_idx, error) = if p1_class == true_class {
+                        (p1_idx, p2_idx, 0)
+                    } else {
+                        (p2_idx, p1_idx, 1)
+                    };
+                    Some((idx, correct_idx, wrong_idx, error))
                 } else {
                     None
                 }
             })
             .collect();
 
-        let error_count = errors.len();
-
         // Sequential: apply updates (accumulators not thread-safe)
-        for (idx, true_class, predicted) in errors {
+        let mut error_count = 0; // ignores errors for samples outside the window...
+        for (idx, correct_idx, wrong_idx, error) in one_correct {
             let hdv = &self.samples[idx];
-            self.accumulators[true_class].add(hdv, lr);
-            self.accumulators[predicted].add(hdv, -lr);
+            self.accumulators[correct_idx].add(hdv, lr);
+            self.accumulators[wrong_idx].add(hdv, -lr);
+            error_count += error;
         }
 
         self.prototypes = self.accumulators.iter_mut().map(|a| a.finalize()).collect();
@@ -132,6 +149,7 @@ where
     }
 
     /// Run up to `max_epochs` training steps, stopping early if zero errors.
+    /// Note that LVQ2.1 has no covergence guarantee and can fluctuate
     ///
     /// Returns the results of each epoch and the trained model.
     pub fn fit(mut self, max_epochs: usize) -> (MultiPrototypeModel<T>, Vec<EpochResult>) {
@@ -139,9 +157,6 @@ where
         for epoch in 1..=max_epochs {
             let result = self.step(epoch);
             history.push(result);
-            if result.errors == 0 {
-                break;
-            }
         }
         (
             MultiPrototypeModel {
