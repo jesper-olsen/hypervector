@@ -100,7 +100,7 @@ where
 
         // Parallel: collect misclassifications
         // batch training rather than online where we update after every sample
-        let one_correct: Vec<(usize, usize, usize, usize)> = self
+        let one_correct: Vec<(usize, usize, usize)> = self
             .indices
             .par_iter()
             .filter_map(|&idx| {
@@ -117,12 +117,12 @@ where
 
                 if in_window && one_correct {
                     // move correct prototype toward sample, wrong prototype away
-                    let (correct_idx, wrong_idx, error) = if p1_class == true_class {
-                        (p1_idx, p2_idx, 0)
+                    let (correct_idx, wrong_idx) = if p1_class == true_class {
+                        (p1_idx, p2_idx)
                     } else {
-                        (p2_idx, p1_idx, 1)
+                        (p2_idx, p1_idx)
                     };
-                    Some((idx, correct_idx, wrong_idx, error))
+                    Some((idx, correct_idx, wrong_idx))
                 } else {
                     None
                 }
@@ -130,21 +130,30 @@ where
             .collect();
 
         // Sequential: apply updates (accumulators not thread-safe)
-        let mut error_count = 0; // ignores errors for samples outside the window...
-        for (idx, correct_idx, wrong_idx, error) in one_correct {
+        for (idx, correct_idx, wrong_idx) in one_correct {
             let hdv = &self.samples[idx];
             self.accumulators[correct_idx].add(hdv, lr);
             self.accumulators[wrong_idx].add(hdv, -lr);
-            error_count += error;
         }
 
         self.prototypes = self.accumulators.iter_mut().map(|a| a.finalize()).collect();
-        //self.prototypes = core::array::from_fn(|i| self.accumulators[i].finalize()).to_vec();
+
+        // Compute actual error count against all samples
+        let errors: usize = self
+            .indices
+            .par_iter()
+            .filter(|&&idx| {
+                let hdv = &self.samples[idx];
+                let true_class = self.proto_labels[idx] / self.proto_per_class;
+                let (p1_idx, _) = nearest(hdv, &self.prototypes);
+                p1_idx / self.proto_per_class != true_class
+            })
+            .count();
 
         EpochResult {
             epoch,
-            correct: self.indices.len() - error_count,
-            errors: error_count,
+            correct: self.indices.len() - errors,
+            errors,
         }
     }
 

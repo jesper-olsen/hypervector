@@ -10,8 +10,8 @@ pub mod perceptron;
 pub trait Classifier<T: HyperVector> {
     fn predict(&self, h: &T) -> usize;
 
-    /// returns tuple: number of correct, accuracy
-    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> (usize, f64)
+    /// returns tuple: number of correct, errors, accuracy
+    fn accuracy<L>(&self, samples: &[T], labels: &[L]) -> (usize, usize, f64)
     where
         L: Into<usize> + Copy + Send + Sync,
         T: Send + Sync,
@@ -23,8 +23,8 @@ pub trait Classifier<T: HyperVector> {
             .zip(labels.par_iter().copied())
             .filter(|(h, label)| self.predict(h) == (*label).into())
             .count();
-        let acc = correct as f64 / samples.len() as f64;
-        (correct, acc)
+        let acc = (100 * correct) as f64 / samples.len() as f64;
+        (correct, samples.len() - correct, acc)
     }
 }
 
