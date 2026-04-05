@@ -143,15 +143,7 @@ where
                 break;
             }
         }
-        (
-            MultiPrototypeModel {
-                prototypes: self.prototypes,
-                proto_labels: self.proto_labels,
-                n_classes: self.n_classes,
-                proto_per_class: self.proto_per_class,
-            },
-            history,
-        )
+        (self.into_model(), history)
     }
 
     /// Consume the trainer and return the final trained model.

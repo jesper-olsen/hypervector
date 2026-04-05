@@ -1,14 +1,14 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+use hypervector::encoding::ScalarEncoder;
 use hypervector::hdv;
 use hypervector::trainer::lvq::LvqTrainer;
 use hypervector::trainer::{
-    Classifier, multi_perceptron::PerceptronMultiTrainer,
-    pa::PaTrainer, pa::PaVariant, perceptron::PerceptronTrainer,
+    Classifier, multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer, pa::PaVariant,
+    perceptron::PerceptronTrainer,
 };
 use hypervector::{Accumulator, HyperVector, trainer::Trainer};
 use hypervector::{
-    binary_hdv::BinaryHDV, complex_hdv::ComplexHDV,
-    modular_hdv::ModularHDV, real_hdv::RealHDV,
+    binary_hdv::BinaryHDV, complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV,
 };
 
 use std::fs;
@@ -20,6 +20,7 @@ use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
 use rayon::prelude::*;
 use std::io::Write;
+use std::fmt;
 
 // ls -l UCI\ HAR\ Dataset/test
 //
@@ -42,6 +43,8 @@ use std::io::Write;
 // activity (1-6), line n refers tofeature v
 // activity (1-6) one per line, activity on line n refers to feature vector on line n in X_test/X_train/y_test/y_train
 
+pub const NUM_CLASSES: usize = 6;
+
 pub struct HarDataset {
     pub train: Vec<Sample>,
     pub test: Vec<Sample>,
@@ -52,6 +55,8 @@ pub struct HarDataset {
 }
 
 impl HarDataset {
+    pub const NUM_CLASSES: usize = 6;
+
     pub fn load(dir: &str) -> io::Result<Self> {
         let base = Path::new(dir);
         Ok(Self {
@@ -150,13 +155,14 @@ impl From<Activity> for usize {
     }
 }
 
+// feature bundling aka record-based encoding
 pub struct HarEncoder<T: HyperVector> {
-    base_vectors: Vec<T>, // one per feature, length 561
+    base_vectors: Vec<T>, // one per feature
 }
 
 impl<T: HyperVector> HarEncoder<T> {
     pub fn new<R: Rng>(rng: &mut R) -> Self {
-        let base_vectors = (0..561).map(|_| T::random(rng)).collect();
+        let base_vectors = (0..N_FEATURES).map(|_| T::random(rng)).collect();
         Self { base_vectors }
     }
 
@@ -169,6 +175,62 @@ impl<T: HyperVector> HarEncoder<T> {
         acc.finalize()
     }
 }
+
+// scalar encoder
+//pub struct HarEncoder<T: HyperVector> {
+//    feature_encoders: Vec<ScalarEncoder<T>>,  // one per feature
+//    position_vectors: Vec<T>,                  // one per feature position
+//}
+//
+//impl<T: HyperVector> HarEncoder<T> {
+//    pub fn new<R: Rng>(rng: &mut R) -> Self {
+//        let feature_encoders = (0..N_FEATURES)
+//            .map(|_| ScalarEncoder::new(-1.0, 1.0, 100, rng))
+//            .collect();
+//        let position_vectors = (0..N_FEATURES)
+//            .map(|_| T::random(rng))
+//            .collect();
+//        Self { feature_encoders, position_vectors }
+//    }
+//
+//    pub fn encode(&self, features: &[f32]) -> T {
+//        let mut acc = T::Accumulator::new();
+//        for ((encoder, pos), &val) in self.feature_encoders.iter()
+//            .zip(self.position_vectors.iter())
+//            .zip(features.iter())
+//        {
+//            let level_hv = encoder.encode(val);
+//            // bind position to value, then bundle
+//            let bound = pos.bind(level_hv);
+//            acc.add(&bound, 1.0);
+//        }
+//        acc.finalize()
+//    }
+//}
+
+#[derive(Copy, Clone, Debug, ValueEnum)]
+enum TrainerKind {
+    Perceptron,
+    Pa,
+    Pai,
+    Paii,
+    Multi,
+    Lvq,
+}
+
+impl fmt::Display for TrainerKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TrainerKind::Perceptron => write!(f, "Perceptron"),
+            TrainerKind::Pa => write!(f, "Pa"),
+            TrainerKind::Pai => write!(f, "Pai"),
+            TrainerKind::Paii => write!(f, "Paii"),
+            TrainerKind::Multi => write!(f, "Multi"),
+            TrainerKind::Lvq => write!(f, "Lvq"),
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -179,8 +241,8 @@ struct Args {
     /// One of 1024, 2048, 8192, 16384
     dim: usize,
 
-    #[arg(long, default_value = "perceptron", value_parser=["perceptron", "pa", "pai", "paii", "multi", "lvq"])]
-    trainer: String,
+    #[arg(long, default_value_t = TrainerKind::Perceptron)]
+    trainer: TrainerKind,
 
     #[arg(long, default_value_t = 1)]
     /// number of prototypes per class
@@ -244,102 +306,68 @@ fn run<T: HyperVector + Sync + Send>(data: &HarDataset, rng: &mut impl Rng, args
     let train_hvs: Vec<T> = data.train.par_iter().map(|s| encoder.encode(s)).collect();
     let test_hvs: Vec<T> = data.test.par_iter().map(|s| encoder.encode(s)).collect();
 
-    const NUM_CLASSES: usize = 6;
     let k = args.prototypes;
     let epochs = args.epochs;
 
-    match args.trainer.as_str() {
-        "perceptron" => report(
-            train(
-                PerceptronTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                    train_hvs,
-                    data.train_labels.clone(),
-                    rng,
-                ),
-                epochs,
-            ),
-            &test_hvs,
-            &data.test_labels,
-        ),
-        "pa" => report(
-            train(
-                PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                    train_hvs,
-                    data.train_labels.clone(),
-                    PaVariant::Pa,
-                    rng,
-                ),
-                epochs,
-            ),
-            &test_hvs,
-            &data.test_labels,
-        ),
-        "pai" => report(
-            train(
-                PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                    train_hvs,
-                    data.train_labels.clone(),
-                    PaVariant::PaI { c: 0.1 },
-                    rng,
-                ),
-                epochs,
-            ),
-            &test_hvs,
-            &data.test_labels,
-        ),
-        "paii" => report(
-            train(
-                PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                    train_hvs,
-                    data.train_labels.clone(),
-                    PaVariant::PaII { c: 1.0 },
-                    rng,
-                ),
-                epochs,
-            ),
-            &test_hvs,
-            &data.test_labels,
-        ),
-        "multi" => report(
-            train(
-                PerceptronMultiTrainer::<T, _>::new(
-                    train_hvs,
-                    data.train_labels.clone(),
-                    NUM_CLASSES,
-                    k,
-                    rng,
-                ),
-                epochs,
-            ),
-            &test_hvs,
-            &data.test_labels,
-        ),
-        "lvq" => report(
-            train(
-                LvqTrainer::<T, _>::new(
-                    train_hvs,
-                    data.train_labels.clone(),
-                    NUM_CLASSES,
-                    k,
-                    rng,
-                    args.window,
-                ),
-                epochs,
-            ),
-            &test_hvs,
-            &data.test_labels,
-        ),
-        _ => eprintln!("Unknown trainer: {}", args.trainer),
-    }
-}
-
-fn report<T, C>(model: C, test_hvs: &[T], labels: &[Activity])
-where
-    T: HyperVector + Send + Sync,
-    C: Classifier<T> + Sync,
-{
-    let (correct, errors, acc) = model.accuracy(test_hvs, labels);
-    println!("Test Accuracy: {correct}/{}={acc:.2}%", correct + errors);
+    let (correct, errors, acc) = match args.trainer {
+        TrainerKind::Perceptron => {
+            let trainer = PerceptronTrainer::<T, Activity, _, NUM_CLASSES>::new(
+                train_hvs.clone(),
+                data.train_labels.clone(),
+                &mut *rng,
+            );
+            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+        }
+        TrainerKind::Pa => {
+            let trainer = PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
+                train_hvs,
+                data.train_labels.clone(),
+                PaVariant::Pa,
+                &mut *rng,
+            );
+            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+        }
+        TrainerKind::Pai => {
+            let trainer = PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
+                train_hvs,
+                data.train_labels.clone(),
+                PaVariant::PaI { c: 0.1 },
+                rng,
+            );
+            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+        }
+        TrainerKind::Paii => {
+            let trainer = PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
+                train_hvs,
+                data.train_labels.clone(),
+                PaVariant::PaII { c: 1.0 },
+                rng,
+            );
+            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+        }
+        TrainerKind::Multi => {
+            let trainer = PerceptronMultiTrainer::<T, _>::new(
+                train_hvs,
+                data.train_labels.clone(),
+                NUM_CLASSES,
+                k,
+                rng,
+            );
+            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+        }
+        TrainerKind::Lvq => {
+            let trainer = LvqTrainer::<T, _>::new(
+                train_hvs,
+                data.train_labels.clone(),
+                NUM_CLASSES,
+                k,
+                rng,
+                args.window,
+            );
+            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+        }
+    };
+    println!("Test Accuracy: {correct}/{}={acc:.2}%", correct + errors)
 }
 
 fn main() -> Result<(), io::Error> {
