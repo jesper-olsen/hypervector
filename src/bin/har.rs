@@ -2,13 +2,13 @@ use clap::Parser;
 use hypervector::hdv;
 use hypervector::trainer::lvq::LvqTrainer;
 use hypervector::trainer::{
-    Classifier, MultiPrototypeModel, PrototypeModel, multi_perceptron::PerceptronMultiTrainer,
+    Classifier, multi_perceptron::PerceptronMultiTrainer,
     pa::PaTrainer, pa::PaVariant, perceptron::PerceptronTrainer,
 };
 use hypervector::{Accumulator, HyperVector, trainer::Trainer};
 use hypervector::{
-    binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, complex_hdv::ComplexHDV,
-    modular_hdv::ModularHDV, real_hdv::RealHDV, save_hypervectors_to_csv,
+    binary_hdv::BinaryHDV, complex_hdv::ComplexHDV,
+    modular_hdv::ModularHDV, real_hdv::RealHDV,
 };
 
 use std::fs;

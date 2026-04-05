@@ -96,6 +96,7 @@ pub trait HyperVector: Sized + Clone {
     fn unbind(&self, other: &Self) -> Self;
 
     fn inverse(&self) -> Self;
+
     fn permute(&self, by: usize) -> Self;
     fn unpermute(&self, by: usize) -> Self;
 
