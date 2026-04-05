@@ -42,40 +42,6 @@ use std::io::Write;
 // activity (1-6), line n refers tofeature v
 // activity (1-6) one per line, activity on line n refers to feature vector on line n in X_test/X_train/y_test/y_train
 
-pub const N_FEATURES: usize = 561;
-pub type Sample = [f32; N_FEATURES];
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum Activity {
-    Walking = 0,
-    WalkingUpstairs = 1,
-    WalkingDownstairs = 2,
-    Sitting = 3,
-    Standing = 4,
-    Laying = 5,
-}
-
-impl Activity {
-    pub fn from_label(n: u8) -> Self {
-        match n {
-            1 => Activity::Walking,
-            2 => Activity::WalkingUpstairs,
-            3 => Activity::WalkingDownstairs,
-            4 => Activity::Sitting,
-            5 => Activity::Standing,
-            6 => Activity::Laying,
-            _ => panic!("Invalid activity label: {n}"),
-        }
-    }
-}
-
-impl From<Activity> for usize {
-    fn from(a: Activity) -> usize {
-        a as usize
-    }
-}
-
 pub struct HarDataset {
     pub train: Vec<Sample>,
     pub test: Vec<Sample>,
@@ -150,6 +116,40 @@ fn load_subjects(path: &Path) -> io::Result<Vec<u8>> {
         .collect()
 }
 
+pub const N_FEATURES: usize = 561;
+pub type Sample = [f32; N_FEATURES];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Activity {
+    Walking = 0,
+    WalkingUpstairs = 1,
+    WalkingDownstairs = 2,
+    Sitting = 3,
+    Standing = 4,
+    Laying = 5,
+}
+
+impl Activity {
+    pub fn from_label(n: u8) -> Self {
+        match n {
+            1 => Activity::Walking,
+            2 => Activity::WalkingUpstairs,
+            3 => Activity::WalkingDownstairs,
+            4 => Activity::Sitting,
+            5 => Activity::Standing,
+            6 => Activity::Laying,
+            _ => panic!("Invalid activity label: {n}"),
+        }
+    }
+}
+
+impl From<Activity> for usize {
+    fn from(a: Activity) -> usize {
+        a as usize
+    }
+}
+
 pub struct HarEncoder<T: HyperVector> {
     base_vectors: Vec<T>, // one per feature, length 561
 }
@@ -175,8 +175,8 @@ struct Args {
     #[arg(long, default_value = "binary", value_parser=["binary", "bipolar", "real", "complex", "modular"])]
     mode: String,
 
-    #[arg(long, default_value_t = 1024)]
-    /// one of 1024, 10048, 100032
+    #[arg(long, default_value_t = 8192, value_parser = valid_dim)]
+    /// One of 1024, 2048, 8192, 16384
     dim: usize,
 
     #[arg(long, default_value = "perceptron", value_parser=["perceptron", "pa", "pai", "paii", "multi", "lvq"])]
@@ -194,51 +194,27 @@ struct Args {
     epochs: usize,
 }
 
+fn valid_dim(s: &str) -> Result<usize, String> {
+    let n: usize = s.parse().map_err(|_| format!("{s} is not a number"))?;
+    match n {
+        1024 | 2048 | 8192 | 16384 => Ok(n),
+        _ => Err(format!(
+            "{n} is not a supported dimension (1024, 2048, 8192, 16384)"
+        )),
+    }
+}
+
 hdv!(binary, BinaryHDV1024, 1024);
+hdv!(binary, BinaryHDV2048, 2048);
 hdv!(binary, BinaryHDV8192, 8192);
 hdv!(binary, BinaryHDV16384, 16384);
 hdv!(modular, ModularHDV1024, 1024);
+hdv!(modular, ModularHDV2048, 2048);
 hdv!(modular, ModularHDV8192, 8192);
 hdv!(modular, ModularHDV16384, 16384);
 hdv!(real, RealHDV1024, 1024);
 hdv!(real, RealHDV2048, 2048);
 hdv!(complex, ComplexHDV1024, 1024);
-
-fn main() -> Result<(), io::Error> {
-    let args = Args::parse();
-    println!("Mode: {} ", args.mode);
-    //match (args.mode.as_str(), args.dim) {
-    //    ("binary", 1024) => run::<BinaryHDV<16>>(n)?,
-    //    ("binary", 100032) => run::<BinaryHDV<1563>>(n)?,
-    //    ("binary", 200000) => run::<BinaryHDV<3125>>(n)?,
-    //    _ => {
-    //        eprintln!("Unsupported combination: {args:?}");
-    //        std::process::exit(1);
-    //    }
-    //};
-
-    let har = HarDataset::load("UCI HAR Dataset")?;
-    println!(
-        "#train samples: {} #labels: {}",
-        har.train.len(),
-        har.train_labels.len()
-    );
-    println!(
-        "#test samples: {} #labels: {}",
-        har.test.len(),
-        har.test_labels.len()
-    );
-    println!("train subjects: {}", har.train_subjects.len());
-    println!("test subjects: {}", har.test_subjects.len());
-
-    let mut rng = MersenneTwister64::default();
-
-    //run::<BinaryHDV1024>(&har, &mut rng);
-    //run::<BinaryHDV8192>(&har, &mut rng);
-    run::<BinaryHDV16384>(&har, &mut rng, &args);
-
-    Ok(())
-}
 
 fn train<T, Tr>(mut trainer: Tr, epochs: usize) -> Tr::Model
 where
@@ -363,5 +339,31 @@ where
     C: Classifier<T> + Sync,
 {
     let (correct, errors, acc) = model.accuracy(test_hvs, labels);
-    println!("Test Accuracy: {correct}/{}={:.2}%", correct + errors, acc);
+    println!("Test Accuracy: {correct}/{}={acc:.2}%", correct + errors);
+}
+
+fn main() -> Result<(), io::Error> {
+    let args = Args::parse();
+    let har = HarDataset::load("UCI HAR Dataset")?;
+    let mut rng = MersenneTwister64::default();
+
+    match (args.mode.as_str(), args.dim) {
+        ("binary", 1024) => run::<BinaryHDV1024>(&har, &mut rng, &args),
+        ("binary", 2048) => run::<BinaryHDV2048>(&har, &mut rng, &args),
+        ("binary", 8192) => run::<BinaryHDV8192>(&har, &mut rng, &args),
+        ("binary", 16384) => run::<BinaryHDV16384>(&har, &mut rng, &args),
+        ("modular", 1024) => run::<ModularHDV1024>(&har, &mut rng, &args),
+        ("modular", 2048) => run::<ModularHDV2048>(&har, &mut rng, &args),
+        ("modular", 8192) => run::<ModularHDV8192>(&har, &mut rng, &args),
+        ("modular", 16384) => run::<ModularHDV16384>(&har, &mut rng, &args),
+        ("real", 1024) => run::<RealHDV1024>(&har, &mut rng, &args),
+        ("real", 2048) => run::<RealHDV2048>(&har, &mut rng, &args),
+        ("complex", 1024) => run::<ComplexHDV1024>(&har, &mut rng, &args),
+        _ => eprintln!(
+            "Unsupported combination: mode={} dim={}",
+            args.mode, args.dim
+        ),
+    }
+
+    Ok(())
 }
