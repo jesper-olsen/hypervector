@@ -110,18 +110,7 @@ where
                 break;
             }
         }
-        (
-            PrototypeModel {
-                prototypes: self.prototypes,
-            },
-            history,
-        )
-    }
-
-    /// Borrow the current prototype hypervectors without consuming the trainer.
-    /// Useful for evaluating mid-training when driving the loop manually.
-    pub fn prototypes(&self) -> &[T; N] {
-        &self.prototypes
+        (self.into_model(), history)
     }
 
     /// Consume the trainer and return the final trained model.
