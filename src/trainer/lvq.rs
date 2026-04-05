@@ -1,4 +1,4 @@
-use crate::trainer::{EpochResult, MultiPrototypeModel, kmeans::KMeans};
+use crate::trainer::{EpochResult, MultiPrototypeModel, Trainer, kmeans::KMeans};
 use crate::{Accumulator, HyperVector, nearest, nearest_two};
 use rand::Rng;
 use rand::prelude::SliceRandom;
@@ -186,5 +186,20 @@ where
             n_classes: self.n_classes,
             proto_per_class: self.proto_per_class,
         }
+    }
+}
+
+impl<T, R> Trainer<T> for LvqTrainer<T, R>
+where
+    T: HyperVector + Send + Sync,
+    R: Rng,
+{
+    type Model = MultiPrototypeModel<T>;
+    fn step(&mut self, epoch: usize) -> EpochResult {
+        self.step(epoch)
+    }
+
+    fn into_model(self) -> Self::Model {
+        self.into_model()
     }
 }

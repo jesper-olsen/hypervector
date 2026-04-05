@@ -72,3 +72,11 @@ impl<T: HyperVector> Classifier<T> for MultiPrototypeModel<T> {
         idx / self.proto_per_class
     }
 }
+
+pub trait Trainer<T: HyperVector> {
+    type Model: Classifier<T>;
+    fn step(&mut self, epoch: usize) -> EpochResult;
+
+    /// Consume the trainer and return the final trained model.
+    fn into_model(self) -> Self::Model;
+}

@@ -1,4 +1,4 @@
-use crate::trainer::{EpochResult, PrototypeModel};
+use crate::trainer::{EpochResult, PrototypeModel, Trainer};
 use crate::{Accumulator, HyperVector, nearest};
 use rand::Rng;
 use rand::prelude::SliceRandom;
@@ -157,5 +157,21 @@ where
         PrototypeModel {
             prototypes: self.prototypes,
         }
+    }
+}
+
+impl<T, L, R, const N: usize> Trainer<T> for PaTrainer<T, L, R, N>
+where
+    T: HyperVector + Send + Sync,
+    L: Into<usize> + Copy + Send + Sync,
+    R: Rng,
+{
+    type Model = PrototypeModel<T, N>;
+    fn step(&mut self, epoch: usize) -> EpochResult {
+        self.step(epoch)
+    }
+
+    fn into_model(self) -> Self::Model {
+        self.into_model()
     }
 }
