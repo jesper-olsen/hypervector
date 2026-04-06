@@ -1,10 +1,10 @@
 # Hypervector - Human Activity Recognition Using Smartphones
 
-Classification on the UCI HAR dataset [1] - the dataset has sensor data from a:
+Classification on the UCI HAR dataset [1] - the dataset has sensor data from a ...
 
 > ... group of 30 volunteers within an age bracket of 19-48 years. Each person performed six activities (WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS, SITTING, STANDING, LAYING) wearing a smartphone (Samsung Galaxy S II) on the waist. Using its embedded accelerometer and gyroscope, we captured 3-axial linear acceleration and 3-axial angular velocity at a constant rate of 50Hz.
 
-An ensemble of 9 binary hypervector models achieves 93.7% test accuracy in 16 seconds wall time (Macbook Air M1). 
+An ensemble of 5 binary hypervector models achieves 93.7% test accuracy in 16 seconds wall time (Macbook Air M1). 
 The size of a 8192-dim binary hypervector is 1KB - hence a model with 6 activities is 6KB and an ensemble of 5 is 30KB.
 
 For comparison, sklearn's SVM and MLP classifiers achieve [~95%](https://github.com/jesper-olsen/UCI-Human-Activity-Recognition) accuracy on the same 
@@ -90,13 +90,13 @@ The table shows runs with binary and modular hypervector models - ensemble size 
 
 | Model             | Dim        | Individual Accuracy | Ensemble Accuracy | Time   | Bytes    |
 | :---------------  | ---------: | :-----------------: | ----------------: | -----: | -------: |
-| binary            |  1024      | 85.4-89.1%          | 92.3%             |    6s  | 5 x 128  |
-| binary            |  2048      | 87.6-91.5%          | 93.4%             |    6s  | 5 x 256  |
-| binary            |  4096      | 89.7-92.0%          | 93.4%             |    9s  | 5 x 512  |
-| binary            |  8192      | 91.6-93.3%          | 93.7%             |   16s  | 5 x 1024 |
-| binary            | 16384      | 91.7-92.1%          | 92.8%             |   28s  | 5 x 2048 |
-| modular           |  1024      | 91.9-92.7%          | 93.6%             |   26s  | 5 x 1024 |
-| modular           |  2048      | 92.6-93.2%          | 93.7%             |   51s  | 5 x 2048 |
+| binary            |  1024      | 85.4-89.1%          | 92.3%             |    6s  | 6 x 128  |
+| binary            |  2048      | 87.6-91.5%          | 93.4%             |    6s  | 6 x 256  |
+| binary            |  4096      | 89.7-92.0%          | 93.4%             |    9s  | 6 x 512  |
+| binary            |  8192      | 91.6-93.3%          | 93.7%             |   16s  | 6 x 1024 |
+| binary            | 16384      | 91.7-92.1%          | 92.8%             |   28s  | 6 x 2048 |
+| modular           |  1024      | 91.9-92.7%          | 93.6%             |   26s  | 6 x 1024 |
+| modular           |  2048      | 92.6-93.2%          | 93.7%             |   51s  | 6 x 2048 |
 
 
 Observations
