@@ -4,21 +4,31 @@ Classification on the UCI HAR dataset [1]:
 
 > The experiments have been carried out with a group of 30 volunteers within an age bracket of 19-48 years. Each person performed six activities (WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS, SITTING, STANDING, LAYING) wearing a smartphone (Samsung Galaxy S II) on the waist. Using its embedded accelerometer and gyroscope, we captured 3-axial linear acceleration and 3-axial angular velocity at a constant rate of 50Hz.
 
-See [here](https://github.com/jesper-olsen/UCI-Human-Activity-Recognition) for a jupyter notebook which explores the datasets and evaluates a number of
-standard classifiers from the python ecosystem.
+An ensemble of 9 binary hypervector models achieves 93.7% test accuracy in 16 seconds wall time (Macbook Air M1). 
+The size of a 8192-dim binary hypervector is 1KB - hence a model with 6 activities is 6KB and an ensemble of 5 is 30KB.
+
+For comparison, sklearn's SVM and MLP classifiers achieve [~95%](https://github.com/jesper-olsen/UCI-Human-Activity-Recognition) accuracy on the same 
+feature set - at the cost of much larger model sizes:
+
+| Model             | Accuracy   | Size    |
+| :---------------  | ---------: | ------: |
+| SVM               |  ~95%      | ~10 MB  |
+| MLP               |  ~95%      | ~1.8 MB |
+| HDC               | 91.6-92.4% |   6KB   |
+| HDC ensemble of 5 |   93.7%    | 30 KB   |
 
 Modelling
 ---------
 
+The dataset comes with raw sensor data as well as 561 dimensional feature vectors extracted from same; Features are normalised to the interval -1 to 1.
+
 Four different training schemes are implemented:
 * Perceptron - one hypervector prototype per activity
 * Multi Perceptron - N prototypes per activity.
-* Passive Agressive - with variants Pa, PaI & PaII [3]. One hypervector prototype per activity.
+* Passive-Aggressive - with variants Pa, PaI & PaII [3]. One hypervector prototype per activity.
 * LVQ2.1 [4] - N prototypes per activity.
 
-The dataset comes with raw sensor data as well as 561 dimensional feature vectors extracted from same. Features are normalised to the interval -1 to 1.
-
-Encoding: One hypervector per feature is gerated and features bundled over each of the 6 activities.
+Encoding: Each sample is encoded by generating one random hypervector per feature and bundling them weighted by the feature values. The result is one hypervector per sample.
 
 Usage
 ---------
@@ -50,49 +60,43 @@ Experiments
 ------------
 
 ```bash
-time cargo run --release --bin har -- --trainer perceptron --dim  8192   --mode binary
+% time cargo run --release --bin har -- --trainer perceptron --dim  8192   --mode binary --ensemble-size 5
 
-Epoch 1000: Training Accuracy 7273/7352=98.93%
-Model 1/9 - test: 92.03%  (2712/2947)
+Epoch 1000: Training Accuracy 7185/7352=97.73%
+Model 1/5 - test: 92.37%  (2722/2947)
 
-Epoch 1000: Training Accuracy 7221/7352=98.22%
-Model 2/9 - test: 91.38%  (2693/2947)
+Epoch 1000: Training Accuracy 7271/7352=98.90%
+Model 2/5 - test: 91.58%  (2699/2947)
 
-Epoch 1000: Training Accuracy 7236/7352=98.42%
-Model 3/9 - test: 91.82%  (2706/2947)
-Ensemble of 3 - test 93.32%  (2750/2947)
+Epoch 1000: Training Accuracy 7267/7352=98.84%
+Model 3/5 - test: 91.72%  (2703/2947)
+Ensemble of 3 - test 93.28%  (2749/2947)
 
-Epoch 1000: Training Accuracy 7154/7352=97.31%
-Model 4/9 - test: 91.18%  (2687/2947)
-Ensemble of 4 - test 92.70%  (2732/2947)
+Epoch 1000: Training Accuracy 7259/7352=98.74%
+Model 4/5 - test: 92.30%  (2720/2947)
+Ensemble of 4 - test 93.11%  (2744/2947)
 
-Epoch 1000: Training Accuracy 7312/7352=99.46%
-Model 5/9 - test: 92.47%  (2725/2947)
-Ensemble of 5 - test 93.65%  (2760/2947)
+Epoch 1000: Training Accuracy 7270/7352=98.88%
+Model 5/5 - test: 92.26%  (2719/2947)
+Ensemble of 5 - test 93.69%  (2761/2947)
 
-Epoch 1000: Training Accuracy 7289/7352=99.14%
-Model 6/9 - test: 91.28%  (2690/2947)
-Ensemble of 6 - test 93.01%  (2741/2947)
-
-Epoch 1000: Training Accuracy 7274/7352=98.94%
-Model 7/9 - test: 91.62%  (2700/2947)
-Ensemble of 7 - test 93.65%  (2760/2947)
-
-Epoch 1000: Training Accuracy 7289/7352=99.14%
-Model 8/9 - test: 91.31%  (2691/2947)
-Ensemble of 8 - test 93.35%  (2751/2947)
-
-Epoch 1000: Training Accuracy 7301/7352=99.31%
-Model 9/9 - test: 92.40%  (2723/2947)
-Ensemble of 9 - test 93.65%  (2760/2947)
-
-147.43s user 8.23s system 564% cpu 27.577 total
+82.23s user 3.49s system 531% cpu 16.129 total
 ```
+
+Observations
+------------
+
+The Perceptron trainer achieves the best accuracy-to-speed ratio. Multi-prototype and LVQ2.1 schemes did not improve on it for this dataset and encoding, likely because the single-prototype perceptron already captures the class structure well in the random projection space.
+
+Encoding: The weighted random projection preserves the linear separability of the pre-engineered 561 features, which is why the simple perceptron is competitive with SVM.
+
+Modular hypervectors (8 bits per component) achieve similar accuracy to binary at equivalent memory footprint, with better accuracy at lower dimensions — at the cost of slower training due to trigonometric accumulation.
+
 
 References
 ----------
 1. [UCI HAR](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones)
 2. ["A Public Domain Dataset for Human Activity Recognition using Smartphones", D. Anguita, A. Ghio, L. Oneto, X. Parra, Jorge Luis Reyes-Ortiz, The European Symposium on Artificial Neural Networks, 2013](https://www.semanticscholar.org/paper/A-Public-Domain-Dataset-for-Human-Activity-using-Anguita-Ghio/83de43bc849ad3d9579ccf540e6fe566ef90a58e)
 3. ["Online Passive-Aggressive Algorithms", Koby Crammer et al, Journal of Machine Learning Research 7 (2006) 551–585, 2006](https://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf)
-4. [Learning Vector Quantization](https://en.wikipedia.org/wiki/Learning_vector_quantization)
+4. T. Kohonen, "Improved versions of learning vector quantization", IJCNN 1990.
 
