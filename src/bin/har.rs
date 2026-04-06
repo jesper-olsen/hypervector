@@ -221,12 +221,12 @@ enum TrainerKind {
 impl fmt::Display for TrainerKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TrainerKind::Perceptron => write!(f, "Perceptron"),
-            TrainerKind::Pa => write!(f, "Pa"),
-            TrainerKind::Pai => write!(f, "Pai"),
-            TrainerKind::Paii => write!(f, "Paii"),
-            TrainerKind::Multi => write!(f, "Multi"),
-            TrainerKind::Lvq => write!(f, "Lvq"),
+            TrainerKind::Perceptron => write!(f, "perceptron"),
+            TrainerKind::Pa => write!(f, "pa"),
+            TrainerKind::Pai => write!(f, "pai"),
+            TrainerKind::Paii => write!(f, "paii"),
+            TrainerKind::Multi => write!(f, "multi"),
+            TrainerKind::Lvq => write!(f, "lvq"),
         }
     }
 }

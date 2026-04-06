@@ -1,8 +1,8 @@
 # Hypervector - Human Activity Recognition Using Smartphones
 
-Classification on the UCI HAR dataset [1]:
+Classification on the UCI HAR dataset [1] - the dataset has sensor data from a:
 
-> The experiments have been carried out with a group of 30 volunteers within an age bracket of 19-48 years. Each person performed six activities (WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS, SITTING, STANDING, LAYING) wearing a smartphone (Samsung Galaxy S II) on the waist. Using its embedded accelerometer and gyroscope, we captured 3-axial linear acceleration and 3-axial angular velocity at a constant rate of 50Hz.
+> ... group of 30 volunteers within an age bracket of 19-48 years. Each person performed six activities (WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS, SITTING, STANDING, LAYING) wearing a smartphone (Samsung Galaxy S II) on the waist. Using its embedded accelerometer and gyroscope, we captured 3-axial linear acceleration and 3-axial angular velocity at a constant rate of 50Hz.
 
 An ensemble of 9 binary hypervector models achieves 93.7% test accuracy in 16 seconds wall time (Macbook Air M1). 
 The size of a 8192-dim binary hypervector is 1KB - hence a model with 6 activities is 6KB and an ensemble of 5 is 30KB.
@@ -95,7 +95,7 @@ Modular hypervectors (8 bits per component) achieve similar accuracy to binary a
 
 References
 ----------
-1. [UCI HAR](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones)
+1. [UCI HAR dataset](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones)
 2. ["A Public Domain Dataset for Human Activity Recognition using Smartphones", D. Anguita, A. Ghio, L. Oneto, X. Parra, Jorge Luis Reyes-Ortiz, The European Symposium on Artificial Neural Networks, 2013](https://www.semanticscholar.org/paper/A-Public-Domain-Dataset-for-Human-Activity-using-Anguita-Ghio/83de43bc849ad3d9579ccf540e6fe566ef90a58e)
 3. ["Online Passive-Aggressive Algorithms", Koby Crammer et al, Journal of Machine Learning Research 7 (2006) 551–585, 2006](https://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf)
 4. T. Kohonen, "Improved versions of learning vector quantization", IJCNN 1990.
