@@ -91,8 +91,8 @@ Ensemble of 9 - test 93.65%  (2760/2947)
 
 References
 ----------
-* [1] [UCI HAR](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones)
-* [2] ["A Public Domain Dataset for Human Activity Recognition using Smartphones", D. Anguita, A. Ghio, L. Oneto, X. Parra, Jorge Luis Reyes-Ortiz, The European Symposium on Artificial Neural Networks, 2013](https://www.semanticscholar.org/paper/A-Public-Domain-Dataset-for-Human-Activity-using-Anguita-Ghio/83de43bc849ad3d9579ccf540e6fe566ef90a58e)
-* [3] ["Online Passive-Aggressive Algorithms", Koby Crammer et al, Journal of Machine Learning Research 7 (2006) 551–585, 2006](https://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf)
-* [4] [Learning Vector Quantization](https://en.wikipedia.org/wiki/Learning_vector_quantization)
+1. [UCI HAR](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones)
+2. ["A Public Domain Dataset for Human Activity Recognition using Smartphones", D. Anguita, A. Ghio, L. Oneto, X. Parra, Jorge Luis Reyes-Ortiz, The European Symposium on Artificial Neural Networks, 2013](https://www.semanticscholar.org/paper/A-Public-Domain-Dataset-for-Human-Activity-using-Anguita-Ghio/83de43bc849ad3d9579ccf540e6fe566ef90a58e)
+3. ["Online Passive-Aggressive Algorithms", Koby Crammer et al, Journal of Machine Learning Research 7 (2006) 551–585, 2006](https://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf)
+4. [Learning Vector Quantization](https://en.wikipedia.org/wiki/Learning_vector_quantization)
 
