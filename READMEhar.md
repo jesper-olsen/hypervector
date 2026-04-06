@@ -17,8 +17,8 @@ feature set - at the cost of much larger model sizes:
 | HDC               | 91.6-92.4% |   6KB   |
 | HDC ensemble of 5 |   93.7%    | 30 KB   |
 
-Modelling
----------
+## Modelling
+------------
 
 The dataset comes with raw sensor data as well as 561 dimensional feature vectors extracted from same; Features are normalised to the interval -1 to 1.
 
@@ -30,8 +30,8 @@ Four different training schemes are implemented:
 
 Encoding: Each sample is encoded by generating one random hypervector per feature and bundling them weighted by the feature values. The result is one hypervector per sample.
 
-Usage
----------
+## Usage
+--------
 
 ```bash
 cargo run --release --bin har -- --help
@@ -49,15 +49,15 @@ Options:
   -V, --version                        Print version
 ```
 
-Preliminaries
--------------
+## Preliminaries
+----------------
 Download the dataset from [1]. Unpack the zipped dataset with root dir "UCI HAR Dataset".
 
 [Install Rust](https://rust-lang.org/tools/install/).
 
 
-Experiments
-------------
+## Example Run
+--------------
 
 ```bash
 % time cargo run --release --bin har -- --trainer perceptron --dim  8192   --mode binary --ensemble-size 5
@@ -82,6 +82,22 @@ Ensemble of 5 - test 93.69%  (2761/2947)
 
 82.23s user 3.49s system 531% cpu 16.129 total
 ```
+
+## Experiments
+--------------
+
+The table shows runs with binary and modular hypervector models - ensemble size is 5.
+
+| Model             | Dim        | Individual Accuracy | Ensemble Accuracy | Time   | Bytes    |
+| :---------------  | ---------: | :-----------------: | ----------------: | -----: | -------: |
+| binary            |  1024      | 85.4-89.1%          | 92.3%             |    6s  | 5 x 128  |
+| binary            |  2048      | 87.6-91.5%          | 93.4%             |    6s  | 5 x 256  |
+| binary            |  4096      | 89.7-92.0%          | 93.4%             |    9s  | 5 x 512  |
+| binary            |  8192      | 91.6-93.3%          | 93.7%             |   16s  | 5 x 1024 |
+| binary            | 16384      | 91.7-92.1%          | 92.8%             |   28s  | 5 x 2048 |
+| modular           |  1024      | 91.9-92.7%          | 93.6%             |   26s  | 5 x 1024 |
+| modular           |  2048      | 92.6-93.2%          | 93.7%             |   51s  | 5 x 2048 |
+
 
 Observations
 ------------
