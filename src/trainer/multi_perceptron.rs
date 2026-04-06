@@ -10,14 +10,14 @@ use rayon::prelude::*;
 /// - `T`: HyperVector type
 /// - `R`: RNG (used for per-epoch shuffling)
 /// - `L`: Label type — must be convertible to `usize` as a class index
-pub struct PerceptronMultiTrainer<T, R>
+pub struct PerceptronMultiTrainer<'a, T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,
 {
     accumulators: Vec<T::Accumulator>,
     prototypes: Vec<T>,
-    samples: Vec<T>,
+    samples: &'a [T],
     proto_labels: Vec<usize>,
     n_classes: usize,
     proto_per_class: usize,
@@ -25,14 +25,14 @@ where
     rng: R,
 }
 
-impl<T, R> PerceptronMultiTrainer<T, R>
+impl<'a, T, R> PerceptronMultiTrainer<'a, T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,
 {
     pub fn new<L>(
-        samples: Vec<T>,
-        class_labels: Vec<L>,
+        samples: &'a [T],
+        class_labels: &'a [L],
         n_classes: usize,
         proto_per_class: usize,
         mut rng: R,
@@ -157,7 +157,7 @@ where
     }
 }
 
-impl<T, R> Trainer<T> for PerceptronMultiTrainer<T, R>
+impl<'a, T, R> Trainer<T> for PerceptronMultiTrainer<'a, T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,

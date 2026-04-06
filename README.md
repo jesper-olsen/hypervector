@@ -31,6 +31,7 @@ Four examples of problems that can be solved with hypervectors:
   cargo run --release --bin mexican
   ```
 * Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
+* [Human Activity Recognition Using Smartphones](READMEhar.md).
 * [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
 * [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
 * [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.

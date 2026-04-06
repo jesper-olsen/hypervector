@@ -10,14 +10,14 @@ use rayon::prelude::*;
 /// - `T`: HyperVector type
 /// - `R`: RNG (used for per-epoch shuffling)
 /// - `L`: Label type — must be convertible to `usize` as a class index
-pub struct LvqTrainer<T, R>
+pub struct LvqTrainer<'a, T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,
 {
     accumulators: Vec<T::Accumulator>,
     prototypes: Vec<T>,
-    samples: Vec<T>,
+    samples: &'a [T],
     proto_labels: Vec<usize>,
     n_classes: usize,
     proto_per_class: usize,
@@ -26,14 +26,14 @@ where
     window: f32, // typically from the range 0.2 - 0.3
 }
 
-impl<T, R> LvqTrainer<T, R>
+impl<'a, T, R> LvqTrainer<'a, T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,
 {
     pub fn new<L>(
-        samples: Vec<T>,
-        class_labels: Vec<L>,
+        samples: &'a [T],
+        class_labels: &'a [L],
         n_classes: usize,
         proto_per_class: usize,
         mut rng: R,
@@ -189,7 +189,7 @@ where
     }
 }
 
-impl<T, R> Trainer<T> for LvqTrainer<T, R>
+impl<'a, T, R> Trainer<T> for LvqTrainer<'a, T, R>
 where
     T: HyperVector + Send + Sync,
     R: Rng,

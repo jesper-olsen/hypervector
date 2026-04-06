@@ -37,7 +37,7 @@ impl PaVariant {
     }
 }
 
-pub struct PaTrainer<T, L, R, const N: usize>
+pub struct PaTrainer<'a, T, L, R, const N: usize>
 where
     T: HyperVector + Send + Sync,
     L: Into<usize> + Copy + Send + Sync,
@@ -45,20 +45,20 @@ where
 {
     accumulators: [T::Accumulator; N],
     prototypes: [T; N],
-    samples: Vec<T>,
-    labels: Vec<L>,
+    samples: &'a [T],
+    labels: &'a [L],
     indices: Vec<usize>,
     rng: R,
     variant: PaVariant,
 }
 
-impl<T, L, R, const N: usize> PaTrainer<T, L, R, N>
+impl<'a, T, L, R, const N: usize> PaTrainer<'a, T, L, R, N>
 where
     T: HyperVector + Send + Sync,
     L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
-    pub fn new(hvs: Vec<T>, labels: Vec<L>, variant: PaVariant, rng: R) -> Self {
+    pub fn new(hvs: &'a [T], labels: &'a [L], variant: PaVariant, rng: R) -> Self {
         let n = hvs.len();
         assert_eq!(n, labels.len());
 
@@ -160,7 +160,7 @@ where
     }
 }
 
-impl<T, L, R, const N: usize> Trainer<T> for PaTrainer<T, L, R, N>
+impl<'a, T, L, R, const N: usize> Trainer<T> for PaTrainer<'a, T, L, R, N>
 where
     T: HyperVector + Send + Sync,
     L: Into<usize> + Copy + Send + Sync,

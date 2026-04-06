@@ -1,10 +1,10 @@
 use clap::{Parser, ValueEnum};
-use hypervector::encoding::ScalarEncoder;
+//use hypervector::encoding::ScalarEncoder;
 use hypervector::hdv;
 use hypervector::trainer::lvq::LvqTrainer;
 use hypervector::trainer::{
-    Classifier, multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer, pa::PaVariant,
-    perceptron::PerceptronTrainer,
+    Classifier, ensemble_accuracy, multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer,
+    pa::PaVariant, perceptron::PerceptronTrainer,
 };
 use hypervector::{Accumulator, HyperVector, trainer::Trainer};
 use hypervector::{
@@ -19,8 +19,8 @@ use std::str::FromStr;
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
 use rayon::prelude::*;
-use std::io::Write;
 use std::fmt;
+use std::io::Write;
 
 // ls -l UCI\ HAR\ Dataset/test
 //
@@ -254,6 +254,9 @@ struct Args {
 
     #[arg(long, default_value_t = 1000)]
     epochs: usize,
+
+    #[arg(long, default_value_t = 9)]
+    ensemble_size: usize,
 }
 
 fn valid_dim(s: &str) -> Result<usize, String> {
@@ -286,7 +289,7 @@ where
     for epoch in 1..=epochs {
         let r = trainer.step(epoch);
         print!(
-            "Epoch {epoch}: {}/{}={:.2}%\r",
+            "Epoch {epoch}: Training Accuracy {}/{}={:.2}%\r",
             r.correct,
             r.total(),
             r.accuracy() * 100.0
@@ -300,97 +303,125 @@ where
     trainer.into_model()
 }
 
-fn run<T: HyperVector + Sync + Send>(data: &HarDataset, rng: &mut impl Rng, args: &Args) {
+fn run<T: HyperVector + Sync + Send>(
+    data: &HarDataset,
+    rng: &mut impl Rng,
+    args: &Args,
+) -> Vec<usize> {
     let encoder = HarEncoder::<T>::new(rng);
-
     let train_hvs: Vec<T> = data.train.par_iter().map(|s| encoder.encode(s)).collect();
     let test_hvs: Vec<T> = data.test.par_iter().map(|s| encoder.encode(s)).collect();
 
     let k = args.prototypes;
     let epochs = args.epochs;
 
-    let (correct, errors, acc) = match args.trainer {
+    match args.trainer {
         TrainerKind::Perceptron => {
             let trainer = PerceptronTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                train_hvs.clone(),
-                data.train_labels.clone(),
+                &train_hvs,
+                &data.train_labels,
                 &mut *rng,
             );
-            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+            train(trainer, epochs).classify_all(&test_hvs)
         }
         TrainerKind::Pa => {
             let trainer = PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                train_hvs,
-                data.train_labels.clone(),
+                &train_hvs,
+                &data.train_labels,
                 PaVariant::Pa,
                 &mut *rng,
             );
-            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+            train(trainer, epochs).classify_all(&test_hvs)
         }
         TrainerKind::Pai => {
             let trainer = PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                train_hvs,
-                data.train_labels.clone(),
+                &train_hvs,
+                &data.train_labels,
                 PaVariant::PaI { c: 0.1 },
                 rng,
             );
-            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+            train(trainer, epochs).classify_all(&test_hvs)
         }
         TrainerKind::Paii => {
             let trainer = PaTrainer::<T, Activity, _, NUM_CLASSES>::new(
-                train_hvs,
-                data.train_labels.clone(),
+                &train_hvs,
+                &data.train_labels,
                 PaVariant::PaII { c: 1.0 },
                 rng,
             );
-            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+            train(trainer, epochs).classify_all(&test_hvs)
         }
         TrainerKind::Multi => {
             let trainer = PerceptronMultiTrainer::<T, _>::new(
-                train_hvs,
-                data.train_labels.clone(),
+                &train_hvs,
+                &data.train_labels,
                 NUM_CLASSES,
                 k,
                 rng,
             );
-            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+            train(trainer, epochs).classify_all(&test_hvs)
         }
         TrainerKind::Lvq => {
             let trainer = LvqTrainer::<T, _>::new(
-                train_hvs,
-                data.train_labels.clone(),
+                &train_hvs,
+                &data.train_labels,
                 NUM_CLASSES,
                 k,
                 rng,
                 args.window,
             );
-            train(trainer, epochs).accuracy(&test_hvs.clone(), &data.test_labels)
+            train(trainer, epochs).classify_all(&test_hvs)
         }
-    };
-    println!("Test Accuracy: {correct}/{}={acc:.2}%", correct + errors)
+    }
 }
 
 fn main() -> Result<(), io::Error> {
     let args = Args::parse();
+    let ensemble_size = args.ensemble_size;
     let har = HarDataset::load("UCI HAR Dataset")?;
     let mut rng = MersenneTwister64::default();
 
-    match (args.mode.as_str(), args.dim) {
-        ("binary", 1024) => run::<BinaryHDV1024>(&har, &mut rng, &args),
-        ("binary", 2048) => run::<BinaryHDV2048>(&har, &mut rng, &args),
-        ("binary", 8192) => run::<BinaryHDV8192>(&har, &mut rng, &args),
-        ("binary", 16384) => run::<BinaryHDV16384>(&har, &mut rng, &args),
-        ("modular", 1024) => run::<ModularHDV1024>(&har, &mut rng, &args),
-        ("modular", 2048) => run::<ModularHDV2048>(&har, &mut rng, &args),
-        ("modular", 8192) => run::<ModularHDV8192>(&har, &mut rng, &args),
-        ("modular", 16384) => run::<ModularHDV16384>(&har, &mut rng, &args),
-        ("real", 1024) => run::<RealHDV1024>(&har, &mut rng, &args),
-        ("real", 2048) => run::<RealHDV2048>(&har, &mut rng, &args),
-        ("complex", 1024) => run::<ComplexHDV1024>(&har, &mut rng, &args),
-        _ => eprintln!(
-            "Unsupported combination: mode={} dim={}",
-            args.mode, args.dim
-        ),
+    let mut all_predictions = Vec::with_capacity(ensemble_size);
+    for i in 1..=ensemble_size {
+        let preds = match (args.mode.as_str(), args.dim) {
+            ("binary", 1024) => run::<BinaryHDV1024>(&har, &mut rng, &args),
+            ("binary", 2048) => run::<BinaryHDV2048>(&har, &mut rng, &args),
+            ("binary", 8192) => run::<BinaryHDV8192>(&har, &mut rng, &args),
+            ("binary", 16384) => run::<BinaryHDV16384>(&har, &mut rng, &args),
+            ("modular", 1024) => run::<ModularHDV1024>(&har, &mut rng, &args),
+            ("modular", 2048) => run::<ModularHDV2048>(&har, &mut rng, &args),
+            ("modular", 8192) => run::<ModularHDV8192>(&har, &mut rng, &args),
+            ("modular", 16384) => run::<ModularHDV16384>(&har, &mut rng, &args),
+            ("real", 1024) => run::<RealHDV1024>(&har, &mut rng, &args),
+            ("real", 2048) => run::<RealHDV2048>(&har, &mut rng, &args),
+            ("complex", 1024) => run::<ComplexHDV1024>(&har, &mut rng, &args),
+            _ => {
+                eprintln!(
+                    "Unsupported combination: mode={} dim={}",
+                    args.mode, args.dim
+                );
+                return Ok(());
+            }
+        };
+        let (correct, errors, acc) =
+            ensemble_accuracy(&[preds.clone()], &har.test_labels, NUM_CLASSES);
+
+        println!(
+            "Model {i}/{ensemble_size} - test: {:.2}%  ({correct}/{})",
+            acc * 100.0,
+            correct + errors,
+        );
+        all_predictions.push(preds);
+        if i > 2 {
+            let (correct, errors, acc) =
+                ensemble_accuracy(&all_predictions, &har.test_labels, NUM_CLASSES);
+            println!(
+                "Ensemble of {i} - test {:.2}%  ({correct}/{})",
+                acc * 100.0,
+                correct + errors,
+            );
+        } 
+        println!();
     }
 
     Ok(())

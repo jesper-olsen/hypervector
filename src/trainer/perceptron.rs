@@ -11,7 +11,7 @@ use rayon::prelude::*;
 /// - `R`: RNG (used for per-epoch shuffling)
 /// - `L`: Label type — must be convertible to `usize` as a class index
 /// - `N`: Number of classes (const generic)
-pub struct PerceptronTrainer<T, L, R, const N: usize>
+pub struct PerceptronTrainer<'a, T, L, R, const N: usize>
 where
     T: HyperVector + Send + Sync,
     L: Into<usize> + Copy + Send + Sync,
@@ -19,19 +19,19 @@ where
 {
     accumulators: [T::Accumulator; N],
     prototypes: [T; N],
-    samples: Vec<T>,
-    labels: Vec<L>,
+    samples: &'a [T],
+    labels: &'a [L],
     indices: Vec<usize>,
     rng: R,
 }
 
-impl<T, L, R, const N: usize> PerceptronTrainer<T, L, R, N>
+impl<'a, T, L, R, const N: usize> PerceptronTrainer<'a, T, L, R, N>
 where
     T: HyperVector + Send + Sync,
     L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
-    pub fn new(samples: Vec<T>, labels: Vec<L>, rng: R) -> Self {
+    pub fn new(samples: &'a [T], labels: &'a [L], rng: R) -> Self {
         assert_eq!(samples.len(), labels.len());
 
         let mut accumulators: [T::Accumulator; N] = core::array::from_fn(|_| T::Accumulator::new());
@@ -53,18 +53,10 @@ where
         }
     }
 
-    /// Run a single training epoch (perceptron update rule).
-    ///
-    /// Shuffles the sample order, finds all misclassifications in parallel,
-    /// then applies weight updates sequentially.
-    ///
-    /// `epoch` is 1-based and used to compute the learning rate `1/sqrt(epoch)`.
     pub fn step(&mut self, epoch: usize) -> EpochResult {
-        self.indices.shuffle(&mut self.rng); // not needed for batch training...
+        self.indices.shuffle(&mut self.rng);
         let lr = 1.0 / (epoch as f64).sqrt();
 
-        // Parallel: collect misclassifications
-        // batch training rather than online where we update after every sample
         let errors: Vec<(usize, usize, usize)> = self
             .indices
             .par_iter()
@@ -82,7 +74,6 @@ where
 
         let error_count = errors.len();
 
-        // Sequential: apply updates (accumulators not thread-safe)
         for (idx, true_class, predicted) in errors {
             let hdv = &self.samples[idx];
             self.accumulators[true_class].add(hdv, lr);
@@ -98,9 +89,6 @@ where
         }
     }
 
-    /// Run up to `max_epochs` training steps, stopping early if zero errors.
-    ///
-    /// Returns the results of each epoch and the trained model.
     pub fn fit(mut self, max_epochs: usize) -> (PrototypeModel<T, N>, Vec<EpochResult>) {
         let mut history = Vec::with_capacity(max_epochs);
         for epoch in 1..=max_epochs {
@@ -113,7 +101,6 @@ where
         (self.into_model(), history)
     }
 
-    /// Consume the trainer and return the final trained model.
     pub fn into_model(self) -> PrototypeModel<T, N> {
         PrototypeModel {
             prototypes: self.prototypes,
@@ -121,13 +108,14 @@ where
     }
 }
 
-impl<T, L, R, const N: usize> Trainer<T> for PerceptronTrainer<T, L, R, N>
+impl<'a, T, L, R, const N: usize> Trainer<T> for PerceptronTrainer<'a, T, L, R, N>
 where
     T: HyperVector + Send + Sync,
     L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
     type Model = PrototypeModel<T, N>;
+
     fn step(&mut self, epoch: usize) -> EpochResult {
         self.step(epoch)
     }
