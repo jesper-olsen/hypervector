@@ -40,7 +40,7 @@ Usage: har [OPTIONS]
 Options:
       --mode <MODE>                    [default: binary] [possible values: binary, bipolar, real, complex, modular]
       --dim <DIM>                      One of 1024, 2048, 8192, 16384 [default: 8192]
-      --trainer <TRAINER>              [default: Perceptron] [possible values: perceptron, pa, pai, paii, multi, lvq]
+      --trainer <TRAINER>              [default: perceptron] [possible values: perceptron, pa, pai, paii, multi, lvq]
       --prototypes <PROTOTYPES>        number of prototypes per class [default: 1]
       --window <WINDOW>                lvq window [default: 0.25]
       --epochs <EPOCHS>                [default: 1000]
@@ -86,17 +86,19 @@ Ensemble of 5 - test 93.69%  (2761/2947)
 ## Experiments
 --------------
 
-The table shows runs with binary and modular hypervector models - ensemble size is 5.
+The table shows runs with binary and modular hypervector models - the ensemble size is 5.
+The "Bytes" column shows the byte size of an ensemble model: ensemble_size times number of activities times bytes per hypervector.
+The modular hypevectors use 8 bits per dimension.
 
-| Model             | Dim        | Individual Accuracy | Ensemble Accuracy | Time   | Bytes    |
-| :---------------  | ---------: | :-----------------: | ----------------: | -----: | -------: |
-| binary            |  1024      | 85.4-89.1%          | 92.3%             |    6s  | 6 x 128  |
-| binary            |  2048      | 87.6-91.5%          | 93.4%             |    6s  | 6 x 256  |
-| binary            |  4096      | 89.7-92.0%          | 93.4%             |    9s  | 6 x 512  |
-| binary            |  8192      | 91.6-93.3%          | 93.7%             |   16s  | 6 x 1024 |
-| binary            | 16384      | 91.7-92.1%          | 92.8%             |   28s  | 6 x 2048 |
-| modular           |  1024      | 91.9-92.7%          | 93.6%             |   26s  | 6 x 1024 |
-| modular           |  2048      | 92.6-93.2%          | 93.7%             |   51s  | 6 x 2048 |
+| Model             | Dim        | Individual Accuracy | Ensemble Accuracy | Time   | Bytes        |
+| :---------------  | ---------: | :-----------------: | ----------------: | -----: | :----------- |
+| binary            |  1024      | 85.4-89.1%          | 92.3%             |    6s  | 5 x 6 x 128  |
+| binary            |  2048      | 87.6-91.5%          | 93.4%             |    6s  | 5 x 6 x 256  |
+| binary            |  4096      | 89.7-92.0%          | 93.4%             |    9s  | 5 x 6 x 512  |
+| binary            |  8192      | 91.6-93.3%          | 93.7%             |   16s  | 5 x 6 x 1024 |
+| binary            | 16384      | 91.7-92.1%          | 92.8%             |   28s  | 5 x 6 x 2048 |
+| modular           |  1024      | 91.9-92.7%          | 93.6%             |   26s  | 5 x 6 x 1024 |
+| modular           |  2048      | 92.6-93.2%          | 93.7%             |   51s  | 5 x 6 x 2048 |
 
 
 Observations
