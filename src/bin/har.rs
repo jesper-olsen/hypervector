@@ -397,7 +397,7 @@ fn stats(v: &[f64]) -> Option<(f64, f64, f64)> {
     }
 
     let avg = sum / v.len() as f64;
-    Some((100.0*min, 100.0*max, 100.0*avg))
+    Some((100.0 * min, 100.0 * max, 100.0 * avg))
 }
 
 fn main() -> Result<(), io::Error> {
@@ -449,11 +449,11 @@ fn main() -> Result<(), io::Error> {
                 acc * 100.0,
                 correct + errors,
             );
-        } 
+        }
         println!();
     }
-    
-    if let Some((min,max,avg)) = stats(&accs) {
+
+    if let Some((min, max, avg)) = stats(&accs) {
         println!("Model accuracies - avg {avg:.2}%, min {min:.2}%, max {max:.2}")
     }
 

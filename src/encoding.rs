@@ -15,19 +15,18 @@ impl<H: HyperVector> ScalarEncoder<H> {
         let v_min = H::random(rng);
         let v_max = H::random(rng);
 
-        let mut basis = Vec::with_capacity(num_levels);
-
         // Shuffle indices to pick which bits to swap
         let mut indices: Vec<usize> = (0..H::DIM).collect();
         indices.shuffle(rng);
 
-        for i in 0..num_levels {
-            let frac = i as f32 / (num_levels - 1) as f32;
-            let num_to_swap = (frac * H::DIM as f32) as usize;
-            let current_indices = &indices[0..num_to_swap];
-            let b = v_min.blend(&v_max, current_indices);
-            basis.push(b);
-        }
+        let basis = (0..num_levels)
+            .map(|i| {
+                let frac = i as f32 / (num_levels - 1) as f32;
+                let num_to_swap = (frac * H::DIM as f32) as usize;
+                let current_indices = &indices[0..num_to_swap];
+                v_min.blend(&v_max, current_indices)
+            })
+            .collect();
 
         Self { min, max, basis }
     }
