@@ -19,14 +19,12 @@ feature set - at the cost of a much larger model size (80x):
 For Isolet, the SVM model stores 4165 support vetors - 67% of the training samples - which accounts for the larger model size. 
 
 ## Modelling
-------------
 
 The dataset comes with 617 dimensional feature vectors normalised to the interval -1 to 1.
 
 The modelling of Isolet used here is the same as the one used for [UCI HAR](https://github.com/jesper-olsen/hypervector/blob/master/READMEhar.md)
 
 ## Usage
---------
 
 ```bash
 cargo run --release --bin isolet -- --help
@@ -46,14 +44,13 @@ Options:
 ```
 
 ## Preliminaries
-----------------
+
 Download the dataset from [1]. Unpack the zipped dataset with root dir "isolet".
 
 [Install Rust](https://rust-lang.org/tools/install/).
 
 
 ## Example Run
---------------
 
 ```bash
 time cargo run --release --bin isolet -- --trainer perceptron --dim 2048   --mode binary --ensemble-size 5
@@ -82,7 +79,6 @@ Model accuracies - avg 91.43%, min 90.83%, max 91.85
 ```
 
 ## Experiments
---------------
 
 The table shows runs with binary and modular hypervector models - the ensemble size is 5.
 The "Bytes" column shows the byte size of an ensemble model: ensemble_size times number of letters times bytes per hypervector.
@@ -99,7 +95,7 @@ The modular hypevectors use 8 bits per dimension.
 | modular           |  2048      | 92.8-93.3%          | 93.7%             |  180s  | 5 x 26 x 2048 |
 
 
-References
-----------
+## References
+
 1. [UCI Isolet dataset](https://archive.ics.uci.edu/dataset/54/isolet)
 
