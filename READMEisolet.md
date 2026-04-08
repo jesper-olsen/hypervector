@@ -21,9 +21,9 @@ For Isolet, the SVM model stores 4165 support vetors - 67% of the training sampl
 ## Modelling
 ------------
 
-The dataset comes with raw sensor data as well as 617 dimensional feature vectors extracted from same; Features are normalised to the interval -1 to 1.
+The dataset comes with 617 dimensional feature vectors normalised to the interval -1 to 1.
 
-The modelling of Isolet is the same as the one used for [UCI HAR](https://github.com/jesper-olsen/hypervector/blob/master/READMEhar.md)
+The modelling of Isolet used here is the same as the one used for [UCI HAR](https://github.com/jesper-olsen/hypervector/blob/master/READMEhar.md)
 
 ## Usage
 --------
