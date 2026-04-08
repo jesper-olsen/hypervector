@@ -1,7 +1,6 @@
 use clap::{Parser, ValueEnum};
-//use hypervector::encoding::ScalarEncoder;
 use hypervector::encoding::BundleEncoder;
-use hypervector::trainer::har_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
+use hypervector::trainer::isolet_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
 use hypervector::trainer::{
     Classifier, Trainer, ensemble_accuracy, lvq::LvqTrainer,
     multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer, pa::PaVariant,
@@ -17,38 +16,6 @@ use rayon::prelude::*;
 use std::fmt;
 use std::io;
 use std::io::Write;
-
-// scalar encoder
-//pub struct HarEncoder<T: HyperVector> {
-//    feature_encoders: Vec<ScalarEncoder<T>>,  // one per feature
-//    position_vectors: Vec<T>,                  // one per feature position
-//}
-//
-//impl<T: HyperVector> HarEncoder<T> {
-//    pub fn new<R: Rng>(rng: &mut R) -> Self {
-//        let feature_encoders = (0..N_FEATURES)
-//            .map(|_| ScalarEncoder::new(-1.0, 1.0, 100, rng))
-//            .collect();
-//        let position_vectors = (0..N_FEATURES)
-//            .map(|_| T::random(rng))
-//            .collect();
-//        Self { feature_encoders, position_vectors }
-//    }
-//
-//    pub fn encode(&self, features: &[f32]) -> T {
-//        let mut acc = T::Accumulator::new();
-//        for ((encoder, pos), &val) in self.feature_encoders.iter()
-//            .zip(self.position_vectors.iter())
-//            .zip(features.iter())
-//        {
-//            let level_hv = encoder.encode(val);
-//            // bind position to value, then bundle
-//            let bound = pos.bind(level_hv);
-//            acc.add(&bound, 1.0);
-//        }
-//        acc.finalize()
-//    }
-//}
 
 #[derive(Copy, Clone, Debug, ValueEnum)]
 enum TrainerKind {
@@ -245,8 +212,7 @@ fn stats(v: &[f64]) -> Option<(f64, f64, f64)> {
 fn main() -> Result<(), io::Error> {
     let args = Args::parse();
     let ensemble_size = args.ensemble_size;
-    let har = Dataset::load("UCI HAR Dataset")?;
-
+    let har = Dataset::load("isolet")?;
     let mut rng = MersenneTwister64::default();
 
     let mut all_predictions = Vec::with_capacity(ensemble_size);

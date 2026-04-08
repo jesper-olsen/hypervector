@@ -101,8 +101,9 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
 
 #[derive(Debug, Clone)]
 pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
-    votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
-    count: f64,                                    // total number of vectors added
+    //votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
+    votes: Box<[[f64; usize::BITS as usize]; N_WORDS]>, // one vote counter per bit
+    count: f64,                                         // total number of vectors added
     rng: R,
 }
 
@@ -123,7 +124,8 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV
 {
     fn new() -> Self {
         Self {
-            votes: [[0.0; usize::BITS as usize]; N_WORDS],
+            votes: Box::new([[0.0; usize::BITS as usize]; N_WORDS]),
+            //votes: [[0.0; usize::BITS as usize]; N_WORDS],
             count: 0.0,
             rng: R::from_rng(&mut rand::rng()),
         }

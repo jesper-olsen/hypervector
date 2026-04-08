@@ -1,6 +1,8 @@
 use crate::{HyperVector, nearest};
 use rayon::prelude::*;
 
+pub mod har_dataset;
+pub mod isolet_dataset;
 pub mod kmeans;
 pub mod lvq;
 pub mod multi_perceptron;

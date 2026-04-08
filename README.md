@@ -32,7 +32,8 @@ Examples of problems that can be solved with hypervectors:
   ```
 2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
 3. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
-4. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
-5. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
-6. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
+4. [Spoken letter recognitin (UCI Isolet)](READMEisolet.md).
+5. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
+6. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
+7. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
 

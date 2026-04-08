@@ -54,7 +54,7 @@ pub struct ModularHDV<const D: usize> {
 }
 
 impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
-    type Accumulator = ModularAccumulator<DIM>;
+    type Accumulator = WeightedAccumulator<DIM>;
     type UnitAccumulator = UnitAcc<DIM>;
     const DIM: usize = DIM;
 
@@ -132,24 +132,28 @@ impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
 }
 
 #[derive(Clone)]
-pub struct ModularAccumulator<const D: usize> {
+pub struct WeightedAccumulator<const D: usize> {
     // We track sums of Sines and Cosines to find the circular mean
-    sums_sin: [f32; D],
-    sums_cos: [f32; D],
+    //sums_sin: [f32; D],
+    //sums_cos: [f32; D],
+    sums_sin: Box<[f32; D]>,
+    sums_cos: Box<[f32; D]>,
     count: f64,
 }
 
-impl<const D: usize> Default for ModularAccumulator<D> {
+impl<const D: usize> Default for WeightedAccumulator<D> {
     fn default() -> Self {
-        ModularAccumulator::new()
+        WeightedAccumulator::new()
     }
 }
 
-impl<const D: usize> Accumulator<ModularHDV<D>> for ModularAccumulator<D> {
+impl<const D: usize> Accumulator<ModularHDV<D>> for WeightedAccumulator<D> {
     fn new() -> Self {
         Self {
-            sums_sin: [0.0; D],
-            sums_cos: [0.0; D],
+            sums_sin: Box::new([0.0; D]),
+            sums_cos: Box::new([0.0; D]),
+            //sums_sin: [0.0; D],
+            //sums_cos: [0.0; D],
             count: 0.0,
         }
     }

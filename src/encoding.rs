@@ -84,6 +84,30 @@ impl<H: HyperVector> ScalarEncoder<H> {
 //    }
 //}
 
+// Simpler than TabularEncoder
+// Weights each raw basis vector by the feature value directly
+// Good for pre-normalized continuous features like HAR's [-1, 1] range
+pub struct BundleEncoder<T: HyperVector, const N: usize> {
+    base_vectors: Vec<T>,
+}
+
+impl<T: HyperVector, const N: usize> BundleEncoder<T, N> {
+    pub fn new<R: Rng>(rng: &mut R) -> Self {
+        let base_vectors = (0..N).map(|_| T::random(rng)).collect();
+        Self { base_vectors }
+    }
+
+    pub fn encode(&self, features: &[f32]) -> T {
+        // feature bundling
+        assert_eq!(features.len(), N);
+        let mut acc = T::Accumulator::new();
+        for (base, &val) in self.base_vectors.iter().zip(features.iter()) {
+            acc.add(base, val as f64);
+        }
+        acc.finalize()
+    }
+}
+
 pub struct TabularEncoder<H: HyperVector> {
     // Vectors indexed by the column position in the CSV
     pub field_encoders: Vec<ScalarEncoder<H>>,
