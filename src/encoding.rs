@@ -38,52 +38,6 @@ impl<H: HyperVector> ScalarEncoder<H> {
     }
 }
 
-//pub struct TabularEncoder<H: HyperVector> {
-//    // Maps column name to its specific ScalarEncoder
-//    pub field_encoders: HashMap<String, ScalarEncoder<H>>,
-//    // Maps column name to its unique ID vector (the "Key")
-//    pub field_keys: HashMap<String, H>,
-//}
-//
-//impl<H: HyperVector> TabularEncoder<H> {
-//    /// Initialize encoders based on a schema: (Name, Min, Max, Resolution)
-//    pub fn new(
-//        schema: Vec<(String, f32, f32, usize)>,
-//        rng: &mut impl RngCore
-//    ) -> Self {
-//        let mut field_encoders = HashMap::new();
-//        let mut field_keys = HashMap::new();
-//
-//        for (name, min, max, levels) in schema {
-//            field_encoders.insert(
-//                name.clone(),
-//                ScalarEncoder::new(min, max, levels, rng)
-//            );
-//            // Each column gets a completely random orthogonal key
-//            field_keys.insert(name, H::random(rng));
-//        }
-//
-//        Self { field_encoders, field_keys }
-//    }
-//
-//    /// Encodes a single row/record into one HyperVector
-//    pub fn encode_record(&self, record: &HashMap<String, f32>) -> H {
-//        let mut acc = H::Accumulator::default();
-//
-//        for (name, value) in record {
-//            if let (Some(enc), Some(key)) = (self.field_encoders.get(name), self.field_keys.get(name)) {
-//                // Scalar value -> Level Vector
-//                let val_v = enc.encode(*value);
-//                // Bind Level Vector with Column Key
-//                let bound = val_v.bind(key);
-//                acc.add(&bound, 1.0);
-//            }
-//        }
-//
-//        acc.finalize()
-//    }
-//}
-
 // Simpler than TabularEncoder
 // Weights each raw basis vector by the feature value directly
 // Good for pre-normalized continuous features like HAR's [-1, 1] range

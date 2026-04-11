@@ -212,26 +212,26 @@ fn stats(v: &[f64]) -> Option<(f64, f64, f64)> {
 fn main() -> Result<(), io::Error> {
     let args = Args::parse();
     let ensemble_size = args.ensemble_size;
-    let har = Dataset::load("isolet")?;
+    let dataset = Dataset::load("isolet")?;
     let mut rng = MersenneTwister64::default();
 
     let mut all_predictions = Vec::with_capacity(ensemble_size);
     let mut accs = Vec::with_capacity(ensemble_size);
     for i in 1..=ensemble_size {
         let preds = match (args.mode.as_str(), args.dim) {
-            ("binary", 1024) => run::<BinaryHDV1024>(&har, &mut rng, &args),
-            ("binary", 2048) => run::<BinaryHDV2048>(&har, &mut rng, &args),
-            ("binary", 4096) => run::<BinaryHDV4096>(&har, &mut rng, &args),
-            ("binary", 8192) => run::<BinaryHDV8192>(&har, &mut rng, &args),
-            ("binary", 16384) => run::<BinaryHDV16384>(&har, &mut rng, &args),
-            ("modular", 1024) => run::<ModularHDV1024>(&har, &mut rng, &args),
-            ("modular", 2048) => run::<ModularHDV2048>(&har, &mut rng, &args),
-            ("modular", 4096) => run::<ModularHDV4096>(&har, &mut rng, &args),
-            ("modular", 8192) => run::<ModularHDV8192>(&har, &mut rng, &args),
-            ("modular", 16384) => run::<ModularHDV16384>(&har, &mut rng, &args),
-            ("real", 1024) => run::<RealHDV1024>(&har, &mut rng, &args),
-            ("real", 2048) => run::<RealHDV2048>(&har, &mut rng, &args),
-            ("complex", 1024) => run::<ComplexHDV1024>(&har, &mut rng, &args),
+            ("binary", 1024) => run::<BinaryHDV1024>(&dataset, &mut rng, &args),
+            ("binary", 2048) => run::<BinaryHDV2048>(&dataset, &mut rng, &args),
+            ("binary", 4096) => run::<BinaryHDV4096>(&dataset, &mut rng, &args),
+            ("binary", 8192) => run::<BinaryHDV8192>(&dataset, &mut rng, &args),
+            ("binary", 16384) => run::<BinaryHDV16384>(&dataset, &mut rng, &args),
+            ("modular", 1024) => run::<ModularHDV1024>(&dataset, &mut rng, &args),
+            ("modular", 2048) => run::<ModularHDV2048>(&dataset, &mut rng, &args),
+            ("modular", 4096) => run::<ModularHDV4096>(&dataset, &mut rng, &args),
+            ("modular", 8192) => run::<ModularHDV8192>(&dataset, &mut rng, &args),
+            ("modular", 16384) => run::<ModularHDV16384>(&dataset, &mut rng, &args),
+            ("real", 1024) => run::<RealHDV1024>(&dataset, &mut rng, &args),
+            ("real", 2048) => run::<RealHDV2048>(&dataset, &mut rng, &args),
+            ("complex", 1024) => run::<ComplexHDV1024>(&dataset, &mut rng, &args),
             _ => {
                 eprintln!(
                     "Unsupported combination: mode={} dim={}",
@@ -240,8 +240,11 @@ fn main() -> Result<(), io::Error> {
                 return Ok(());
             }
         };
-        let (correct, errors, acc) =
-            ensemble_accuracy(std::slice::from_ref(&preds), &har.test_labels, NUM_CLASSES);
+        let (correct, errors, acc) = ensemble_accuracy(
+            std::slice::from_ref(&preds),
+            &dataset.test_labels,
+            NUM_CLASSES,
+        );
 
         println!(
             "Model {i}/{ensemble_size} - test: {:.2}%  ({correct}/{})",
@@ -252,7 +255,7 @@ fn main() -> Result<(), io::Error> {
         accs.push(acc);
         if i > 2 {
             let (correct, errors, acc) =
-                ensemble_accuracy(&all_predictions, &har.test_labels, NUM_CLASSES);
+                ensemble_accuracy(&all_predictions, &dataset.test_labels, NUM_CLASSES);
             println!(
                 "Ensemble of {i} - test {:.2}%  ({correct}/{})",
                 acc * 100.0,
