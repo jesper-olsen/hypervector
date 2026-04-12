@@ -1,6 +1,6 @@
 use clap::{Parser, ValueEnum};
-use hypervector::trainer::wine_dataset::{Dataset, Label, NUM_CLASSES};
 use hypervector::encoding::TabularEncoder;
+use hypervector::trainer::wine_dataset::{Dataset, Label, NUM_CLASSES};
 use hypervector::trainer::{
     Classifier, Trainer, ensemble_accuracy, lvq::LvqTrainer,
     multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer, pa::PaVariant,
