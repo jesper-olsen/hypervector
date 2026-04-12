@@ -1,6 +1,6 @@
 use clap::{Parser, ValueEnum};
 use hypervector::encoding::BundleEncoder;
-use hypervector::trainer::isolet_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
+use hypervector::datasets::isolet_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
 use hypervector::trainer::{
     Classifier, Trainer, ensemble_accuracy, lvq::LvqTrainer,
     multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer, pa::PaVariant,

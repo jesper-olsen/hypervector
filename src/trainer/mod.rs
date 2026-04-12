@@ -1,14 +1,11 @@
 use crate::{HyperVector, nearest};
 use rayon::prelude::*;
 
-pub mod har_dataset;
-pub mod isolet_dataset;
 pub mod kmeans;
 pub mod lvq;
 pub mod multi_perceptron;
 pub mod pa;
 pub mod perceptron;
-pub mod wine_dataset;
 
 pub trait Classifier<T: HyperVector> {
     fn predict(&self, h: &T) -> usize;
