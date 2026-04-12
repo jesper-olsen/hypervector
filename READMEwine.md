@@ -73,52 +73,52 @@ Model 5/5 - test: 79.50%  (318/400)
 Ensemble of 5 - test 79.75%  (319/400)
 
 Model accuracies - avg 77.85%, min 76.25%, max 79.50
-cargo run --release --bin wine -- --dim 2048 --trainer multi --prototypes 8    17.88s user 0.84s system 441% cpu 4.242 total
+cargo run --release --bin wine -- --dim 2048 --trainer multi --prototypes 8    
+17.88s user 0.84s system 441% cpu 4.242 total
 ```
 
 ## Experiments
 
 The table shows runs with binary and modular hypervector models - the ensemble size is 5.
-The "Bytes" column shows the byte size of an ensemble model: ensemble_size times number of classes times number of levels in the scalar encoders.
-The modular hypevectors use 8 bits per dimension.
+The "Bytes" column shows the byte size of an ensemble model. The modular hypevectors use 8 bits per dimension.
 
 | Model             | Trainer    | Prototypes | Dim        | Individual Accuracy | Ensemble Accuracy | Time   |     Bytes         |
 | :---------------  | :--------- | ----------:| ---------: | :-----------------: | ----------------: | -----: |     :------------ |
-| binary            | Perceptron |         1  |  1024      | 61.8-73.0%          | 71.8%             |    2s  | 5 x 2 x 64 x 128  |
-| binary            | Perceptron |         1  |  2048      | 70.8-74.5%          | 74.7%             |    3s  | 5 x 2 x 64 x 256  |
-| binary            | Perceptron |         1  |  4096      | 69.3-73.5%          | 75.3%             |    3s  | 5 x 2 x 64 x 512  |
-| binary            | Perceptron |         1  |  8192      | 66.5-74.8%          | 75.3%             |    4s  | 5 x 2 x 64 x 1024 |
-| binary            | Perceptron |         1  | 16384      | 70.0-76.5%          | 77.3%             |    7s  | 5 x 2 x 64 x 2048 |
-| binary            | Multi      |         2  |  1024      | 67.8-71.0%          | 73.0%             |    3s  | 5 x 2 x 64 x 128  |
-| binary            | Multi      |         2  |  2048      | 72.0-76.3%          | 78.0%             |    3s  | 5 x 2 x 64 x 128  |
-| binary            | Multi      |         2  |  4096      | 70.8-76.5%          | 77.8%             |    3s  | 5 x 2 x 64 x 128  |
-| binary            | Multi      |         3  |  4096      | 74.0-77.0%          | 78.0%             |    3s  | 5 x 2 x 64 x 128  |
-| binary            | Perceptron |         1  |  1024      | 61.8-73.0%          | 71.8%             |    2s  | 5 x 2 x 64 x 128  |
-| binary            | Pa         |         1  |  1024      | 64.0-75.3%          | 74.5%             |   14s  | 5 x 2 x 64 x 128  |
-| binary            | Pa         |         1  |  2048      | 68.0-74.0%          | 74.8%             |   23s  | 5 x 2 x 64 x 128  |
-| binary            | Pa         |         1  |  4096      | 73.5-77.0%          | 77.3%             |   68s  | 5 x 2 x 64 x 128  |
-| binary            | Pa         |         1  |  8192      | 76.8-79.0%          | 78.5%             |  198s  | 5 x 2 x 64 x 128  |
-| binary            | Pa         |         1  | 16384      | 75.5-78.3%          | 78.3%             |  239s  | 5 x 2 x 64 x 128  |
-| binary            | Pai        |         1  |  1024      | 67.0-72.8%          | 74.3%             |   14s  | 5 x 2 x 64 x 128  |
-| binary            | Pai        |         1  |  2048      | 68.3-74.8%          | 76.5%             |   23s  | 5 x 2 x 64 x 128  |
-| binary            | Pai        |         1  |  4096      | 70.8-76.5%          | 77.0%             |   54s  | 5 x 2 x 64 x 128  |
-| binary            | Paii       |         1  |  1024      | 68.3-74.3%          | 76.8%             |   14s  | 5 x 2 x 64 x 128  |
-| binary            | Paii       |         1  |  2048      | 71.5-77.3%          | 76.8%             |   23s  | 5 x 2 x 64 x 128  |
-| binary            | Paii       |         1  |  4096      | 74.3-77.8%          | 76.3%             |   65s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         1  |  1024      | 71.0-74.3%          | 73.0%             |    5s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         2  |  1024      | 72.3-74.5%          | 74.3%             |    5s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         3  |  1024      | 72.8-75.3%          | 75.3%             |    4s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         4  |  1024      | 74.0-75.8%          | 75.8%             |    4s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         5  |  1024      | 75.5-78.0%          | 76.3%             |    4s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         6  |  1024      | 74.2-77.3%          | 76.8%             |    3s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         7  |  1024      | 73.8-78.8%          | 77.3%             |    4s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         8  |  1024      | 74.8-78.8%          | 77.8%             |    4s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         2  |  2048      | 72.0-74.3%          | 74.0%             |    5s  | 5 x 2 x 64 x 128  |
-| binary            | lvq        |         2  |  4096      | 72.3-74.8%          | 73.5%             |    5s  | 5 x 2 x 64 x 128  |
-| modular           | Perceptron |         1  |  1024      | 67.5-75.0%          | 74.0%             |    5s  | 5 x 2 x 64 x 1024 |
-| modular           | Perceptron |         1  |  2048      | 67.8-72.8%          | 75.0%             |    7s  | 5 x 2 x 64 x 2048 |
-| modular           | Multi      |         8  |  2048      | 76.3-79.5%          | **79.8%**         |    4s  | 5 x 2 x 64 x 2048 |
-| modular           | pa         |         1  |  2048      | 74.8-79.0%          | 78.3%             |  167s  | 5 x 2 x 64 x 2048 |
+| binary            | Perceptron |         1  |  1024      | 61.8-73.0%          | 71.8%             |    2s  | 5 x (2 + 64) x 128  |
+| binary            | Perceptron |         1  |  2048      | 70.8-74.5%          | 74.7%             |    3s  | 5 x (2 + 64) x 256  |
+| binary            | Perceptron |         1  |  4096      | 69.3-73.5%          | 75.3%             |    3s  | 5 x (2 + 64) x 512  |
+| binary            | Perceptron |         1  |  8192      | 66.5-74.8%          | 75.3%             |    4s  | 5 x (2 + 64) x 1024 |
+| binary            | Perceptron |         1  | 16384      | 70.0-76.5%          | 77.3%             |    7s  | 5 x (2 + 64) x 2048 |
+| binary            | Multi      |         2  |  1024      | 67.8-71.0%          | 73.0%             |    3s  | 5 x (2 + 64) x 128  |
+| binary            | Multi      |         2  |  2048      | 72.0-76.3%          | 78.0%             |    3s  | 5 x (2 + 64) x 128  |
+| binary            | Multi      |         2  |  4096      | 70.8-76.5%          | 77.8%             |    3s  | 5 x (2 + 64) x 128  |
+| binary            | Multi      |         3  |  4096      | 74.0-77.0%          | 78.0%             |    3s  | 5 x (2 + 64) x 128  |
+| binary            | Perceptron |         1  |  1024      | 61.8-73.0%          | 71.8%             |    2s  | 5 x (2 + 64) x 128  |
+| binary            | Pa         |         1  |  1024      | 64.0-75.3%          | 74.5%             |   14s  | 5 x (2 + 64) x 128  |
+| binary            | Pa         |         1  |  2048      | 68.0-74.0%          | 74.8%             |   23s  | 5 x (2 + 64) x 128  |
+| binary            | Pa         |         1  |  4096      | 73.5-77.0%          | 77.3%             |   68s  | 5 x (2 + 64) x 128  |
+| binary            | Pa         |         1  |  8192      | 76.8-79.0%          | 78.5%             |  198s  | 5 x (2 + 64) x 128  |
+| binary            | Pa         |         1  | 16384      | 75.5-78.3%          | 78.3%             |  239s  | 5 x (2 + 64) x 128  |
+| binary            | Pai        |         1  |  1024      | 67.0-72.8%          | 74.3%             |   14s  | 5 x (2 + 64) x 128  |
+| binary            | Pai        |         1  |  2048      | 68.3-74.8%          | 76.5%             |   23s  | 5 x (2 + 64) x 128  |
+| binary            | Pai        |         1  |  4096      | 70.8-76.5%          | 77.0%             |   54s  | 5 x (2 + 64) x 128  |
+| binary            | Paii       |         1  |  1024      | 68.3-74.3%          | 76.8%             |   14s  | 5 x (2 + 64) x 128  |
+| binary            | Paii       |         1  |  2048      | 71.5-77.3%          | 76.8%             |   23s  | 5 x (2 + 64) x 128  |
+| binary            | Paii       |         1  |  4096      | 74.3-77.8%          | 76.3%             |   65s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         1  |  1024      | 71.0-74.3%          | 73.0%             |    5s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         2  |  1024      | 72.3-74.5%          | 74.3%             |    5s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         3  |  1024      | 72.8-75.3%          | 75.3%             |    4s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         4  |  1024      | 74.0-75.8%          | 75.8%             |    4s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         5  |  1024      | 75.5-78.0%          | 76.3%             |    4s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         6  |  1024      | 74.2-77.3%          | 76.8%             |    3s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         7  |  1024      | 73.8-78.8%          | 77.3%             |    4s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         8  |  1024      | 74.8-78.8%          | 77.8%             |    4s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         2  |  2048      | 72.0-74.3%          | 74.0%             |    5s  | 5 x (2 + 64) x 128  |
+| binary            | lvq        |         2  |  4096      | 72.3-74.8%          | 73.5%             |    5s  | 5 x (2 + 64) x 128  |
+| modular           | Perceptron |         1  |  1024      | 67.5-75.0%          | 74.0%             |    5s  | 5 x (2 + 64) x 1024 |
+| modular           | Perceptron |         1  |  2048      | 67.8-72.8%          | 75.0%             |    7s  | 5 x (2 + 64) x 2048 |
+| modular           | Multi      |         8  |  2048      | 76.3-79.5%          | **79.8%**         |    4s  | 5 x (2 + 64) x 2048 |
+| modular           | pa         |         1  |  2048      | 74.8-79.0%          | 78.3%             |  167s  | 5 x (2 + 64) x 2048 |
 
 
 ## References
