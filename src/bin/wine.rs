@@ -119,19 +119,34 @@ fn run<T: HyperVector + Sync + Send>(
     rng: &mut impl Rng,
     args: &Args,
 ) -> Vec<usize> {
+    const LEVELS: usize = 64;
     let schema: &[(f32, f32, usize)] = &[
-        (4.0, 16.0, 64),
-        (0.1, 1.6, 64),
-        (0.0, 1.0, 64),
-        (1.0, 16.0, 64),
-        (0.01, 0.62, 64),
-        (1.0, 72.0, 64),
-        (6.0, 290.0, 64),
-        (0.99, 1.004, 64),
-        (2.7, 4.1, 64),
-        (0.3, 2.0, 64),
-        (8.0, 15.0, 64),
+        (4.0, 16.0, LEVELS),
+        (0.1, 1.6, LEVELS),
+        (0.0, 1.0, LEVELS),
+        (1.0, 16.0, LEVELS),
+        (0.01, 0.62, LEVELS),
+        (1.0, 72.0, LEVELS),
+        (6.0, 290.0, LEVELS),
+        (0.99, 1.004, LEVELS),
+        (2.7, 4.1, LEVELS),
+        (0.3, 2.0, LEVELS),
+        (8.0, 15.0, LEVELS),
     ];
+
+    // Red wine training
+    //    fixed acidity         4.60000   15.90000
+    //    volatile acidity      0.12000    1.58000
+    //    citric acid           0.00000    0.79000
+    //    residual sugar        0.90000   15.50000
+    //    chlorides             0.01200    0.61100
+    //    free sulfur dioxide   1.00000   72.00000
+    //    total sulfur dioxide  7.00000  289.00000
+    //    density               0.99007    1.00369
+    //    pH                    2.86000    4.01000
+    //    sulphates             0.37000    1.98000
+    //    alcohol               8.40000   14.90000
+
     let encoder = TabularEncoder::<T>::new(schema, rng);
     let train_hvs: Vec<T> = data.train.par_iter().map(|s| encoder.encode(s)).collect();
     let test_hvs: Vec<T> = data.test.par_iter().map(|s| encoder.encode(s)).collect();

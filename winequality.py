@@ -59,6 +59,18 @@ class WineBaseline:
             test_df.to_csv("wine_test.csv", index=False)
             print("Exported wine_train.csv and wine_test.csv")
 
+            # Compute min/max for each feature (TRAIN ONLY)
+            feature_stats = pd.DataFrame({
+                    "min": self.X_train.min(),
+                    "max": self.X_train.max()
+            })
+
+            print("\nFeature ranges (training set):")
+            print(feature_stats)
+
+        # Optional: save to CSV for reuse
+        feature_stats.to_csv("feature_min_max.csv")
+
         # 3. Scale features (Crucial for LR, SGD, and KNN)
         self.X_train = self.scaler.fit_transform(self.X_train)
         self.X_test = self.scaler.transform(self.X_test)
