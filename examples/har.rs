@@ -1,22 +1,24 @@
+use std::fmt;
+use std::io::{self, Write};
+
 use clap::{Parser, ValueEnum};
-//use hypervector::encoding::ScalarEncoder;
-use hypervector::encoding::BundleEncoder;
-use hypervector::datasets::har_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
-use hypervector::trainer::{
-    Classifier, Trainer, ensemble_accuracy, lvq::LvqTrainer,
-    multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer, pa::PaVariant,
-    perceptron::PerceptronTrainer,
-};
-use hypervector::{HyperVector, hdv};
-use hypervector::{
-    binary_hdv::BinaryHDV, complex_hdv::ComplexHDV, modular_hdv::ModularHDV, real_hdv::RealHDV,
-};
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
 use rayon::prelude::*;
-use std::fmt;
-use std::io;
-use std::io::Write;
+
+use hypervector::datasets::har_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
+use hypervector::encoding::BundleEncoder;
+use hypervector::trainer::{
+    Classifier, Trainer, ensemble_accuracy,
+    lvq::LvqTrainer,
+    multi_perceptron::PerceptronMultiTrainer,
+    pa::{PaTrainer, PaVariant},
+    perceptron::PerceptronTrainer,
+};
+use hypervector::types::{
+    binary::BinaryHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
+};
+use hypervector::{HyperVector, hdv};
 
 #[derive(Copy, Clone, Debug, ValueEnum)]
 enum TrainerKind {

@@ -5,10 +5,10 @@
 // 4. Unbind a key and try to decode the corresponding value.
 // Plot the results with plot_kv.py
 
-use hypervector::{
-    HyperVector, UnitAccumulator, binary_hdv::BinaryHDV, complex_hdv::ComplexHDV, hdv,
-    modular_hdv::ModularHDV, nearest, real_hdv::RealHDV,
+use hypervector::types::{
+    binary::BinaryHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
 };
+use hypervector::{HyperVector, UnitAccumulator, hdv, nearest};
 use mersenne_twister_rs::MersenneTwister64;
 use std::io::{self, Write};
 

@@ -3,17 +3,17 @@
 // IEEE Transactions on Neural Networks, February, 1995, 6(3):623-41
 // https://www.researchgate.net/publication/5589577_Holographic_Reduced_Representations
 
-use hypervector::binary_hdv::BinaryHDV;
-use hypervector::bipolar_hdv::BipolarHDV;
-use hypervector::complex_hdv::ComplexHDV;
-use hypervector::modular_hdv::ModularHDV;
-use hypervector::real_hdv::RealHDV;
-use hypervector::{HyperVector, gen_vars};
-use mersenne_twister_rs::MersenneTwister64;
 use std::any::type_name;
-
 use std::fs::File;
 use std::io::Write;
+
+use hypervector::types::binary::BinaryHDV;
+use hypervector::types::bipolar::BipolarHDV;
+use hypervector::types::complex::ComplexHDV;
+use hypervector::types::modular::ModularHDV;
+use hypervector::types::real::RealHDV;
+use hypervector::{HyperVector, gen_vars};
+use mersenne_twister_rs::MersenneTwister64;
 
 fn write_confusion_csv<T: HyperVector>(filename: &str, items: &[(T, &str)]) -> std::io::Result<()> {
     let mut file = File::create(filename)?;
