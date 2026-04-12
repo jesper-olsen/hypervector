@@ -482,8 +482,8 @@ pub fn save_hdvs_to_csv<const N: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::binary_hdv::{BinaryHDV, UnitAcc, WeightedAcc};
-    use crate::{Accumulator, HyperVector, UnitAccumulator};
+    use crate::types::binary::{BinaryHDV, UnitAcc, WeightedAcc};
+    use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
     #[test]
     fn test_accumulate() {

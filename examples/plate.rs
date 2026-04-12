@@ -7,13 +7,13 @@ use std::any::type_name;
 use std::fs::File;
 use std::io::Write;
 
+use hypervector::gen_vars;
 use hypervector::types::binary::BinaryHDV;
 use hypervector::types::bipolar::BipolarHDV;
 use hypervector::types::complex::ComplexHDV;
 use hypervector::types::modular::ModularHDV;
 use hypervector::types::real::RealHDV;
 use hypervector::types::traits::HyperVector;
-use hypervector::gen_vars;
 use mersenne_twister_rs::MersenneTwister64;
 
 fn write_confusion_csv<T: HyperVector>(filename: &str, items: &[(T, &str)]) -> std::io::Result<()> {

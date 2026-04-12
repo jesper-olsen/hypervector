@@ -201,8 +201,8 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 
 #[cfg(test)]
 mod tests {
-    use crate::bipolar_hdv::{BipolarHDV, WeightedAcc};
-    use crate::{Accumulator, HyperVector};
+    use crate::types::bipolar::{BipolarHDV, WeightedAcc};
+    use crate::types::traits::{Accumulator, HyperVector};
 
     #[test]
     fn test_accumulate() {

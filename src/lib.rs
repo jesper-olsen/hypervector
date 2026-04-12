@@ -176,9 +176,10 @@ pub fn example_mexican_dollar<T: HyperVector>() {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        HyperVector, binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, complex_hdv::ComplexHDV,
-        modular_hdv::ModularHDV, real_hdv::RealHDV,
+    use crate::types::traits::HyperVector;
+    use crate::types::{
+        binary::BinaryHDV, bipolar::BipolarHDV, complex::ComplexHDV, modular::ModularHDV,
+        real::RealHDV,
     };
 
     fn test_permute_unpermute<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>() {

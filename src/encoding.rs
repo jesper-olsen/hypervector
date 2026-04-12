@@ -103,7 +103,7 @@ impl<H: HyperVector> TabularEncoder<H> {
 #[cfg(test)]
 mod encoding_tests {
     use super::*;
-    use crate::binary_hdv::BinaryHDV;
+    use crate::types::binary::BinaryHDV;
     use mersenne_twister_rs::MersenneTwister64;
 
     #[test]
