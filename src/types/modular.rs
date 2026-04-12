@@ -1,7 +1,7 @@
 // Modular Composite Representation", J. Snaider S. Franklin, 2014
 // https://digitalcommons.memphis.edu/ccrg_papers/32/
 
-use crate::{Accumulator, HyperVector, UnitAccumulator};
+use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 use rand::Rng;
 use std::fs::File;
 use std::io::{Read, Write};

@@ -1,4 +1,4 @@
-use crate::{Accumulator, HyperVector, UnitAccumulator};
+use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use rustfft::{FftPlanner, num_complex::Complex};

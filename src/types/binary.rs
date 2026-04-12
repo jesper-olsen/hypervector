@@ -1,10 +1,12 @@
-use crate::{Accumulator, HyperVector, UnitAccumulator};
-use mersenne_twister_rs::MersenneTwister64;
-use rand::{Rng, SeedableRng};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};
 use std::mem::size_of;
+
+use mersenne_twister_rs::MersenneTwister64;
+use rand::{Rng, SeedableRng};
+
+use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct BinaryHDV<const N_WORDS: usize> {

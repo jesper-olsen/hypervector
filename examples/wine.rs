@@ -7,15 +7,16 @@ use rayon::prelude::*;
 
 use hypervector::datasets::wine_dataset::{Dataset, Label, NUM_CLASSES};
 use hypervector::encoding::TabularEncoder;
+use hypervector::hdv;
 use hypervector::trainer::{
     Classifier, Trainer, ensemble_accuracy, lvq::LvqTrainer,
     multi_perceptron::PerceptronMultiTrainer, pa::PaTrainer, pa::PaVariant,
     perceptron::PerceptronTrainer,
 };
+use hypervector::types::traits::HyperVector;
 use hypervector::types::{
     binary::BinaryHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
 };
-use hypervector::{HyperVector, hdv};
 use mersenne_twister_rs::MersenneTwister64;
 
 #[derive(Copy, Clone, Debug, ValueEnum)]

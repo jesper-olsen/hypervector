@@ -1,17 +1,16 @@
+use clap::Parser;
+use hypervector::types::traits::{HyperVector, UnitAccumulator};
+use hypervector::types::{
+    binary::BinaryHDV, bipolar::BipolarHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
+};
+use hypervector::{cleanup, save_hypervectors_to_csv};
+use mersenne_twister_rs::MersenneTwister64;
+use rand::Rng;
 use std::collections::hash_map::HashMap;
 use std::collections::vec_deque::VecDeque;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
-
-use clap::Parser;
-use rand::Rng;
-
-use hypervector::types::{
-    binary::BinaryHDV, bipolar::BipolarHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
-};
-use hypervector::{HyperVector, UnitAccumulator, cleanup, save_hypervectors_to_csv};
-use mersenne_twister_rs::MersenneTwister64;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

@@ -1,4 +1,6 @@
-use hypervector::{HyperVector, hdv, types::binary::BinaryHDV};
+use hypervector::hdv;
+use hypervector::types::binary::BinaryHDV;
+use hypervector::types::traits::HyperVector;
 use mersenne_twister_rs::MersenneTwister64;
 
 hdv!(binary, BinaryHDV1024, 1024);

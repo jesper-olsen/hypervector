@@ -3,9 +3,8 @@
 // However, that would make the implementation basically the same as BinaryHDV.
 // Only difference is how 0 and 1 are interpreted - ie. for bipolar 0=1 and 1=-1.
 
-use crate::{Accumulator, HyperVector, UnitAccumulator};
-use rand::Rng;
-use rand::RngExt;
+use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
+use rand::{Rng, RngExt};
 use std::fs::File;
 use std::io::{Read, Write};
 

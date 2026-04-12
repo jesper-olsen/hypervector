@@ -2,9 +2,9 @@
 // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
 // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
 
-use hypervector::{
-    binary_hdv::BinaryHDV, bipolar_hdv::BipolarHDV, complex_hdv::ComplexHDV,
-    example_mexican_dollar, modular_hdv::ModularHDV, real_hdv::RealHDV,
+use hypervector::example_mexican_dollar;
+use hypervector::types::{
+    binary::BinaryHDV, bipolar::BipolarHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
 };
 
 fn main() {

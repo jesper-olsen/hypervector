@@ -3,3 +3,4 @@ pub mod bipolar;
 pub mod complex;
 pub mod modular;
 pub mod real;
+pub mod traits;

@@ -1,4 +1,4 @@
-use crate::{Accumulator, HyperVector};
+use crate::types::traits::{Accumulator, HyperVector};
 use rand::Rng;
 use rand::seq::SliceRandom;
 

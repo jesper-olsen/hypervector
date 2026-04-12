@@ -1,4 +1,5 @@
-use crate::{HyperVector, UnitAccumulator, nearest};
+use crate::nearest;
+use crate::types::traits::{HyperVector, UnitAccumulator};
 use rand::Rng;
 use rand::prelude::IndexedRandom;
 use std::borrow::Borrow;

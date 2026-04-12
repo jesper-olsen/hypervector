@@ -8,6 +8,7 @@ use rayon::prelude::*;
 
 use hypervector::datasets::har_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
 use hypervector::encoding::BundleEncoder;
+use hypervector::hdv;
 use hypervector::trainer::{
     Classifier, Trainer, ensemble_accuracy,
     lvq::LvqTrainer,
@@ -15,10 +16,10 @@ use hypervector::trainer::{
     pa::{PaTrainer, PaVariant},
     perceptron::PerceptronTrainer,
 };
+use hypervector::types::traits::HyperVector;
 use hypervector::types::{
     binary::BinaryHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
 };
-use hypervector::{HyperVector, hdv};
 
 #[derive(Copy, Clone, Debug, ValueEnum)]
 enum TrainerKind {
