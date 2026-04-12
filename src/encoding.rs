@@ -86,7 +86,7 @@ impl<H: HyperVector> TabularEncoder<H> {
     }
 
     /// Encodes a row of features. Assumes row.len() == schema.len()
-    pub fn encode_row(&self, row: &[f32]) -> H {
+    pub fn encode(&self, row: &[f32]) -> H {
         let mut acc = H::Accumulator::new();
 
         for (i, &value) in row.iter().enumerate() {
