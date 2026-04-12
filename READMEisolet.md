@@ -27,7 +27,7 @@ The modelling of Isolet used here is the same as the one used for [UCI HAR](http
 ## Usage
 
 ```bash
-cargo run --release --bin isolet -- --help
+cargo run --release --example isolet -- --help
 
 Usage: isolet [OPTIONS]
 
@@ -53,7 +53,7 @@ Download the dataset from [1]. Unpack the zipped dataset with root dir "isolet".
 ## Example Run
 
 ```bash
-time cargo run --release --bin isolet -- --trainer perceptron --dim 2048   --mode binary --ensemble-size 5
+time cargo run --release --example isolet -- --trainer perceptron --dim 2048   --mode binary --ensemble-size 5
 
 Epoch 1000: Training Accuracy 6235/6238=99.95%
 Model 1/5 - test: 91.85%  (1432/1559)

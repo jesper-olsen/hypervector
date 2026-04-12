@@ -28,7 +28,7 @@ Examples of problems that can be solved with hypervectors:
 
 1. Kanerva's Mexican Dollar [1] inferencing example - run it with:
   ```
-  cargo run --release --bin mexican
+  cargo run --example mexican
   ```
 2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
 3. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...

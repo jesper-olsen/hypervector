@@ -13,7 +13,7 @@ Bipolar HDVs are represented as u8 arrays with one element per dimension. Binary
 because they only use one bit per dimension; this is not only more storage efficient but also computationally significantly faster as can be seen from the table below.
 
 ```
-cargo run --release --bin language_id -- --mode binary --dim 1024 --ngram 3
+cargo run --release --example language_id -- --mode binary --dim 1024 --ngram 3
 ```
 
 ### Accuracy 

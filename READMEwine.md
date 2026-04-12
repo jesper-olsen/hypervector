@@ -28,6 +28,8 @@ The 11 scalar features were level encoded (64 levels) and bundled over the two c
 ## Usage
 
 ```bash
+cargo run --example wine -- --help
+
 Usage: wine [OPTIONS]
 
 Options:
@@ -81,9 +83,18 @@ cargo run --release --bin wine -- --dim 2048 --trainer multi --prototypes 8
 
 The table shows runs with binary and modular hypervector models - the ensemble size is 5.
 The "Bytes" column shows the byte size of an ensemble model. The modular hypevectors use 8 bits per dimension.
+Six different trainers are used:
 
-| Model             | Trainer    | Prototypes | Dim        | Individual Accuracy | Ensemble Accuracy | Time   |     Bytes         |
-| :---------------  | :--------- | ----------:| ---------: | :-----------------: | ----------------: | -----: |     :------------ |
+1. Perceptron trainer - one hypervector prototype per class trained with the perceptron rule. 
+2. Multi - n prototypes per class trained with the perceptron rule.
+3. Pa - Passive-Agressive base case [2]. 
+4. Pai - Passive-Agressive variant i [2].
+5. Paii - Passive-Agressive variant ii [2].
+6. LVQ2.1 - Learning Vector Quantisation [3].
+
+
+| Model             | Trainer    | Prototypes | Dim        | Individual Accuracy | Ensemble Accuracy | Time   |     Bytes           |
+| :---------------  | :--------- | ----------:| ---------: | :-----------------: | ----------------: | -----: |     :-------------- |
 | binary            | Perceptron |         1  |  1024      | 61.8-73.0%          | 71.8%             |    2s  | 5 x (2 + 64) x 128  |
 | binary            | Perceptron |         1  |  2048      | 70.8-74.5%          | 74.7%             |    3s  | 5 x (2 + 64) x 256  |
 | binary            | Perceptron |         1  |  4096      | 69.3-73.5%          | 75.3%             |    3s  | 5 x (2 + 64) x 512  |
@@ -124,4 +135,6 @@ The "Bytes" column shows the byte size of an ensemble model. The modular hypevec
 ## References
 
 1. [Wine Quality dataset](https://uci-ics-mlr-prod.aws.uci.edu/dataset/186/wine%2Bquality)
+2. ["Online Passive-Aggressive Algorithms", Koby Crammer et al, Journal of Machine Learning Research 7 (2006) 551–585, 2006](https://jmlr.csail.mit.edu/papers/volume7/crammer06a/crammer06a.pdf)
+3. T. Kohonen, "Improved versions of learning vector quantization", IJCNN 1990.
 

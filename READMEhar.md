@@ -34,7 +34,7 @@ Encoding: Each sample is encoded by generating one random hypervector per featur
 --------
 
 ```bash
-cargo run --release --bin har -- --help
+cargo run --example har -- --help
 Usage: har [OPTIONS]
 
 Options:
@@ -60,7 +60,7 @@ Download the dataset from [1]. Unpack the zipped dataset with root dir "UCI HAR 
 --------------
 
 ```bash
-% time cargo run --release --bin har -- --trainer perceptron --dim  8192   --mode binary --ensemble-size 5
+% time cargo run --release --example har -- --trainer perceptron --dim  8192   --mode binary --ensemble-size 5
 
 Epoch 1000: Training Accuracy 7185/7352=97.73%
 Model 1/5 - test: 92.37%  (2722/2947)
