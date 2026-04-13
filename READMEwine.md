@@ -28,12 +28,14 @@ The 11 scalar features were level encoded (64 levels) and bundled over the two c
 ## Usage
 
 ```bash
-cargo run --example wine -- --help
-
+cargo run --release --example wine -- --help
+    Finished `release` profile [optimized] target(s) in 0.18s
+     Running `target/release/examples/wine --help`
 Usage: wine [OPTIONS]
 
 Options:
       --mode <MODE>                    [default: binary] [possible values: binary, bipolar, real, complex, modular]
+      --colour <COLOUR>                Wine type [default: red] [possible values: red, white]
       --dim <DIM>                      One of 1024, 2048, 4096, 8192, 16384 [default: 8192]
       --trainer <TRAINER>              [default: perceptron] [possible values: perceptron, pa, pai, paii, multi, lvq]
       --prototypes <PROTOTYPES>        number of prototypes per class [default: 1]
@@ -46,7 +48,8 @@ Options:
 
 ## Preliminaries
 
-The dataset mapped from 10 to 2 quality ratings (good & bad) is in [DATA/WINEQUALITY](DATA/WINEQUALITY).
+The dataset mapped from 10 to 2 quality ratings (good & bad) is in [DATA/WINEQUALITY_RED](DATA/WINEQUALITY_RED) and
+[DATA/WINEQUALITY_WHITE](DATA/WINEQUALITY_WHITE).
 Alternatively you can download it from [1] and run [py/winequality.py](py/winequality.py) to split and map it from the source.
 
 [Install Rust](https://rust-lang.org/tools/install/).
