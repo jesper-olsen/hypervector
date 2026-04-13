@@ -9,11 +9,11 @@ use rand::{Rng, SeedableRng};
 use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct BinaryHDV<const N_WORDS: usize> {
+pub struct Binary<const N_WORDS: usize> {
     pub data: [usize; N_WORDS],
 }
 
-impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
+impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
     type Accumulator = WeightedAcc<N_WORDS>;
     type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
@@ -24,7 +24,7 @@ impl<const N_WORDS: usize> HyperVector for BinaryHDV<N_WORDS> {
     }
 
     fn ident() -> Self {
-        BinaryHDV { data: [0; N_WORDS] }
+        Binary { data: [0; N_WORDS] }
     }
 
     /// Creates a new HDV by blending `self` and `other`
@@ -121,7 +121,7 @@ impl<const N_WORDS: usize> WeightedAcc<N_WORDS> {
     }
 }
 
-impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV<N_WORDS>>
+impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_WORDS>>
     for WeightedAcc<N_WORDS, R>
 {
     fn new() -> Self {
@@ -133,7 +133,7 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV
         }
     }
 
-    fn add(&mut self, v: &BinaryHDV<N_WORDS>, weight: f64) {
+    fn add(&mut self, v: &Binary<N_WORDS>, weight: f64) {
         for i in 0..N_WORDS {
             let word = v.data[i];
             for j in 0..usize::BITS as usize {
@@ -145,7 +145,7 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV
         self.count += weight.abs();
     }
 
-    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
+    fn finalize(&mut self) -> Binary<N_WORDS> {
         let data = std::array::from_fn(|i| {
             let mut acc_word = 0usize;
             let tie_breaker: usize = self.rng.next_u64() as usize;
@@ -160,7 +160,7 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<BinaryHDV
             }
             acc_word
         });
-        BinaryHDV { data }
+        Binary { data }
     }
 
     fn count(&self) -> f64 {
@@ -194,12 +194,12 @@ impl<const N_WORDS: usize> UnitAcc<N_WORDS> {
     }
 }
 
-impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WORDS> {
+impl<const N_WORDS: usize> UnitAccumulator<Binary<N_WORDS>> for UnitAcc<N_WORDS> {
     fn new() -> Self {
         Self::default()
     }
 
-    fn add(&mut self, v: &BinaryHDV<N_WORDS>) {
+    fn add(&mut self, v: &Binary<N_WORDS>) {
         for i in 0..N_WORDS {
             let word = v.data[i];
             for j in 0..usize::BITS {
@@ -210,7 +210,7 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
         self.count += 1;
     }
 
-    fn finalize(&mut self) -> BinaryHDV<N_WORDS> {
+    fn finalize(&mut self) -> Binary<N_WORDS> {
         let data = std::array::from_fn(|uidx| {
             let tie_breaker: usize = self.rng.next_u64() as usize;
             let mut acc_word = 0usize;
@@ -223,7 +223,7 @@ impl<const N_WORDS: usize> UnitAccumulator<BinaryHDV<N_WORDS>> for UnitAcc<N_WOR
             }
             acc_word
         });
-        BinaryHDV { data }
+        Binary { data }
     }
 
     fn count(&self) -> usize {
@@ -251,15 +251,13 @@ impl<const N_WORDS: usize, const PLANES: usize, R: Rng + SeedableRng + Default> 
     }
 }
 
-impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
-    for SlicedUnitAcc<N, PLANES>
-{
+impl<const N: usize, const PLANES: usize> UnitAccumulator<Binary<N>> for SlicedUnitAcc<N, PLANES> {
     fn new() -> Self {
         Self::default()
     }
 
     #[inline]
-    fn add(&mut self, v: &BinaryHDV<N>) {
+    fn add(&mut self, v: &Binary<N>) {
         let mut carry = v.data;
 
         for p in 0..PLANES {
@@ -275,8 +273,8 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
         self.count += 1;
     }
 
-    fn finalize(&mut self) -> BinaryHDV<N> {
-        let mut result = BinaryHDV::<N>::zero();
+    fn finalize(&mut self) -> Binary<N> {
+        let mut result = Binary::<N>::zero();
         let threshold = (self.count / 2) as u64;
         let is_even = self.count.is_multiple_of(2);
 
@@ -307,7 +305,7 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<BinaryHDV<N>>
     }
 }
 
-impl<const N_WORDS: usize> BinaryHDV<N_WORDS> {
+impl<const N_WORDS: usize> Binary<N_WORDS> {
     pub fn from_slice(slice: &[u8]) -> Self {
         let dim = N_WORDS * usize::BITS as usize;
         assert!(slice.len() <= dim);
@@ -470,7 +468,7 @@ impl<const N_WORDS: usize> BinaryHDV<N_WORDS> {
 
 pub fn save_hdvs_to_csv<const N: usize>(
     filename: &str,
-    hdv_dataset: &[BinaryHDV<N>],
+    hdv_dataset: &[Binary<N>],
 ) -> io::Result<()> {
     let file = File::create(filename)?;
     let mut writer = BufWriter::new(file);
@@ -482,15 +480,15 @@ pub fn save_hdvs_to_csv<const N: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::types::binary::{BinaryHDV, UnitAcc, WeightedAcc};
+    use crate::types::binary::{Binary, UnitAcc, WeightedAcc};
     use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
     #[test]
     fn test_accumulate() {
-        let v1 = BinaryHDV::<1>::from_slice(&[1, 0, 1, 0, 0, 0, 0, 0]);
-        let v2 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
-        let v3 = BinaryHDV::<1>::from_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);
-        let expected = BinaryHDV::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
+        let v1 = Binary::<1>::from_slice(&[1, 0, 1, 0, 0, 0, 0, 0]);
+        let v2 = Binary::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
+        let v3 = Binary::<1>::from_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);
+        let expected = Binary::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
 
         let mut acc = WeightedAcc::default();
         acc.add(&v1, 1.0);
@@ -504,7 +502,7 @@ mod tests {
         acc.add(&v3);
         assert_eq!(acc.finalize(), expected);
 
-        let result = BinaryHDV::<1>::bundle(&[&v1, &v2, &v3]);
+        let result = Binary::<1>::bundle(&[&v1, &v2, &v3]);
         assert_eq!(result, expected);
     }
 }

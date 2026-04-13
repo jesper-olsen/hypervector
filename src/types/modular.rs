@@ -49,11 +49,11 @@ fn sincos_tables() -> &'static SinCosTables {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub struct ModularHDV<const D: usize> {
+pub struct Modular<const D: usize> {
     pub data: [u8; D],
 }
 
-impl<const DIM: usize> HyperVector for ModularHDV<DIM> {
+impl<const DIM: usize> HyperVector for Modular<DIM> {
     type Accumulator = WeightedAccumulator<DIM>;
     type UnitAccumulator = UnitAcc<DIM>;
     const DIM: usize = DIM;
@@ -147,7 +147,7 @@ impl<const D: usize> Default for WeightedAccumulator<D> {
     }
 }
 
-impl<const D: usize> Accumulator<ModularHDV<D>> for WeightedAccumulator<D> {
+impl<const D: usize> Accumulator<Modular<D>> for WeightedAccumulator<D> {
     fn new() -> Self {
         Self {
             sums_sin: Box::new([0.0; D]),
@@ -158,7 +158,7 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for WeightedAccumulator<D> {
         }
     }
 
-    fn add(&mut self, v: &ModularHDV<D>, weight: f64) {
+    fn add(&mut self, v: &Modular<D>, weight: f64) {
         let t = sincos_tables();
         let w = weight as f32;
 
@@ -172,7 +172,7 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for WeightedAccumulator<D> {
         self.count += weight;
     }
 
-    fn finalize(&mut self) -> ModularHDV<D> {
+    fn finalize(&mut self) -> Modular<D> {
         let data = std::array::from_fn(|i| {
             if self.sums_sin[i].abs() < f32::EPSILON && self.sums_cos[i].abs() < f32::EPSILON {
                 0
@@ -186,7 +186,7 @@ impl<const D: usize> Accumulator<ModularHDV<D>> for WeightedAccumulator<D> {
                 (val % MODULUS) as u8
             }
         });
-        ModularHDV { data }
+        Modular { data }
     }
 
     fn count(&self) -> f64 {
@@ -208,7 +208,7 @@ impl<const D: usize> Default for UnitAcc<D> {
     }
 }
 
-impl<const D: usize> UnitAccumulator<ModularHDV<D>> for UnitAcc<D> {
+impl<const D: usize> UnitAccumulator<Modular<D>> for UnitAcc<D> {
     fn new() -> Self {
         Self {
             sums_sin: [0.0; D],
@@ -217,7 +217,7 @@ impl<const D: usize> UnitAccumulator<ModularHDV<D>> for UnitAcc<D> {
         }
     }
 
-    fn add(&mut self, v: &ModularHDV<D>) {
+    fn add(&mut self, v: &Modular<D>) {
         let t = sincos_tables();
         for i in 0..D {
             let idx = v.data[i] as usize;
@@ -227,7 +227,7 @@ impl<const D: usize> UnitAccumulator<ModularHDV<D>> for UnitAcc<D> {
         self.count += 1;
     }
 
-    fn finalize(&mut self) -> ModularHDV<D> {
+    fn finalize(&mut self) -> Modular<D> {
         let data = std::array::from_fn(|i| {
             if self.sums_sin[i].abs() < f32::EPSILON && self.sums_cos[i].abs() < f32::EPSILON {
                 0
@@ -241,7 +241,7 @@ impl<const D: usize> UnitAccumulator<ModularHDV<D>> for UnitAcc<D> {
                 (val % MODULUS) as u8
             }
         });
-        ModularHDV { data }
+        Modular { data }
     }
 
     fn count(&self) -> usize {
@@ -249,7 +249,7 @@ impl<const D: usize> UnitAccumulator<ModularHDV<D>> for UnitAcc<D> {
     }
 }
 
-impl<const DIM: usize> ModularHDV<DIM> {
+impl<const DIM: usize> Modular<DIM> {
     pub fn from_slice(slice: &[u8]) -> Self {
         assert_eq!(slice.len(), DIM);
         let data = std::array::from_fn(|i| slice[i] & MASK); // all values in [0, MODULUS)

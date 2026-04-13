@@ -1,7 +1,7 @@
 use clap::Parser;
 use hypervector::types::traits::{HyperVector, UnitAccumulator};
 use hypervector::types::{
-    binary::BinaryHDV, bipolar::BipolarHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
+    binary::Binary, bipolar::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
 };
 use hypervector::{cleanup, save_hypervectors_to_csv};
 use mersenne_twister_rs::MersenneTwister64;
@@ -172,22 +172,22 @@ fn main() -> Result<(), io::Error> {
         args.mode, args.ngram, args.dim
     );
     match (args.mode.as_str(), args.dim) {
-        ("binary", 1024) => run::<BinaryHDV<16>>(n)?,
-        ("binary", 10048) => run::<BinaryHDV<157>>(n)?,
-        ("binary", 100032) => run::<BinaryHDV<1563>>(n)?,
-        ("binary", 200000) => run::<BinaryHDV<3125>>(n)?,
-        ("bipolar", 1024) => run::<BipolarHDV<1024>>(n)?,
-        ("bipolar", 10048) => run::<BipolarHDV<10048>>(n)?,
-        ("bipolar", 100032) => run::<BipolarHDV<100032>>(n)?,
+        ("binary", 1024) => run::<Binary<16>>(n)?,
+        ("binary", 10048) => run::<Binary<157>>(n)?,
+        ("binary", 100032) => run::<Binary<1563>>(n)?,
+        ("binary", 200000) => run::<Binary<3125>>(n)?,
+        ("bipolar", 1024) => run::<Bipolar<1024>>(n)?,
+        ("bipolar", 10048) => run::<Bipolar<10048>>(n)?,
+        ("bipolar", 100032) => run::<Bipolar<100032>>(n)?,
         ("real", 1024) => run::<RealHDV<1024>>(n)?,
         ("real", 10048) => run::<RealHDV<10048>>(n)?,
         ("real", 100032) => run::<RealHDV<100032>>(n)?,
         ("complex", 1024) => run::<ComplexHDV<1024>>(n)?,
         ("complex", 10048) => run::<ComplexHDV<10048>>(n)?,
         ("complex", 100032) => run::<ComplexHDV<100032>>(n)?,
-        ("modular", 1024) => run::<ModularHDV<1024>>(n)?,
-        ("modular", 10048) => run::<ModularHDV<10048>>(n)?,
-        ("modular", 100032) => run::<ModularHDV<100032>>(n)?,
+        ("modular", 1024) => run::<Modular<1024>>(n)?,
+        ("modular", 10048) => run::<Modular<10048>>(n)?,
+        ("modular", 100032) => run::<Modular<100032>>(n)?,
         _ => {
             eprintln!("Unsupported combination: {args:?}");
             std::process::exit(1);

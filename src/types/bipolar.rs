@@ -1,6 +1,6 @@
-// BipolarHDV - note that this module uses one i8 per dimension.
+// Bipolar - note that this module uses one i8 per dimension.
 // It can be implemented more compactly with bitarrays.
-// However, that would make the implementation basically the same as BinaryHDV.
+// However, that would make the implementation basically the same as Binary.
 // Only difference is how 0 and 1 are interpreted - ie. for bipolar 0=1 and 1=-1.
 
 use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct BipolarHDV<const DIM: usize> {
+pub struct Bipolar<const DIM: usize> {
     data: [i8; DIM], // +1 or -1
 }
 
@@ -25,7 +25,7 @@ impl<const DIM: usize> Default for WeightedAcc<DIM> {
     }
 }
 
-impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
+impl<const DIM: usize> HyperVector for Bipolar<DIM> {
     type Accumulator = WeightedAcc<DIM>;
     type UnitAccumulator = UnitAcc<DIM>;
     const DIM: usize = DIM;
@@ -36,7 +36,7 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     }
 
     fn ident() -> Self {
-        BipolarHDV { data: [1; DIM] }
+        Bipolar { data: [1; DIM] }
     }
 
     // blend two hypervectors by coping indices from other - rest from self
@@ -63,11 +63,11 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     }
 
     fn bind(&self, other: &Self) -> Self {
-        BipolarHDV::multiply(self, other)
+        Bipolar::multiply(self, other)
     }
 
     fn unbind(&self, other: &Self) -> Self {
-        BipolarHDV::multiply(self, other)
+        Bipolar::multiply(self, other)
     }
 
     fn inverse(&self) -> Self {
@@ -104,7 +104,7 @@ impl<const DIM: usize> HyperVector for BipolarHDV<DIM> {
     }
 }
 
-impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for WeightedAcc<DIM> {
+impl<const DIM: usize> Accumulator<Bipolar<DIM>> for WeightedAcc<DIM> {
     fn new() -> Self {
         Self {
             sum: [0.0; DIM],
@@ -112,7 +112,7 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for WeightedAcc<DIM> {
         }
     }
 
-    fn add(&mut self, v: &BipolarHDV<DIM>, weight: f64) {
+    fn add(&mut self, v: &Bipolar<DIM>, weight: f64) {
         self.sum
             .iter_mut()
             .zip(v.data.iter())
@@ -120,14 +120,14 @@ impl<const DIM: usize> Accumulator<BipolarHDV<DIM>> for WeightedAcc<DIM> {
         self.count += weight;
     }
 
-    fn finalize(&mut self) -> BipolarHDV<DIM> {
+    fn finalize(&mut self) -> Bipolar<DIM> {
         let data = std::array::from_fn(|i| match self.sum[i] {
             s if s > 0.0 => 1,
             s if s < 0.0 => -1,
             _ if rand::random() => 1,
             _ => -1,
         });
-        BipolarHDV { data }
+        Bipolar { data }
     }
 
     fn count(&self) -> f64 {
@@ -147,7 +147,7 @@ impl<const DIM: usize> Default for UnitAcc<DIM> {
     }
 }
 
-impl<const DIM: usize> UnitAccumulator<BipolarHDV<DIM>> for UnitAcc<DIM> {
+impl<const DIM: usize> UnitAccumulator<Bipolar<DIM>> for UnitAcc<DIM> {
     fn new() -> Self {
         Self {
             sum: [0; DIM],
@@ -155,7 +155,7 @@ impl<const DIM: usize> UnitAccumulator<BipolarHDV<DIM>> for UnitAcc<DIM> {
         }
     }
 
-    fn add(&mut self, v: &BipolarHDV<DIM>) {
+    fn add(&mut self, v: &Bipolar<DIM>) {
         self.sum
             .iter_mut()
             .zip(v.data.iter())
@@ -163,14 +163,14 @@ impl<const DIM: usize> UnitAccumulator<BipolarHDV<DIM>> for UnitAcc<DIM> {
         self.count += 1;
     }
 
-    fn finalize(&mut self) -> BipolarHDV<DIM> {
+    fn finalize(&mut self) -> Bipolar<DIM> {
         let data = std::array::from_fn(|i| match self.sum[i] {
             s if s > 0 => 1,
             s if s < 0 => -1,
             _ if rand::random() => 1,
             _ => -1,
         });
-        BipolarHDV { data }
+        Bipolar { data }
     }
 
     fn count(&self) -> usize {
@@ -178,11 +178,11 @@ impl<const DIM: usize> UnitAccumulator<BipolarHDV<DIM>> for UnitAcc<DIM> {
     }
 }
 
-impl<const DIM: usize> BipolarHDV<DIM> {
+impl<const DIM: usize> Bipolar<DIM> {
     pub fn from_slice(slice: &[i8]) -> Self {
         assert_eq!(slice.len(), DIM);
         let data = std::array::from_fn(|i| if slice[i] == 1 { 1 } else { -1 });
-        BipolarHDV { data }
+        Bipolar { data }
     }
 
     pub fn multiply(&self, b: &Self) -> Self {
@@ -201,16 +201,16 @@ impl<const DIM: usize> BipolarHDV<DIM> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::bipolar::{BipolarHDV, WeightedAcc};
+    use crate::types::bipolar::{Bipolar, WeightedAcc};
     use crate::types::traits::{Accumulator, HyperVector};
 
     #[test]
     fn test_accumulate() {
         let mut acc = WeightedAcc::<5>::default();
-        let v1 = BipolarHDV::<5>::from_slice(&[1, -1, 1, -1, -1]);
-        let v2 = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
-        let v3 = BipolarHDV::<5>::from_slice(&[1, -1, -1, 1, -1]);
-        let expected = BipolarHDV::<5>::from_slice(&[1, -1, -1, -1, -1]);
+        let v1 = Bipolar::<5>::from_slice(&[1, -1, 1, -1, -1]);
+        let v2 = Bipolar::<5>::from_slice(&[1, -1, -1, -1, -1]);
+        let v3 = Bipolar::<5>::from_slice(&[1, -1, -1, 1, -1]);
+        let expected = Bipolar::<5>::from_slice(&[1, -1, -1, -1, -1]);
 
         acc.add(&v1, 1.0);
         acc.add(&v2, 1.0);
@@ -218,7 +218,7 @@ mod tests {
         let result = acc.finalize();
         assert_eq!(result, expected);
 
-        let result = BipolarHDV::<5>::bundle(&[&v1, &v2, &v3]);
+        let result = Bipolar::<5>::bundle(&[&v1, &v2, &v3]);
         assert_eq!(result, expected);
     }
 }

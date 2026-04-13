@@ -8,10 +8,10 @@ use std::fs::File;
 use std::io::Write;
 
 use hypervector::gen_vars;
-use hypervector::types::binary::BinaryHDV;
-use hypervector::types::bipolar::BipolarHDV;
+use hypervector::types::binary::Binary;
+use hypervector::types::bipolar::Bipolar;
 use hypervector::types::complex::ComplexHDV;
-use hypervector::types::modular::ModularHDV;
+use hypervector::types::modular::Modular;
 use hypervector::types::real::RealHDV;
 use hypervector::types::traits::HyperVector;
 use mersenne_twister_rs::MersenneTwister64;
@@ -139,10 +139,10 @@ pub fn plate<T: HyperVector>(fname_prefix: &str) -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
-    plate::<BipolarHDV<1024>>("RESULTS/hdv_bipolar")?;
-    plate::<BinaryHDV<16>>("RESULTS/hdv_binary")?; // 16*64 = 1024
+    plate::<Bipolar<1024>>("RESULTS/hdv_bipolar")?;
+    plate::<Binary<16>>("RESULTS/hdv_binary")?; // 16*64 = 1024
     plate::<RealHDV<512>>("RESULTS/hdv_real")?;
     plate::<ComplexHDV<512>>("RESULTS/hdv_complex")?;
-    plate::<ModularHDV<512>>("RESULTS/hdv_modular")?;
+    plate::<Modular<512>>("RESULTS/hdv_modular")?;
     Ok(())
 }

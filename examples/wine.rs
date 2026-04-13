@@ -14,9 +14,7 @@ use hypervector::trainer::{
     perceptron::PerceptronTrainer,
 };
 use hypervector::types::traits::HyperVector;
-use hypervector::types::{
-    binary::BinaryHDV, complex::ComplexHDV, modular::ModularHDV, real::RealHDV,
-};
+use hypervector::types::{binary::Binary, complex::ComplexHDV, modular::Modular, real::RealHDV};
 use mersenne_twister_rs::MersenneTwister64;
 
 #[derive(Copy, Clone, Debug, ValueEnum)]

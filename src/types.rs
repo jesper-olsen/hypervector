@@ -21,14 +21,14 @@ macro_rules! hdv {
             $dim % (usize::BITS as usize) == 0,
             "DIM must be a multiple of usize::BITS"
         );
-        pub type $name = BinaryHDV<{ $dim / usize::BITS as usize }>;
+        pub type $name = Binary<{ $dim / usize::BITS as usize }>;
     };
     //(bipolar, $name:ident, $dim:expr) => {
     //    const _: () = assert!($dim % (usize::BITS as usize) == 0, "DIM must be a multiple of usize::BITS");
-    //    pub type $name = BipolarHDV<{ $dim / usize::BITS as usize }>;
+    //    pub type $name = Bipolar<{ $dim / usize::BITS as usize }>;
     //};
     (bipolar, $name:ident, $dim:expr) => {
-        pub type $name = BipolarHDV<$dim>;
+        pub type $name = Bipolar<$dim>;
     };
     (real,    $name:ident, $dim:expr) => {
         pub type $name = RealHDV<$dim>;
@@ -37,7 +37,7 @@ macro_rules! hdv {
         pub type $name = ComplexHDV<$dim>;
     };
     (modular, $name:ident, $dim:expr) => {
-        pub type $name = ModularHDV<$dim>;
+        pub type $name = Modular<$dim>;
     };
 }
 
@@ -56,8 +56,7 @@ macro_rules! gen_vars {
 mod tests {
     use crate::types::traits::HyperVector;
     use crate::types::{
-        binary::BinaryHDV, bipolar::BipolarHDV, complex::ComplexHDV, modular::ModularHDV,
-        real::RealHDV,
+        binary::Binary, bipolar::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
     };
 
     fn test_permute_unpermute<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>() {
@@ -72,17 +71,17 @@ mod tests {
 
     #[test]
     fn test_binary_permute_unpermute() {
-        test_permute_unpermute::<BinaryHDV<157>>();
+        test_permute_unpermute::<Binary<157>>();
     }
 
     #[test]
     fn test_bipolar_permute_unpermute() {
-        test_permute_unpermute::<BipolarHDV<1024>>();
+        test_permute_unpermute::<Bipolar<1024>>();
     }
 
     #[test]
     fn test_modular_permute_unpermute() {
-        test_permute_unpermute::<ModularHDV<256>>();
+        test_permute_unpermute::<Modular<256>>();
     }
 
     fn test_bind_unbind<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>(thr: f32) {
@@ -99,17 +98,17 @@ mod tests {
 
     #[test]
     fn test_modular_bind_unbind() {
-        test_bind_unbind::<ModularHDV<256>>(0.0);
+        test_bind_unbind::<Modular<256>>(0.0);
     }
 
     #[test]
     fn test_bipolar_bind_unbind() {
-        test_bind_unbind::<BipolarHDV<1024>>(0.01);
+        test_bind_unbind::<Bipolar<1024>>(0.01);
     }
 
     #[test]
     fn test_binary_bind_unbind() {
-        test_bind_unbind::<BinaryHDV<64>>(0.0);
+        test_bind_unbind::<Binary<64>>(0.0);
     }
 
     #[test]

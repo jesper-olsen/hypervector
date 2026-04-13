@@ -103,7 +103,7 @@ impl<H: HyperVector> TabularEncoder<H> {
 #[cfg(test)]
 mod encoding_tests {
     use super::*;
-    use crate::types::binary::BinaryHDV;
+    use crate::types::binary::Binary;
     use mersenne_twister_rs::MersenneTwister64;
 
     #[test]
@@ -111,7 +111,7 @@ mod encoding_tests {
         let mut mt = MersenneTwister64::new(42);
         let num_levels = 10;
 
-        let encoder = ScalarEncoder::<BinaryHDV<16>>::new(0.0, 10.0, num_levels, &mut mt);
+        let encoder = ScalarEncoder::<Binary<16>>::new(0.0, 10.0, num_levels, &mut mt);
 
         // Get vectors for 0, 1, and 10
         let v0 = encoder.encode(0.0);
@@ -133,7 +133,7 @@ mod encoding_tests {
     #[test]
     fn test_clamping() {
         let mut mt = MersenneTwister64::new(42);
-        let encoder = ScalarEncoder::<BinaryHDV<16>>::new(0.0, 10.0, 5, &mut mt);
+        let encoder = ScalarEncoder::<Binary<16>>::new(0.0, 10.0, 5, &mut mt);
 
         // Values outside range should not panic and should clamp to boundaries
         let low = encoder.encode(-5.0);

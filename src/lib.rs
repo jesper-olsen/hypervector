@@ -7,7 +7,7 @@ pub mod encoding;
 pub mod trainer;
 pub mod types;
 
-// Re-exports 
+// Re-exports
 pub use types::traits::{Accumulator, HyperVector};
 
 pub fn save_hypervectors_to_csv<H: HyperVector>(
@@ -131,18 +131,17 @@ pub fn example_mexican_dollar<T: HyperVector>() {
 #[cfg(test)]
 mod tests {
     use crate::types::{
-        binary::BinaryHDV, bipolar::BipolarHDV, complex::ComplexHDV, modular::ModularHDV,
-        real::RealHDV,
+        binary::Binary, bipolar::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
     };
 
     #[test]
     fn binary_mexican_dollar() {
-        crate::example_mexican_dollar::<BinaryHDV<16>>(); // 16*64 = 1024 bits
+        crate::example_mexican_dollar::<Binary<16>>(); // 16*64 = 1024 bits
     }
 
     #[test]
     fn bipolar_mexican_dollar() {
-        crate::example_mexican_dollar::<BipolarHDV<1024>>();
+        crate::example_mexican_dollar::<Bipolar<1024>>();
     }
 
     #[test]
@@ -157,6 +156,6 @@ mod tests {
 
     #[test]
     fn modular_mexican_dollar() {
-        crate::example_mexican_dollar::<ModularHDV<10000>>();
+        crate::example_mexican_dollar::<Modular<10000>>();
     }
 }
