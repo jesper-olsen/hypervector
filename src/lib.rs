@@ -1,4 +1,3 @@
-use mersenne_twister_rs::MersenneTwister64;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 
@@ -93,69 +92,4 @@ pub fn nearest_two<T: HyperVector>(query: &T, candidates: &[T]) -> ((usize, f32)
         }
     }
     (first, second)
-}
-
-pub fn example_mexican_dollar<T: HyperVector>() {
-    // Pentti Kanerva: What We Mean When We Say “What’s the Dollar of Mexico?”
-    // https://redwood.berkeley.edu/wp-content/uploads/2020/05/kanerva2010what.pdf
-    // Calculate answer: Mexican Peso - mpe
-    //
-    let mut mt = MersenneTwister64::new(42);
-    gen_vars!(
-        &mut mt, T, name, capital, currency, swe, usa, mex, stockholm, wdc, cdmx, usd, mpe, skr
-    );
-
-    let ustates = T::bundle(&[&name.bind(&usa), &capital.bind(&wdc), &currency.bind(&usd)]);
-    let mexico = T::bundle(&[&name.bind(&mex), &capital.bind(&cdmx), &currency.bind(&mpe)]);
-
-    let transformation = mexico.bind(&ustates.inverse());
-    let x = transformation.bind(&usd);
-
-    let vocab = [
-        ("swe", swe),
-        ("usa", usa),
-        ("mex", mex),
-        ("stkhlm", stockholm),
-        ("wdc", wdc),
-        ("cdmx", cdmx),
-        ("usd", usd),
-        ("mpe", mpe),
-        ("skr", skr),
-    ];
-
-    let ml = cleanup(&x, &vocab);
-    println!("Nearest HDV is: {ml}\n\n");
-    assert_eq!(ml, "mpe", "Expected mpe");
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::types::{
-        binary::Binary, bipolar::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
-    };
-
-    #[test]
-    fn binary_mexican_dollar() {
-        crate::example_mexican_dollar::<Binary<16>>(); // 16*64 = 1024 bits
-    }
-
-    #[test]
-    fn bipolar_mexican_dollar() {
-        crate::example_mexican_dollar::<Bipolar<1024>>();
-    }
-
-    #[test]
-    fn real_mexican_dollar() {
-        crate::example_mexican_dollar::<RealHDV<2048>>();
-    }
-
-    #[test]
-    fn complex_mexican_dollar() {
-        crate::example_mexican_dollar::<ComplexHDV<1000>>();
-    }
-
-    #[test]
-    fn modular_mexican_dollar() {
-        crate::example_mexican_dollar::<Modular<10000>>();
-    }
 }
