@@ -17,8 +17,8 @@ pub struct Dataset {
 impl Dataset {
     pub fn load(dir: &str) -> io::Result<Self> {
         let base = Path::new(dir);
-        let fname1 = "winequality_red_train.csv";
-        let fname2 = "winequality_red_test.csv";
+        let fname1 = "winequality_train.csv";
+        let fname2 = "winequality_test.csv";
         let (train, train_labels) = load_samples(&base.join(fname1))?;
         let (test, test_labels) = load_samples(&base.join(fname2))?;
         Ok(Self {

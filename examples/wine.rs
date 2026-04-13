@@ -46,6 +46,10 @@ struct Args {
     #[arg(long, default_value = "binary", value_parser=["binary", "bipolar", "real", "complex", "modular"])]
     mode: String,
 
+    #[arg(long, default_value = "red", value_parser=["red", "white"])]
+    /// Wine type
+    colour: String,
+
     #[arg(long, default_value_t = 8192, value_parser = valid_dim)]
     /// One of 1024, 2048, 4096, 8192, 16384
     dim: usize,
@@ -134,18 +138,33 @@ fn run<T: HyperVector + Sync + Send>(
         (8.0, 15.0, LEVELS),
     ];
 
-    // Red wine training
-    //    fixed acidity         4.60000   15.90000
-    //    volatile acidity      0.12000    1.58000
-    //    citric acid           0.00000    0.79000
-    //    residual sugar        0.90000   15.50000
-    //    chlorides             0.01200    0.61100
-    //    free sulfur dioxide   1.00000   72.00000
-    //    total sulfur dioxide  7.00000  289.00000
-    //    density               0.99007    1.00369
-    //    pH                    2.86000    4.01000
-    //    sulphates             0.37000    1.98000
-    //    alcohol               8.40000   14.90000
+    // Feature ranges (red training set):
+    //
+    // fixed acidity         4.60000   15.90000
+    // volatile acidity      0.12000    1.58000
+    // citric acid           0.00000    0.79000
+    // residual sugar        0.90000   15.50000
+    // chlorides             0.01200    0.61100
+    // free sulfur dioxide   1.00000   72.00000
+    // total sulfur dioxide  7.00000  289.00000
+    // density               0.99007    1.00369
+    // pH                    2.86000    4.01000
+    // sulphates             0.37000    1.98000
+    // alcohol               8.40000   14.90000
+
+    // Feature ranges (white training set):
+    //                            min        max
+    // fixed acidity          3.80000   14.20000
+    // volatile acidity       0.08000    1.10000
+    // citric acid            0.00000    1.66000
+    // residual sugar         0.60000   65.80000
+    // chlorides              0.00900    0.34600
+    // free sulfur dioxide    2.00000  289.00000
+    // total sulfur dioxide  18.00000  440.00000
+    // density                0.98711    1.03898
+    // pH                     2.72000    3.82000
+    // sulphates              0.22000    1.08000
+    // alcohol                8.00000   14.20000
 
     let encoder = TabularEncoder::<T>::new(schema, rng);
     let train_hvs: Vec<T> = data.train.par_iter().map(|s| encoder.encode(s)).collect();
@@ -240,7 +259,11 @@ fn stats(v: &[f64]) -> Option<(f64, f64, f64)> {
 fn main() -> Result<(), io::Error> {
     let args = Args::parse();
     let ensemble_size = args.ensemble_size;
-    let dataset = Dataset::load("DATA/WINEQUALITY")?;
+    let dataset = if args.colour.as_str() == "red" {
+        Dataset::load("DATA/WINEQUALITY_RED")?
+    } else {
+        Dataset::load("DATA/WINEQUALITY_WHITE")?
+    };
     let mut rng = MersenneTwister64::default();
 
     let mut all_predictions = Vec::with_capacity(ensemble_size);

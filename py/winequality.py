@@ -114,6 +114,7 @@ def main():
     # Initialize and prep data
     # Ensure the path matches your local structure
     path = "DATA/winequality-red.csv"
+    #path = "DATA/winequality-white.csv"
     baseline = WineBaseline(path)
 
     try:
