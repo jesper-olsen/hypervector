@@ -18,7 +18,6 @@ def load_isolet(path):
             y.append(label)
     return np.array(X), np.array(y)
 
-# Load data
 X_train, y_train = load_isolet("isolet/isolet1+2+3+4.data")
 X_test, y_test = load_isolet("isolet/isolet5.data")
 
@@ -31,13 +30,11 @@ model = make_pipeline(
     SVC(kernel="rbf", C=10, gamma="scale")  # good default
 )
 
-# Train
 model.fit(X_train, y_train)
 
 # Evaluate
 y_pred = model.predict(X_test)
 acc = accuracy_score(y_test, y_pred)
-
 print(f"Test accuracy: {acc:.4f}")
 
 model_bytes = len(pickle.dumps(model))

@@ -21,7 +21,7 @@ Run example with
 and examine the results with
 
 ```
-% uv run plot.py
+% uv run py/plot.py
 ```
 #### Binary HDV
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/binary_hdv_combined.png)

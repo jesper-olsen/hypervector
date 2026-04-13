@@ -36,7 +36,7 @@ cargo run --release --example language_id -- --mode binary --dim 1024 --ngram 3
 
 View the language space - computed with [t-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding) for a particular model:
 ```
-% uv run tsne.py
+% uv run py/tsne.py
 ```
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/LanguageSpace.png)
 

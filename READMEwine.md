@@ -47,7 +47,7 @@ Options:
 ## Preliminaries
 
 The dataset mapped from 10 to 2 quality ratings (good & bad) is in [DATA/WINEQUALITY](DATA/WINEQUALITY).
-Alternatively you can download it from [1] and run [winequality.py](winequality.py) to split and map it from the source.
+Alternatively you can download it from [1] and run [py/winequality.py](py/winequality.py) to split and map it from the source.
 
 [Install Rust](https://rust-lang.org/tools/install/).
 

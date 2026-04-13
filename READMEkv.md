@@ -6,7 +6,7 @@ HDV types are compared at equal total bit-width to give a fair capacity comparis
 ## Run
 ```
 cargo run --release --example kv_store > kv_results.csv
-python plot_kv.py          # pip install pandas matplotlib
+python py/plot_kv.py          # pip install pandas matplotlib
 ```
 
 ![Associative memory capacity](ASSETS/associative_memory_capacity.png)

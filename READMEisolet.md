@@ -7,7 +7,7 @@ Classification on the Isolet dataset [1] - in this dataset ...
 An ensemble of 5 binary hypervector models achieves 93.7% test accuracy in 16 seconds wall time (Macbook Air M1). 
 The size of a 2048-dim binary hypervector is 2KB - hence a model with 26 letters is 52KB and an ensemble of 5 is 260KB.
 
-For comparison, sklearn's SVM classifier achieves [96.4%](https://github.com/jesper-olsen/hypervector/isolet.py) accuracy on the same 
+For comparison, sklearn's SVM classifier achieves [96.4%](py/isolet.py) accuracy on the same 
 feature set - at the cost of a much larger model size (80x):
 
 | Model             | Accuracy   | Size    |  Time |
