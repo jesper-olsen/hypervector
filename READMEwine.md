@@ -29,8 +29,7 @@ The 11 scalar features were level encoded (64 levels) and bundled over the two c
 
 ```bash
 cargo run --release --example wine -- --help
-    Finished `release` profile [optimized] target(s) in 0.18s
-     Running `target/release/examples/wine --help`
+
 Usage: wine [OPTIONS]
 
 Options:
