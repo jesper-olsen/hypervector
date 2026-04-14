@@ -14,8 +14,8 @@ pub struct Binary<const N_WORDS: usize> {
 }
 
 impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
-    //type Accumulator = WeightedAcc<N_WORDS>;
-    type Accumulator = FixPointAcc<N_WORDS>;
+    type Accumulator = WeightedAcc<N_WORDS>;
+    //type Accumulator = FixPointAcc<N_WORDS>;
     type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
 
@@ -104,8 +104,8 @@ impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
 
 #[derive(Debug, Clone)]
 pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
-    //votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
-    votes: Box<[[f32; usize::BITS as usize]; N_WORDS]>, // one vote counter per bit
+    votes: [[f32; usize::BITS as usize]; N_WORDS], // one vote counter per bit
+    //votes: Box<[[f32; usize::BITS as usize]; N_WORDS]>, // one vote counter per bit
     count: f64,                                         // total number of vectors added
     rng: R,
 }
@@ -127,8 +127,8 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
 {
     fn new() -> Self {
         Self {
-            votes: Box::new([[0.0; usize::BITS as usize]; N_WORDS]),
-            //votes: [[0.0; usize::BITS as usize]; N_WORDS],
+            //votes: Box::new([[0.0; usize::BITS as usize]; N_WORDS]),
+            votes: [[0.0; usize::BITS as usize]; N_WORDS],
             count: 0.0,
             rng: R::from_rng(&mut rand::rng()),
         }
@@ -170,9 +170,9 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
 }
 
 pub struct FixPointAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
-    // Same as WeightedAcc, but implemented with i32 instead of f64: half the size
-    // and faster addition.
-    votes: Box<[[i32; usize::BITS as usize]; N_WORDS]>, 
+    // Same as WeightedAcc, but implemented with i32 instead of f32
+    //votes: Box<[[i32; usize::BITS as usize]; N_WORDS]>, 
+    votes: [[i32; usize::BITS as usize]; N_WORDS], 
     count: f64,
     rng: R,
 }
@@ -194,15 +194,15 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
 {
     fn new() -> Self {
         Self {
-            votes: Box::new([[0; usize::BITS as usize]; N_WORDS]),
-            //votes: [[0; usize::BITS as usize]; N_WORDS],
+            //votes: Box::new([[0; usize::BITS as usize]; N_WORDS]),
+            votes: [[0; usize::BITS as usize]; N_WORDS],
             count: 0.0,
             rng: R::from_rng(&mut rand::rng()),
         }
     }
 
     fn add(&mut self, v: &Binary<N_WORDS>, weight: f64) {
-        // Scale factor of 1000,000 preserves 6 decimal places 
+        // Scale factor of 10,000 preserves 4 decimal places 
         const SCALE: f64 = 10_000.0;
         let w = (weight * SCALE) as i32; 
 
