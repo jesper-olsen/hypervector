@@ -58,7 +58,7 @@ Alternatively you can download it from [1] and run [py/winequality.py](py/winequ
 ## Example Run
 
 ```bash
-time cargo run --release --bin wine -- --dim 2048 --trainer multi  --prototypes 8 --ensemble-size 5 --mode modular
+time cargo run --release --example wine -- --dim 2048 --trainer multi  --prototypes 8 --ensemble-size 5 --mode modular
 Epoch 203: Training Accuracy 1199/1199=100.00%
 Model 1/5 - test: 77.50%  (310/400)
 
@@ -78,7 +78,7 @@ Model 5/5 - test: 79.50%  (318/400)
 Ensemble of 5 - test 79.75%  (319/400)
 
 Model accuracies - avg 77.85%, min 76.25%, max 79.50
-cargo run --release --bin wine -- --dim 2048 --trainer multi --prototypes 8    
+cargo run --release --example wine -- --dim 2048 --trainer multi --prototypes 8    
 17.88s user 0.84s system 441% cpu 4.242 total
 ```
 

@@ -14,7 +14,8 @@ pub struct Binary<const N_WORDS: usize> {
 }
 
 impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
-    type Accumulator = WeightedAcc<N_WORDS>;
+    //type Accumulator = WeightedAcc<N_WORDS>;
+    type Accumulator = FixPointAcc<N_WORDS>;
     type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
     const DIM: usize = N_WORDS * usize::BITS as usize;
 
@@ -104,7 +105,7 @@ impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
 #[derive(Debug, Clone)]
 pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
     //votes: [[f64; usize::BITS as usize]; N_WORDS], // one vote counter per bit
-    votes: Box<[[f64; usize::BITS as usize]; N_WORDS]>, // one vote counter per bit
+    votes: Box<[[f32; usize::BITS as usize]; N_WORDS]>, // one vote counter per bit
     count: f64,                                         // total number of vectors added
     rng: R,
 }
@@ -139,7 +140,7 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
             for j in 0..usize::BITS as usize {
                 // MAP: Binary 1 -> 1.0, Binary 0 -> -1.0
                 let bit_signal = if ((word >> j) & 1) == 1 { 1.0 } else { -1.0 };
-                self.votes[i][j] += weight * bit_signal;
+                self.votes[i][j] += weight as f32 * bit_signal;
             }
         }
         self.count += weight.abs();
@@ -154,6 +155,80 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
                 // If it's 0.0, we flip a coin to avoid bias.
                 if self.votes[i][bidx] > 0.0
                     || (self.votes[i][bidx] == 0.0 && (tie_breaker & (1 << bidx)) != 0)
+                {
+                    acc_word |= 1 << bidx;
+                }
+            }
+            acc_word
+        });
+        Binary { data }
+    }
+
+    fn count(&self) -> f64 {
+        self.count
+    }
+}
+
+pub struct FixPointAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
+    // Same as WeightedAcc, but implemented with i32 instead of f64: half the size
+    // and faster addition.
+    votes: Box<[[i32; usize::BITS as usize]; N_WORDS]>, 
+    count: f64,
+    rng: R,
+}
+
+impl<const N_WORDS: usize> Default for FixPointAcc<N_WORDS> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const N_WORDS: usize> FixPointAcc<N_WORDS> {
+    pub const fn is_empty(&self) -> bool {
+        self.count == 0.0
+    }
+}
+
+impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_WORDS>>
+    for FixPointAcc<N_WORDS, R>
+{
+    fn new() -> Self {
+        Self {
+            votes: Box::new([[0; usize::BITS as usize]; N_WORDS]),
+            //votes: [[0; usize::BITS as usize]; N_WORDS],
+            count: 0.0,
+            rng: R::from_rng(&mut rand::rng()),
+        }
+    }
+
+    fn add(&mut self, v: &Binary<N_WORDS>, weight: f64) {
+        // Scale factor of 1000,000 preserves 6 decimal places 
+        const SCALE: f64 = 10_000.0;
+        let w = (weight * SCALE) as i32; 
+
+        for i in 0..N_WORDS {
+            let word = v.data[i];
+            for j in 0..usize::BITS as usize {
+                let bit_is_set = (word >> j) & 1 == 1;
+                // Accumulate the scaled integer
+                if bit_is_set {
+                    self.votes[i][j] += w;
+                } else {
+                    self.votes[i][j] -= w;
+                }
+            }
+        }
+        self.count += weight.abs();
+    }
+
+    fn finalize(&mut self) -> Binary<N_WORDS> {
+        let data = std::array::from_fn(|i| {
+            let mut acc_word = 0usize;
+            let tie_breaker: usize = self.rng.next_u64() as usize;
+            for bidx in 0..usize::BITS as usize {
+                // We only care about the sign of the scaled sum
+                if self.votes[i][bidx] > 0
+                    || (self.votes[i][bidx] == 0 && (tie_breaker & (1 << bidx)) != 0)
                 {
                     acc_word |= 1 << bidx;
                 }
