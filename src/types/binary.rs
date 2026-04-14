@@ -106,7 +106,7 @@ impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
 pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
     votes: [[f32; usize::BITS as usize]; N_WORDS], // one vote counter per bit
     //votes: Box<[[f32; usize::BITS as usize]; N_WORDS]>, // one vote counter per bit
-    count: f64,                                         // total number of vectors added
+    count: f64, // total weight added
     rng: R,
 }
 
@@ -171,8 +171,8 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
 
 pub struct FixPointAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
     // Same as WeightedAcc, but implemented with i32 instead of f32
-    //votes: Box<[[i32; usize::BITS as usize]; N_WORDS]>, 
-    votes: [[i32; usize::BITS as usize]; N_WORDS], 
+    //votes: Box<[[i32; usize::BITS as usize]; N_WORDS]>,
+    votes: [[i32; usize::BITS as usize]; N_WORDS],
     count: f64,
     rng: R,
 }
@@ -202,9 +202,9 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
     }
 
     fn add(&mut self, v: &Binary<N_WORDS>, weight: f64) {
-        // Scale factor of 10,000 preserves 4 decimal places 
+        // Scale factor of 10,000 preserves 4 decimal places
         const SCALE: f64 = 10_000.0;
-        let w = (weight * SCALE) as i32; 
+        let w = (weight * SCALE) as i32;
 
         for i in 0..N_WORDS {
             let word = v.data[i];

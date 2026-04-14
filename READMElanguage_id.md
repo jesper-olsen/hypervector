@@ -19,14 +19,14 @@ cargo run --release --example language_id -- --mode binary --dim 1024 --ngram 3
 ### Accuracy 
 | Kind           | NGram | HDV dim | HDV bytes | Accuracy  | Time   |  
 | ------:        | ----: | ------: | --------: | -------:  | -----: |  
-| bipolar        | 3     |    1024 |      1024 | 90.9%     |    45s |
-| binary         | 3     |    1024 |       128 | 91.4%     |     7s |
+| bipolar        | 3     |    1024 |      1024 | 91.4%     |     6s |
+| binary         | 3     |    1024 |       128 | 91.4%     |     6s |
 | real           | 3     |    1024 |      8192 | 91.3%     |  1059s |
 | complex        | 3     |    1024 |     16384 | 91.8%     |  1815s |
 | modular, R=1   | 3     |    1024 |      1024 | 91.3%     |    62  |
 | modular, R=256 | 3     |    1024 |      1024 | 95.8%     |    60s |
-| bipolar        | 3     |   10048 |     10048 | 96.7%     |    71s |
-| binary         | 3     |   10048 |      1256 | 96.7%     |    27s |
+| bipolar        | 3     |   10048 |     10048 | 96.7%     |    33s |
+| binary         | 3     |   10048 |      1256 | 96.7%     |    32s |
 | modular, R=1   | 3     |   10048 |     10048 | 96.7%     |   230s |
 | modular, R=256 | 3     |   10048 |     10048 | 97.2%     |   197s |
 | binary         | 3     |  100032 |     12504 | 97.1%     |   326s |

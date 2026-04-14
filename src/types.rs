@@ -23,10 +23,13 @@ macro_rules! hdv {
         );
         pub type $name = Binary<{ $dim / usize::BITS as usize }>;
     };
-    //(bipolar, $name:ident, $dim:expr) => {
-    //    const _: () = assert!($dim % (usize::BITS as usize) == 0, "DIM must be a multiple of usize::BITS");
-    //    pub type $name = Bipolar<{ $dim / usize::BITS as usize }>;
-    //};
+    (bipolar, $name:ident, $dim:expr) => {
+        const _: () = assert!(
+            $dim % (usize::BITS as usize) == 0,
+            "DIM must be a multiple of usize::BITS"
+        );
+        pub type $name = Bipolar<{ $dim / usize::BITS as usize }>;
+    };
     (bipolar, $name:ident, $dim:expr) => {
         pub type $name = Bipolar<$dim>;
     };
