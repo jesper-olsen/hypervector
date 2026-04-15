@@ -1,13 +1,17 @@
-// Binary and Bipolar hypervectors.
-// The two types are rolled into one, because they are almost identical.
-//
-// For Bipolar elements are -1 and 1.
-// If we interpret bit value 0 as 1 and 1 as -1, binding (hadamard product) is xor (same as for binary):
-//   0 0 => +1 +1 = +1 => 0
-//   0 1 => +1 -1 = -1 => 1
-//   1 0 => -1 +1 = -1 => 1
-//   1 1 => -1 -1 = +1 => 0
-//
+/* =============================================================================
+ * Binary & Bipolar Hypervectors
+ * =============================================================================
+ * The two types are rolled into one, because they are almost identical.
+ *
+ * For Bipolar, elements are -1 and 1.
+ * If we interpret bit value 0 as 1 and 1 as -1, binding (hadamard product)
+ * is xor (same as for binary):
+ *
+ *   0 0 => +1 +1 = +1 => 0
+ *   0 1 => +1 -1 = -1 => 1
+ *   1 0 => -1 +1 = -1 => 1
+ *   1 1 => -1 -1 = +1 => 0
+ * ========================================================================== */
 
 use std::collections::HashSet;
 use std::fs::File;
@@ -19,13 +23,20 @@ use rand::{Rng, SeedableRng};
 
 use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
+/* =============================================================================
+ * Binary & Bipolar Hypervectors
+ * ========================================================================== */
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Binary<const N: usize, const BIPOLAR: bool = false> {
     pub data: [usize; N],
 }
 
-// Aliase
 pub type Bipolar<const N: usize> = Binary<N, true>;
+
+/* =============================================================================
+ * Trait Implementation (Binding, Permutation, Distance)
+ * ========================================================================== */
 
 impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
     type Accumulator = WeightedAcc<N, BIPOLAR>;
@@ -88,8 +99,8 @@ impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
 
     fn norm(&self) -> f32 {
         if BIPOLAR {
-            return 1.0
-        } 
+            return 1.0;
+        }
         self.data.iter().map(|w| w.count_ones()).sum::<u32>() as f32 / Self::DIM as f32
     }
 
@@ -122,6 +133,14 @@ impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
         Ok(Self { data })
     }
 }
+
+/* =============================================================================
+ * Weighted Accumulator
+ * =============================================================================
+ * This accumulator uses f32 votes to handle weighted superposition.
+ * Maps: 1 -> 1.0, 0 -> -1.0.
+ * Finalization uses a tie-breaker to maintain stochastic neutrality.
+ * ========================================================================== */
 
 #[derive(Debug, Clone)]
 pub struct WeightedAcc<const N: usize, const BIPOLAR: bool, R: Rng = MersenneTwister64> {
@@ -189,6 +208,12 @@ impl<const N: usize, const BIPOLAR: bool, R: Rng + SeedableRng + Default>
         self.count
     }
 }
+
+/* =============================================================================
+ * Fix-point Accumulator
+ * =============================================================================
+ * Variant of WeightedAcc - uses integer votes to handle weighted superposition.
+ * ========================================================================== */
 
 pub struct FixPointAcc<const N: usize, const BIPOLAR: bool, R: Rng = MersenneTwister64> {
     // Same as WeightedAcc, but implemented with i32 instead of f32
@@ -264,9 +289,15 @@ impl<const N: usize, const BIPOLAR: bool, R: Rng + SeedableRng + Default>
     }
 }
 
+/* =============================================================================
+ * UnitAcc Accumulator
+ * =============================================================================
+ * Handles unweighted superposition - VoteCount can be changed depending on
+ * number of vectors being added.
+ * UnitAcc is simple, but - SlicedUnitAcc is typically faster.
+ * ========================================================================== */
 type VoteCount = u32;
 
-// simple, but SlicedUnitAcc is typically faster
 #[derive(Debug, Clone)]
 pub struct UnitAcc<const N: usize, const BIPOLAR: bool, R: Rng = MersenneTwister64> {
     votes: [[VoteCount; usize::BITS as usize]; N],
@@ -331,6 +362,30 @@ impl<const N: usize, const BIPOLAR: bool> UnitAccumulator<Binary<N, BIPOLAR>>
     }
 }
 
+/* =============================================================================
+ * SlicedUnitAcc: Bit-sliced Parallel Accumulator
+ * =============================================================================
+ * Reference: Knuth, TAOCP Vol 4, Fascicle 1 (Bitwise tricks & Popcount)
+ *
+ * This implementation treats the memory as a "Vertical" set of counters.
+ * Instead of N separate integers, we use 'PLANES' number of bit-arrays.
+ *
+ * Each bit-array represents a power of 2:
+ * data[0] -> Units bit (2^0)
+ * data[1] -> Twos bit  (2^1)
+ * ...
+ *
+ * When we 'add' a hypervector, we perform a ripple-carry addition across
+ * these planes using bitwise XOR (sum) and AND (carry).
+ *
+ * PROS:
+ * - Processes 64 counters simultaneously per CPU instruction.
+ * - Extremely cache-friendly; avoids "scatter" increments.
+ * * CONS:
+ * - 'finalize()' is expensive as it must "transpose" the bits back to
+ * standard integers to calculate the majority threshold.
+ * ========================================================================== */
+
 pub struct SlicedUnitAcc<
     const N: usize,
     const BIPOLAR: bool,
@@ -364,9 +419,9 @@ impl<const N: usize, const BIPOLAR: bool, const PLANES: usize> UnitAccumulator<B
     }
 
     #[inline]
+    /// chain of Half-Adders - a batch version (add 3) with full adder logic could potentially make it faster.
     fn add(&mut self, v: &Binary<N, BIPOLAR>) {
         let mut carry = v.data;
-
         for p in 0..PLANES {
             for (old_val_ref, carry_word) in self.data[p].iter_mut().zip(carry.iter_mut()) {
                 let old_val = *old_val_ref;
@@ -415,15 +470,15 @@ impl<const N: usize> Binary<N, true> {
     pub fn from_slice(slice: &[i8]) -> Self {
         let dim = N * usize::BITS as usize;
         assert!(slice.len() <= dim);
-        let mut hdv = Self::zero();
+        let mut data = [0; N];
         for (i, e) in slice.iter().enumerate() {
             let word_idx = i / usize::BITS as usize;
             let bit_idx = i % usize::BITS as usize;
             if *e == -1 {
-                hdv.data[word_idx] |= 1 << bit_idx;
+                data[word_idx] |= 1 << bit_idx;
             }
         }
-        hdv
+        Self { data }
     }
 }
 
@@ -444,13 +499,13 @@ impl<const N: usize> Binary<N, false> {
 }
 
 impl<const N: usize, const BIPOLAR: bool> Binary<N, BIPOLAR> {
-    pub fn zero() -> Self {
-        Self { data: [0usize; N] }
-    }
+    //pub fn zero() -> Self {
+    //    Self { data: [0usize; N] }
+    //}
 
-    pub fn is_zero(&self) -> bool {
-        self.data.iter().all(|&e| e == 0)
-    }
+    //pub fn is_zero(&self) -> bool {
+    //    self.data.iter().all(|&e| e == 0)
+    //}
 
     /// Returns a Vec<u8> with one entry per bit (0 or 1).
     pub fn as_u8_vec(&self) -> Vec<u8> {
