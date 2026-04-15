@@ -1,7 +1,7 @@
 use clap::Parser;
 use hypervector::types::traits::{HyperVector, UnitAccumulator};
 use hypervector::types::{
-    binary::Binary, bipolar::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
+    binary::Binary, binary::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
 };
 use hypervector::{cleanup, save_hypervectors_to_csv};
 use mersenne_twister_rs::MersenneTwister64;

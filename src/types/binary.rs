@@ -9,15 +9,19 @@ use rand::{Rng, SeedableRng};
 use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Binary<const N_WORDS: usize> {
-    pub data: [usize; N_WORDS],
+pub struct Binary<const N: usize, const BIPOLAR: bool = false> {
+    pub data: [usize; N],
 }
 
-impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
-    type Accumulator = WeightedAcc<N_WORDS>;
-    //type Accumulator = FixPointAcc<N_WORDS>;
-    type UnitAccumulator = SlicedUnitAcc<N_WORDS, 32>; // 1-64 bit PLANES
-    const DIM: usize = N_WORDS * usize::BITS as usize;
+// Convenient aliases
+pub type Bipolar<const N: usize> = Binary<N, true>;
+
+impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
+    //impl<const N: usize> HyperVector for Binary<N> {
+    type Accumulator = WeightedAcc<N, BIPOLAR>;
+    //type Accumulator = FixPointAcc<N, BIPOLAR>;
+    type UnitAccumulator = SlicedUnitAcc<N, BIPOLAR, 32>; // 1-64 bit PLANES
+    const DIM: usize = N * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         let data = std::array::from_fn(|_| rng.next_u64() as usize);
@@ -25,13 +29,13 @@ impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
     }
 
     fn ident() -> Self {
-        Binary { data: [0; N_WORDS] }
+        Binary { data: [0; N] }
     }
 
     /// Creates a new HDV by blending `self` and `other`
     /// `indices` are bit positions where values from `other` are used.
     fn blend(&self, other: &Self, indices: &[usize]) -> Self {
-        let mut masks = [0usize; N_WORDS];
+        let mut masks = [0usize; N];
         for &idx in indices {
             let i = idx / (usize::BITS as usize);
             let j = idx % (usize::BITS as usize);
@@ -44,7 +48,7 @@ impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
 
     #[inline]
     fn distance(&self, other: &Self) -> f32 {
-        self.hamming_distance(other) as f32 / (N_WORDS * usize::BITS as usize) as f32
+        self.hamming_distance(other) as f32 / (N * usize::BITS as usize) as f32
     }
 
     fn bind(&self, other: &Self) -> Self {
@@ -89,10 +93,10 @@ impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
     fn read(file: &mut File) -> io::Result<Self> {
         // println!(
         //     "Reading HDV of {} usize elements = {} bits",
-        //     N_WORDS,
-        //     N_WORDS as u32 * usize::BITS
+        //     N,
+        //     N as u32 * usize::BITS
         // );
-        let mut data = [0usize; N_WORDS];
+        let mut data = [0usize; N];
         for slot in &mut data {
             let mut buf = [0u8; size_of::<usize>()];
             file.read_exact(&mut buf)?;
@@ -103,39 +107,39 @@ impl<const N_WORDS: usize> HyperVector for Binary<N_WORDS> {
 }
 
 #[derive(Debug, Clone)]
-pub struct WeightedAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
-    votes: [[f32; usize::BITS as usize]; N_WORDS], // one vote counter per bit
-    //votes: Box<[[f32; usize::BITS as usize]; N_WORDS]>, // one vote counter per bit
+pub struct WeightedAcc<const N: usize, const BIPOLAR: bool, R: Rng = MersenneTwister64> {
+    votes: [[f32; usize::BITS as usize]; N], // one vote counter per bit
+    //votes: Box<[[f32; usize::BITS as usize]; N]>, // one vote counter per bit
     count: f64, // total weight added
     rng: R,
 }
 
-impl<const N_WORDS: usize> Default for WeightedAcc<N_WORDS> {
+impl<const N: usize, const BIPOLAR: bool> Default for WeightedAcc<N, BIPOLAR> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_WORDS: usize> WeightedAcc<N_WORDS> {
+impl<const N: usize, const BIPOLAR: bool> WeightedAcc<N, BIPOLAR> {
     pub const fn is_empty(&self) -> bool {
         self.count == 0.0
     }
 }
 
-impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_WORDS>>
-    for WeightedAcc<N_WORDS, R>
+impl<const N: usize, const BIPOLAR: bool, R: Rng + SeedableRng + Default>
+    Accumulator<Binary<N, BIPOLAR>> for WeightedAcc<N, BIPOLAR, R>
 {
     fn new() -> Self {
         Self {
-            //votes: Box::new([[0.0; usize::BITS as usize]; N_WORDS]),
-            votes: [[0.0; usize::BITS as usize]; N_WORDS],
+            //votes: Box::new([[0.0; usize::BITS as usize]; N]),
+            votes: [[0.0; usize::BITS as usize]; N],
             count: 0.0,
             rng: R::from_rng(&mut rand::rng()),
         }
     }
 
-    fn add(&mut self, v: &Binary<N_WORDS>, weight: f64) {
-        for i in 0..N_WORDS {
+    fn add(&mut self, v: &Binary<N, BIPOLAR>, weight: f64) {
+        for i in 0..N {
             let word = v.data[i];
             for j in 0..usize::BITS as usize {
                 // MAP: Binary 1 -> 1.0, Binary 0 -> -1.0
@@ -146,7 +150,7 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
         self.count += weight.abs();
     }
 
-    fn finalize(&mut self) -> Binary<N_WORDS> {
+    fn finalize(&mut self) -> Binary<N, BIPOLAR> {
         let data = std::array::from_fn(|i| {
             let mut acc_word = 0usize;
             let tie_breaker: usize = self.rng.next_u64() as usize;
@@ -169,44 +173,44 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
     }
 }
 
-pub struct FixPointAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
+pub struct FixPointAcc<const N: usize, const BIPOLAR: bool, R: Rng = MersenneTwister64> {
     // Same as WeightedAcc, but implemented with i32 instead of f32
-    //votes: Box<[[i32; usize::BITS as usize]; N_WORDS]>,
-    votes: [[i32; usize::BITS as usize]; N_WORDS],
+    //votes: Box<[[i32; usize::BITS as usize]; N]>,
+    votes: [[i32; usize::BITS as usize]; N],
     count: f64,
     rng: R,
 }
 
-impl<const N_WORDS: usize> Default for FixPointAcc<N_WORDS> {
+impl<const N: usize, const BIPOLAR: bool> Default for FixPointAcc<N, BIPOLAR> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N_WORDS: usize> FixPointAcc<N_WORDS> {
+impl<const N: usize, const BIPOLAR: bool> FixPointAcc<N, BIPOLAR> {
     pub const fn is_empty(&self) -> bool {
         self.count == 0.0
     }
 }
 
-impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_WORDS>>
-    for FixPointAcc<N_WORDS, R>
+impl<const N: usize, const BIPOLAR: bool, R: Rng + SeedableRng + Default>
+    Accumulator<Binary<N, BIPOLAR>> for FixPointAcc<N, BIPOLAR, R>
 {
     fn new() -> Self {
         Self {
-            //votes: Box::new([[0; usize::BITS as usize]; N_WORDS]),
-            votes: [[0; usize::BITS as usize]; N_WORDS],
+            //votes: Box::new([[0; usize::BITS as usize]; N]),
+            votes: [[0; usize::BITS as usize]; N],
             count: 0.0,
             rng: R::from_rng(&mut rand::rng()),
         }
     }
 
-    fn add(&mut self, v: &Binary<N_WORDS>, weight: f64) {
+    fn add(&mut self, v: &Binary<N, BIPOLAR>, weight: f64) {
         // Scale factor of 10,000 preserves 4 decimal places
         const SCALE: f64 = 10_000.0;
         let w = (weight * SCALE) as i32;
 
-        for i in 0..N_WORDS {
+        for i in 0..N {
             let word = v.data[i];
             for j in 0..usize::BITS as usize {
                 let bit_is_set = (word >> j) & 1 == 1;
@@ -221,7 +225,7 @@ impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Accumulator<Binary<N_
         self.count += weight.abs();
     }
 
-    fn finalize(&mut self) -> Binary<N_WORDS> {
+    fn finalize(&mut self) -> Binary<N, BIPOLAR> {
         let data = std::array::from_fn(|i| {
             let mut acc_word = 0usize;
             let tie_breaker: usize = self.rng.next_u64() as usize;
@@ -247,35 +251,39 @@ type VoteCount = u32;
 
 // simple, but SlicedUnitAcc is typically faster
 #[derive(Debug, Clone)]
-pub struct UnitAcc<const N_WORDS: usize, R: Rng = MersenneTwister64> {
-    votes: [[VoteCount; usize::BITS as usize]; N_WORDS],
+pub struct UnitAcc<const N: usize, const BIPOLAR: bool, R: Rng = MersenneTwister64> {
+    votes: [[VoteCount; usize::BITS as usize]; N],
     count: usize, // total number of vectors added
     rng: R,
 }
 
-impl<const N_WORDS: usize, R: Rng + SeedableRng + Default> Default for UnitAcc<N_WORDS, R> {
+impl<const N: usize, const BIPOLAR: bool, R: Rng + SeedableRng + Default> Default
+    for UnitAcc<N, BIPOLAR, R>
+{
     fn default() -> Self {
         Self {
-            votes: [[0; usize::BITS as usize]; N_WORDS],
+            votes: [[0; usize::BITS as usize]; N],
             count: 0,
             rng: R::from_rng(&mut rand::rng()),
         }
     }
 }
 
-impl<const N_WORDS: usize> UnitAcc<N_WORDS> {
+impl<const N: usize, const BIPOLAR: bool> UnitAcc<N, BIPOLAR> {
     pub const fn is_empty(&self) -> bool {
         self.count == 0
     }
 }
 
-impl<const N_WORDS: usize> UnitAccumulator<Binary<N_WORDS>> for UnitAcc<N_WORDS> {
+impl<const N: usize, const BIPOLAR: bool> UnitAccumulator<Binary<N, BIPOLAR>>
+    for UnitAcc<N, BIPOLAR>
+{
     fn new() -> Self {
         Self::default()
     }
 
-    fn add(&mut self, v: &Binary<N_WORDS>) {
-        for i in 0..N_WORDS {
+    fn add(&mut self, v: &Binary<N, BIPOLAR>) {
+        for i in 0..N {
             let word = v.data[i];
             for j in 0..usize::BITS {
                 let flag = ((word >> j) & 1) as VoteCount;
@@ -285,7 +293,7 @@ impl<const N_WORDS: usize> UnitAccumulator<Binary<N_WORDS>> for UnitAcc<N_WORDS>
         self.count += 1;
     }
 
-    fn finalize(&mut self) -> Binary<N_WORDS> {
+    fn finalize(&mut self) -> Binary<N, BIPOLAR> {
         let data = std::array::from_fn(|uidx| {
             let tie_breaker: usize = self.rng.next_u64() as usize;
             let mut acc_word = 0usize;
@@ -306,7 +314,12 @@ impl<const N_WORDS: usize> UnitAccumulator<Binary<N_WORDS>> for UnitAcc<N_WORDS>
     }
 }
 
-pub struct SlicedUnitAcc<const N: usize, const PLANES: usize, R: Rng = MersenneTwister64> {
+pub struct SlicedUnitAcc<
+    const N: usize,
+    const BIPOLAR: bool,
+    const PLANES: usize,
+    R: Rng = MersenneTwister64,
+> {
     // Each plane is a bit-level of the parallel counters.
     // Plane 0 = Least Significant Bit, Plane PLANES-1 = Most Significant Bit.
     data: [[usize; N]; PLANES],
@@ -314,25 +327,27 @@ pub struct SlicedUnitAcc<const N: usize, const PLANES: usize, R: Rng = MersenneT
     rng: R,
 }
 
-impl<const N_WORDS: usize, const PLANES: usize, R: Rng + SeedableRng + Default> Default
-    for SlicedUnitAcc<N_WORDS, PLANES, R>
+impl<const N: usize, const BIPOLAR: bool, const PLANES: usize, R: Rng + SeedableRng + Default>
+    Default for SlicedUnitAcc<N, BIPOLAR, PLANES, R>
 {
     fn default() -> Self {
         Self {
-            data: [[0; N_WORDS]; PLANES],
+            data: [[0; N]; PLANES],
             count: 0,
             rng: R::from_rng(&mut rand::rng()),
         }
     }
 }
 
-impl<const N: usize, const PLANES: usize> UnitAccumulator<Binary<N>> for SlicedUnitAcc<N, PLANES> {
+impl<const N: usize, const BIPOLAR: bool, const PLANES: usize> UnitAccumulator<Binary<N, BIPOLAR>>
+    for SlicedUnitAcc<N, BIPOLAR, PLANES>
+{
     fn new() -> Self {
         Self::default()
     }
 
     #[inline]
-    fn add(&mut self, v: &Binary<N>) {
+    fn add(&mut self, v: &Binary<N, BIPOLAR>) {
         let mut carry = v.data;
 
         for p in 0..PLANES {
@@ -348,12 +363,11 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<Binary<N>> for SlicedU
         self.count += 1;
     }
 
-    fn finalize(&mut self) -> Binary<N> {
-        let mut result = Binary::<N>::zero();
+    fn finalize(&mut self) -> Binary<N, BIPOLAR> {
         let threshold = (self.count / 2) as u64;
         let is_even = self.count.is_multiple_of(2);
 
-        for i in 0..N {
+        let data = std::array::from_fn(|i| {
             let tie_breaker: usize = self.rng.next_u64() as usize;
             let mut word_acc = 0usize;
             // We process all 64 bits of the word simultaneously for each bit-position
@@ -370,9 +384,9 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<Binary<N>> for SlicedU
                     word_acc |= tie_breaker & (1 << bit_pos);
                 }
             }
-            result.data[i] = word_acc;
-        }
-        result
+            word_acc
+        });
+        Binary { data }
     }
 
     fn count(&self) -> usize {
@@ -380,25 +394,49 @@ impl<const N: usize, const PLANES: usize> UnitAccumulator<Binary<N>> for SlicedU
     }
 }
 
-impl<const N_WORDS: usize> Binary<N_WORDS> {
-    pub fn from_slice(slice: &[u8]) -> Self {
-        let dim = N_WORDS * usize::BITS as usize;
+impl<const N: usize> Binary<N, true> {
+    pub fn from_slice(slice: &[i8]) -> Self {
+        let dim = N * usize::BITS as usize;
         assert!(slice.len() <= dim);
         let mut hdv = Self::zero();
         for (i, e) in slice.iter().enumerate() {
             let word_idx = i / usize::BITS as usize;
             let bit_idx = i % usize::BITS as usize;
-            if *e != 0 {
+            if *e == -1 {
                 hdv.data[word_idx] |= 1 << bit_idx;
             }
         }
         hdv
     }
 
-    pub fn zero() -> Self {
-        Self {
-            data: [0usize; N_WORDS],
+    pub fn norm(&self) -> f32 {
+        1.0
+    }
+}
+
+impl<const N: usize> Binary<N, false> {
+    pub fn from_slice(slice: &[u8]) -> Self {
+        let dim = N * usize::BITS as usize;
+        assert!(slice.len() <= dim);
+        let mut data = [0; N];
+        for (i, e) in slice.iter().enumerate() {
+            let word_idx = i / usize::BITS as usize;
+            let bit_idx = i % usize::BITS as usize;
+            if *e != 0 {
+                data[word_idx] |= 1 << bit_idx;
+            }
         }
+        Self { data }
+    }
+
+    pub fn norm(&self) -> f32 {
+        self.data.iter().map(|w| w.count_ones()).sum::<u32>() as f32 / Self::DIM as f32
+    }
+}
+
+impl<const N: usize, const BIPOLAR: bool> Binary<N, BIPOLAR> {
+    pub fn zero() -> Self {
+        Self { data: [0usize; N] }
     }
 
     pub fn is_zero(&self) -> bool {
@@ -407,7 +445,7 @@ impl<const N_WORDS: usize> Binary<N_WORDS> {
 
     /// Returns a Vec<u8> with one entry per bit (0 or 1).
     pub fn as_u8_vec(&self) -> Vec<u8> {
-        let mut bits = Vec::with_capacity(N_WORDS * usize::BITS as usize);
+        let mut bits = Vec::with_capacity(N * usize::BITS as usize);
         for word in self.data {
             for i in 0..usize::BITS {
                 let bit = (word >> i) & 1;
@@ -418,7 +456,7 @@ impl<const N_WORDS: usize> Binary<N_WORDS> {
     }
 
     pub fn permute_idx(&self, by: usize) -> Self {
-        let data = std::array::from_fn(|i| self.data[(i + by) % N_WORDS]);
+        let data = std::array::from_fn(|i| self.data[(i + by) % N]);
         Self { data }
     }
 
@@ -427,21 +465,21 @@ impl<const N_WORDS: usize> Binary<N_WORDS> {
         if shift == 0 {
             return self.clone();
         }
-        let mut result = Self::zero();
+        let mut data = [0; N];
         let word_shift = shift / usize::BITS as usize;
         let bit_shift = shift % usize::BITS as usize;
 
-        for i in 0..N_WORDS {
-            let target_idx = (i + word_shift) % N_WORDS;
-            let next_idx = (target_idx + 1) % N_WORDS;
+        for i in 0..N {
+            let target_idx = (i + word_shift) % N;
+            let next_idx = (target_idx + 1) % N;
 
             // Carry bits from this word to the next to simulate a global circular shift
-            result.data[target_idx] |= self.data[i] << bit_shift;
+            data[target_idx] |= self.data[i] << bit_shift;
             if bit_shift > 0 {
-                result.data[next_idx] |= self.data[i] >> (usize::BITS as usize - bit_shift);
+                data[next_idx] |= self.data[i] >> (usize::BITS as usize - bit_shift);
             }
         }
-        result
+        Self { data }
     }
 
     /// Creates a new HDV by cloning `self` and flipping `nbits` unique, random bits.
@@ -479,14 +517,11 @@ impl<const N_WORDS: usize> Binary<N_WORDS> {
     }
 
     pub fn xnor(&self, other: &Self) -> Self {
-        let mut result = Self::zero();
-
-        for i in 0..N_WORDS {
+        let data = std::array::from_fn(|i| {
             // safe because DIM is a multiple of 64 - need to mask unused bits if this is not the case
-            result.data[i] = !(self.data[i] ^ other.data[i]);
-        }
-
-        result
+            !(self.data[i] ^ other.data[i])
+        });
+        Self { data }
     }
 
     pub fn write_csv(&self, writer: &mut impl Write) -> io::Result<()> {
@@ -555,11 +590,11 @@ pub fn save_hdvs_to_csv<const N: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::types::binary::{Binary, UnitAcc, WeightedAcc};
+    use crate::types::binary::{Binary, Bipolar, UnitAcc, WeightedAcc};
     use crate::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
     #[test]
-    fn test_accumulate() {
+    fn test_accumulate_binary() {
         let v1 = Binary::<1>::from_slice(&[1, 0, 1, 0, 0, 0, 0, 0]);
         let v2 = Binary::<1>::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0]);
         let v3 = Binary::<1>::from_slice(&[1, 0, 0, 1, 0, 0, 0, 0]);
@@ -578,6 +613,29 @@ mod tests {
         assert_eq!(acc.finalize(), expected);
 
         let result = Binary::<1>::bundle(&[&v1, &v2, &v3]);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_accumulate_bipolar() {
+        let v1 = Bipolar::<1>::from_slice(&[-1, 1, -1, 1, 1, 1, 1, 1]);
+        let v2 = Bipolar::<1>::from_slice(&[-1, 1, 1, 1, 1, 1, 1, 1]);
+        let v3 = Bipolar::<1>::from_slice(&[-1, 1, 1, -1, 1, 1, 1, 1]);
+        let expected = Bipolar::<1>::from_slice(&[-1, 1, 1, 1, 1, 1, 1, 1]);
+
+        let mut acc = WeightedAcc::default();
+        acc.add(&v1, 1.0);
+        acc.add(&v2, 1.0);
+        acc.add(&v3, 1.0);
+        assert_eq!(acc.finalize(), expected);
+
+        let mut acc = UnitAcc::default();
+        acc.add(&v1);
+        acc.add(&v2);
+        acc.add(&v3);
+        assert_eq!(acc.finalize(), expected);
+
+        let result = Bipolar::<1>::bundle(&[&v1, &v2, &v3]);
         assert_eq!(result, expected);
     }
 }

@@ -1,5 +1,4 @@
 pub mod binary;
-pub mod bipolar;
 pub mod complex;
 pub mod modular;
 pub mod real;
@@ -59,7 +58,10 @@ macro_rules! gen_vars {
 mod tests {
     use crate::types::traits::HyperVector;
     use crate::types::{
-        binary::Binary, bipolar::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
+        binary::{Binary, Bipolar},
+        complex::ComplexHDV,
+        modular::Modular,
+        real::RealHDV,
     };
 
     fn test_permute_unpermute<T: HyperVector + std::fmt::Debug + std::cmp::PartialEq>() {

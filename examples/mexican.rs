@@ -4,7 +4,7 @@
 // Calculate answer: Mexican Peso - mpe
 
 use hypervector::types::{
-    binary::Binary, bipolar::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
+    binary::Binary, binary::Bipolar, complex::ComplexHDV, modular::Modular, real::RealHDV,
 };
 use hypervector::{HyperVector, cleanup, gen_vars, hdv};
 use mersenne_twister_rs::MersenneTwister64;

@@ -8,8 +8,7 @@ use std::fs::File;
 use std::io::Write;
 
 use hypervector::gen_vars;
-use hypervector::types::binary::Binary;
-use hypervector::types::bipolar::Bipolar;
+use hypervector::types::binary::{Binary, Bipolar};
 use hypervector::types::complex::ComplexHDV;
 use hypervector::types::modular::Modular;
 use hypervector::types::real::RealHDV;
