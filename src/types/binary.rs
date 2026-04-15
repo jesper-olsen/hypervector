@@ -87,6 +87,9 @@ impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
     }
 
     fn norm(&self) -> f32 {
+        if BIPOLAR {
+            return 1.0
+        } 
         self.data.iter().map(|w| w.count_ones()).sum::<u32>() as f32 / Self::DIM as f32
     }
 
@@ -421,10 +424,6 @@ impl<const N: usize> Binary<N, true> {
             }
         }
         hdv
-    }
-
-    pub fn norm(&self) -> f32 {
-        1.0
     }
 }
 
