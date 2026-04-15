@@ -51,6 +51,8 @@ pub trait HyperVector: Sized + Clone {
         acc.finalize()
     }
 
+    fn norm(&self) -> f32;
+
     fn unpack(&self) -> Vec<f32>;
     fn write(&self, file: &mut File) -> std::io::Result<()>;
     fn read(file: &mut File) -> std::io::Result<Self>;

@@ -115,6 +115,10 @@ impl<const DIM: usize> HyperVector for Modular<DIM> {
         self.permute(DIM - (by % DIM))
     }
 
+    fn norm(&self) -> f32 {
+        self.lee_distance(&Self::ident()) as f32 / (DIM * HALF as usize) as f32
+    }
+
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
     }

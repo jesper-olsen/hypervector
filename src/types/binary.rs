@@ -1,3 +1,14 @@
+// Binary and Bipolar hypervectors.
+// The two types are rolled into one, because they are almost identical.
+//
+// For Bipolar elements are -1 and 1.
+// If we interpret bit value 0 as 1 and 1 as -1, binding (hadamard product) is xor (same as for binary):
+//   0 0 => +1 +1 = +1 => 0
+//   0 1 => +1 -1 = -1 => 1
+//   1 0 => -1 +1 = -1 => 1
+//   1 1 => -1 -1 = +1 => 0
+//
+
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufWriter, Read, Write};
@@ -13,11 +24,10 @@ pub struct Binary<const N: usize, const BIPOLAR: bool = false> {
     pub data: [usize; N],
 }
 
-// Convenient aliases
+// Aliase
 pub type Bipolar<const N: usize> = Binary<N, true>;
 
 impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
-    //impl<const N: usize> HyperVector for Binary<N> {
     type Accumulator = WeightedAcc<N, BIPOLAR>;
     //type Accumulator = FixPointAcc<N, BIPOLAR>;
     type UnitAccumulator = SlicedUnitAcc<N, BIPOLAR, 32>; // 1-64 bit PLANES
@@ -74,6 +84,10 @@ impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
         let shift = by % Self::DIM;
         // Moving backwards 'shift' is the same as moving forwards 'DIM - shift'
         self.permute(Self::DIM - shift)
+    }
+
+    fn norm(&self) -> f32 {
+        self.data.iter().map(|w| w.count_ones()).sum::<u32>() as f32 / Self::DIM as f32
     }
 
     fn unpack(&self) -> Vec<f32> {
@@ -427,10 +441,6 @@ impl<const N: usize> Binary<N, false> {
             }
         }
         Self { data }
-    }
-
-    pub fn norm(&self) -> f32 {
-        self.data.iter().map(|w| w.count_ones()).sum::<u32>() as f32 / Self::DIM as f32
     }
 }
 

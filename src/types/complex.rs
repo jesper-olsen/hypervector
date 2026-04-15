@@ -104,6 +104,10 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
         self.permute(N - (by % N))
     }
 
+    fn norm(&self) -> f32 {
+        self.data.iter().map(|e| e.norm_sqr()).sum::<f64>().sqrt() as f32
+    }
+
     fn unpack(&self) -> Vec<f32> {
         let mut out = Vec::with_capacity(self.data.len() * 2);
         for &c in &self.data {

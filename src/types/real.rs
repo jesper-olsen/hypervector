@@ -71,6 +71,10 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         self.unpermute(by)
     }
 
+    fn norm(&self) -> f32 {
+        self.data.iter().map(|e| e * e).sum::<f64>().sqrt() as f32
+    }
+
     fn unpack(&self) -> Vec<f32> {
         self.data.iter().map(|&e| e as f32).collect()
     }
