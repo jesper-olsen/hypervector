@@ -4,6 +4,7 @@ A Rust library for hyperdimensional computing (HDC).
 
 Hyperdimensional computing is a brain-inspired paradigm where information is represented as high-dimensional vectors (hypervectors or HDVs) and processed using simple algebraic operations like addition, multiplication, and permutation. This enables fast, robust, and noise-tolerant learning for tasks like classification, symbolic reasoning, and associative memory [4].
 
+
 ## Features
 
 - Binary (0/1) and bipolar (+1/-1) hypervector types (HDVs).
@@ -13,8 +14,7 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 - Example applications: concept inference, text image classification
 
 
-## Run
------
+## Examples
 
 Examples of problems that can be solved with hypervectors:
 
