@@ -10,8 +10,8 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 - Binary (0/1) and bipolar (+1/-1) hypervector types (HDVs).
 - Real and complex hypervector types (also known as HRRs or Holographic Reduced Representations).
 - Modular Composite Representation hypervector type.
-- Trait-based design for extensibility
-- Example applications: concept inference, text image classification
+- Trait-based design for extensibility.
+- Example applications: symbolic reasoning, associative memory and classification across multiple modalities.
 
 
 ## Examples
