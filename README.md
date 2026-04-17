@@ -18,8 +18,6 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 
 Example problems solved with hypervectors:
 
-Conceptual:
-
 1. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
 2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
 3. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
