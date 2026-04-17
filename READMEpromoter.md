@@ -73,5 +73,5 @@ Results are consistent across multiple random seeds (not shown).
 
 ## References
 
-1. [UCI Molecular Biology](https://archive.ics.uci.edu/dataset/67/molecular+biology+promoter+gene+sequences
+1. [UCI Molecular Biology](https://archive.ics.uci.edu/dataset/67/molecular+biology+promoter+gene+sequences)
 
