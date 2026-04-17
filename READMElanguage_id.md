@@ -1,7 +1,6 @@
 # Hypervector - Language Identification
 
 Benchmark
----------
 
 Here we benchmark bipolar and binary HDVs on a language identification task [2].
 The approach is to use HDVs to represent letter n-grams, and combine ngrams with superposition to form an overall profile for a given language. The distance between a training profile and a test profile is used for language classification.
@@ -17,6 +16,7 @@ cargo run --release --example language_id -- --mode binary --dim 1024 --ngram 3
 ```
 
 ### Accuracy 
+
 | Kind           | NGram | HDV dim | HDV bytes | Accuracy  | Time   |  
 | ------:        | ----: | ------: | --------: | -------:  | -----: |  
 | bipolar        | 3     |    1024 |      1024 | 91.4%     |     6s |
@@ -41,3 +41,6 @@ View the language space - computed with [t-SNE](https://en.wikipedia.org/wiki/T-
 ![PNG](https://github.com/jesper-olsen/hypervector/blob/master/ASSETS/LanguageSpace.png)
 
 
+## References
+
+1. "Language Geometry using Random Indexing" Aditya Joshi1, Johan T. Halseth, and Pentti Kanerva, 2016

@@ -19,21 +19,20 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 Runnable example problems (`cargo run --example name`):
 
 1. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
-2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
+2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [4].
 3. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
 4. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
 5. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
 6. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
 7. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
-8. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
+8. [Text language identification](READMElanguage_id.md) - English, French, ... 22 languages.
 9. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
 
 
 ## References
 
 1. ["What We Mean When We Say 'What’s the Dollar of Mexico?'" – Pentti Kanerva, 2010](https://aaai.org/papers/02243-2243-what-we-mean-when-we-say-whats-the-dollar-of-mexico-prototypes-and-mapping-in-concept-space/)  
-2. "Language Geometry using Random Indexing" Aditya Joshi1, Johan T. Halseth, and Pentti Kanerva, 2016
-3. "A Robust and Energy-Efficient Classifier Using Brain-Inspired Hyperdimensional Computing" Abbas Rahimi, Pentti Kanerva, Jan M. Rabaey, 2016
-4. ["Hyperdimensional Computing: An Algebra for Computing with Vectors", Pentti Kanerva, 2022](https://redwood.berkeley.edu/wp-content/uploads/2022/05/kanerva2022hdmss.pdf)
-5. ["Holographic Reduced Representations", Tony Plate, IEEE Transactions on Neural Networks, February, 1995, 6(3):623-41](https://www.researchgate.net/publication/5589577_Holographic_Reduced_Representations)
-6. ["Modular Composite Representation", J. Snaider S. Franklin, 2014](https://digitalcommons.memphis.edu/ccrg_papers/32/)
+2. "A Robust and Energy-Efficient Classifier Using Brain-Inspired Hyperdimensional Computing" Abbas Rahimi, Pentti Kanerva, Jan M. Rabaey, 2016
+3. ["Hyperdimensional Computing: An Algebra for Computing with Vectors", Pentti Kanerva, 2022](https://redwood.berkeley.edu/wp-content/uploads/2022/05/kanerva2022hdmss.pdf)
+4. ["Holographic Reduced Representations", Tony Plate, IEEE Transactions on Neural Networks, February, 1995, 6(3):623-41](https://www.researchgate.net/publication/5589577_Holographic_Reduced_Representations)
+5. ["Modular Composite Representation", J. Snaider S. Franklin, 2014](https://digitalcommons.memphis.edu/ccrg_papers/32/)
