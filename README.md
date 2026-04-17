@@ -16,7 +16,7 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 
 ## Examples
 
-Example problems solved with hypervectors:
+Runnable example problems (`cargo run --example name`):
 
 1. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
 2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
