@@ -153,7 +153,7 @@ fn encode_sequence<H: HyperVector>(seq: &[u8], alphabet: &Alphabet<H>, n: usize)
     // this works for all kinds of HDVs
     // a potentially faster way for binary and bipolar is to 'unbind' the oldest symbol
     // for real and complex HDVs this doesn't work well because unbind is noisy
-    let n0 = if n > 1 { n - 1 } else { 1 };
+    let n0 = n.saturating_sub(1).max(1);
     let n1 = n + 1;
     for x in n0..=n1 {
         for window in seq.windows(x) {
@@ -170,41 +170,46 @@ fn encode_sequence<H: HyperVector>(seq: &[u8], alphabet: &Alphabet<H>, n: usize)
 }
 
 fn train<H: HyperVector>(
-    data_plus: &[&[u8]],
-    data_minus: &[&[u8]],
-    alphabet: &Alphabet<H>,
-    n: usize,
+    data_plus: &[H],
+    data_minus: &[H],
+    skip_plus: Option<usize>,
+    skip_minus: Option<usize>,
 ) -> (H, H) {
     let mut acc = <H as HyperVector>::UnitAccumulator::default();
-    for seq in data_plus {
-        acc.add(&encode_sequence(seq, alphabet, n));
+    for (i, h) in data_plus.iter().enumerate() {
+        if skip_plus != Some(i) {
+            acc.add(h);
+        }
     }
     let plus = acc.finalize();
 
     let mut acc = <H as HyperVector>::UnitAccumulator::default();
-    for seq in data_minus {
-        acc.add(&encode_sequence(seq, alphabet, n));
+    for (i, h) in data_minus.iter().enumerate() {
+        if skip_minus != Some(i) {
+            acc.add(h);
+        }
     }
     (plus, acc.finalize())
 }
 
 fn run_loo<H: HyperVector>(alphabet: &Alphabet<H>, n: usize) -> (usize, usize) {
+    let plus_encoded: Vec<H> = DATA_PLUS
+        .iter()
+        .map(|seq| encode_sequence(seq, alphabet, n))
+        .collect();
+    let minus_encoded: Vec<H> = DATA_MINUS
+        .iter()
+        .map(|seq| encode_sequence(seq, alphabet, n))
+        .collect();
+
     let mut correct = 0;
     let mut total = 0;
 
     // PLUS samples
     for i in 0..DATA_PLUS.len() {
-        let train_plus: Vec<_> = DATA_PLUS
-            .iter()
-            .enumerate()
-            .filter(|(j, _)| *j != i)
-            .map(|(_, s)| *s)
-            .collect();
+        let (plus_hv, minus_hv) = train(&plus_encoded, &minus_encoded, Some(i), None);
 
-        let (plus_hv, minus_hv) = train(&train_plus, &DATA_MINUS, &alphabet, n);
-
-        let h = encode_sequence(DATA_PLUS[i], &alphabet, n);
-
+        let h = &plus_encoded[i];
         if h.distance(&plus_hv) < h.distance(&minus_hv) {
             correct += 1;
         }
@@ -213,17 +218,9 @@ fn run_loo<H: HyperVector>(alphabet: &Alphabet<H>, n: usize) -> (usize, usize) {
 
     // MINUS samples
     for i in 0..DATA_MINUS.len() {
-        let train_minus: Vec<_> = DATA_MINUS
-            .iter()
-            .enumerate()
-            .filter(|(j, _)| *j != i)
-            .map(|(_, s)| *s)
-            .collect();
+        let (plus_hv, minus_hv) = train(&plus_encoded, &minus_encoded, None, Some(i));
 
-        let (plus_hv, minus_hv) = train(&DATA_PLUS, &train_minus, &alphabet, n);
-
-        let h = encode_sequence(DATA_MINUS[i], &alphabet, n);
-
+        let h = &minus_encoded[i];
         if h.distance(&plus_hv) > h.distance(&minus_hv) {
             correct += 1;
         }
