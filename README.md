@@ -16,7 +16,7 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 
 ## Examples
 
-Examples of problems that can be solved with hypervectors:
+Example problems solved with hypervectors:
 
 1. Kanerva's Mexican Dollar [1] inferencing example - run it with:
   ```
@@ -26,9 +26,10 @@ Examples of problems that can be solved with hypervectors:
 3. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
 4. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
 5. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
-6. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
-7. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
-8. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
+6. [Molecular Biology (Promoter Gene Sequences)](READMEpromoter.md).
+7. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
+8. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
+9. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
 
 
 ## References
