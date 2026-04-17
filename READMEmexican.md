@@ -11,21 +11,28 @@ Using hypervector algebra, the system infers that the answer is Mexican peso (mp
 
 We encode relationships like:
 
-USA → (name, capital, currency)
-Mexico → (name, capital, currency)
+```
+    USA → (name, capital, currency)
+    Mexico → (name, capital, currency)
+```
 
 These are stored as bundled hypervectors:
 
-USA     = name ⊗ usa + capital ⊗ wdc + currency ⊗ usd
-Mexico  = name ⊗ mex + capital ⊗ cdmx + currency ⊗ mpe
+```
+    USA     = name ⊗ usa + capital ⊗ wdc + currency ⊗ usd
+    Mexico  = name ⊗ mex + capital ⊗ cdmx + currency ⊗ mpe
+```
 
 We then compute a transformation:
 
-T = Mexico ⊗ USA⁻¹
+```
+    T = Mexico ⊗ USA⁻¹
+```
 
 and apply it to usd:
-
-T ⊗ usd ≈ mpe
+```
+    T ⊗ usd ≈ mpe
+```
 
 Finally, we use cleanup (nearest neighbor search) to recover the closest known symbol.
 
