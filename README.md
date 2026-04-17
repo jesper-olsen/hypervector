@@ -20,21 +20,15 @@ Example problems solved with hypervectors:
 
 Conceptual:
 
-*. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
-*. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
-
-Benchmark:
-
-*. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
-
-ML Case Studies:
-
-*. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
-*. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
-*. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
-*. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
-*. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
-*. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
+1. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
+2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
+3. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
+4. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
+5. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
+6. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
+7. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
+8. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
+9. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
 
 
 ## References
