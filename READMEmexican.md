@@ -86,6 +86,7 @@ Nearest HDV is: mpe
 * Different representations (binary, bipolar, complex, etc.) yield the same result.
 * Dimensionality affects robustness but not the underlying logic.
 
+
 ## References
 
 1. ["What We Mean When We Say 'What’s the Dollar of Mexico?'" – Pentti Kanerva, 2010](https://aaai.org/papers/02243-2243-what-we-mean-when-we-say-whats-the-dollar-of-mexico-prototypes-and-mapping-in-concept-space/)  
