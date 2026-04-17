@@ -18,18 +18,23 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 
 Example problems solved with hypervectors:
 
-1. Kanerva's Mexican Dollar [1] inferencing example - run it with:
-  ```
-  cargo run --example mexican
-  ```
-2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
-3. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
-4. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
-5. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
-6. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
-7. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
-8. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
-9. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
+Conceptual:
+
+*. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
+*. Plate's [inferencing example](READMEplate.md) used in his HRR paper [5].
+
+Benchmark:
+
+*. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
+
+ML Case Studies:
+
+*. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
+*. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
+*. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
+*. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
+*. [Text language identification](READMElanguage_id.md) on a 22 language corpus [2].
+*. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
 
 
 ## References
