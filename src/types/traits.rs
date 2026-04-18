@@ -30,8 +30,10 @@ pub trait HyperVector: Sized + Clone {
     fn blend(&self, other: &Self, indices: &[usize]) -> Self;
 
     fn distance(&self, other: &Self) -> f32; // 0..1
+
     fn similarity(&self, other: &Self) -> f32 {
-        1.0 - self.distance(other)
+        // Maps [0, 1] distance to [1, -1] similarity
+        1.0 - (2.0 * self.distance(other))
     }
 
     fn bind(&self, other: &Self) -> Self;
