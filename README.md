@@ -25,7 +25,7 @@ Runnable example problems (`cargo run --example name`):
 5. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
 6. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
 7. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
-7. [Iris](READMEiris.md).
+7. [Iris](READMEiris.md): the classic ML dataset (flowers). 
 8. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
 9. [MNIST image classification](https://github.com/jesper-olsen/engram). Note this example is in its own repo.
 
