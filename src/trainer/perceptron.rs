@@ -31,7 +31,7 @@ where
     L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
-    pub fn new(samples: &'a [T], labels: &'a [L], rng: R) -> Self {
+    pub fn new(samples: &'a [T], labels: &'a [L], exclude: Option<usize>, rng: R) -> Self {
         assert_eq!(samples.len(), labels.len());
 
         let mut accumulators: [T::Accumulator; N] = core::array::from_fn(|_| T::Accumulator::new());
@@ -41,7 +41,8 @@ where
         }
 
         let prototypes: [T; N] = core::array::from_fn(|i| accumulators[i].finalize());
-        let indices = (0..samples.len()).collect();
+        //let indices = (0..samples.len()).collect();
+        let indices = (0..samples.len()).filter(|i| Some(*i) != exclude).collect();
 
         Self {
             accumulators,

@@ -58,7 +58,13 @@ where
     L: Into<usize> + Copy + Send + Sync,
     R: Rng,
 {
-    pub fn new(hvs: &'a [T], labels: &'a [L], variant: PaVariant, rng: R) -> Self {
+    pub fn new(
+        hvs: &'a [T],
+        labels: &'a [L],
+        exclude: Option<usize>,
+        variant: PaVariant,
+        rng: R,
+    ) -> Self {
         let n = hvs.len();
         assert_eq!(n, labels.len());
 
@@ -69,13 +75,14 @@ where
         }
 
         let prototypes: [T; N] = core::array::from_fn(|i| accumulators[i].finalize());
+        let indices = (0..hvs.len()).filter(|i| Some(*i) != exclude).collect();
 
         Self {
             accumulators,
             prototypes,
             samples: hvs,
             labels,
-            indices: (0..n).collect(),
+            indices,
             rng,
             variant,
         }

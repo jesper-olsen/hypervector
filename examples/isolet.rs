@@ -129,6 +129,7 @@ fn run<T: HyperVector + Sync + Send>(
             let trainer = PerceptronTrainer::<T, Label, _, NUM_CLASSES>::new(
                 &train_hvs,
                 &data.train_labels,
+                None,
                 &mut *rng,
             );
             train(trainer, epochs).classify_all(&test_hvs)
@@ -137,6 +138,7 @@ fn run<T: HyperVector + Sync + Send>(
             let trainer = PaTrainer::<T, Label, _, NUM_CLASSES>::new(
                 &train_hvs,
                 &data.train_labels,
+                None,
                 PaVariant::Pa,
                 &mut *rng,
             );
@@ -146,6 +148,7 @@ fn run<T: HyperVector + Sync + Send>(
             let trainer = PaTrainer::<T, Label, _, NUM_CLASSES>::new(
                 &train_hvs,
                 &data.train_labels,
+                None,
                 PaVariant::PaI { c: 0.1 },
                 rng,
             );
@@ -155,6 +158,7 @@ fn run<T: HyperVector + Sync + Send>(
             let trainer = PaTrainer::<T, Label, _, NUM_CLASSES>::new(
                 &train_hvs,
                 &data.train_labels,
+                None,
                 PaVariant::PaII { c: 1.0 },
                 rng,
             );
@@ -164,6 +168,7 @@ fn run<T: HyperVector + Sync + Send>(
             let trainer = PerceptronMultiTrainer::<T, _>::new(
                 &train_hvs,
                 &data.train_labels,
+                None,
                 NUM_CLASSES,
                 k,
                 rng,
@@ -174,6 +179,7 @@ fn run<T: HyperVector + Sync + Send>(
             let trainer = LvqTrainer::<T, _>::new(
                 &train_hvs,
                 &data.train_labels,
+                None,
                 NUM_CLASSES,
                 k,
                 rng,

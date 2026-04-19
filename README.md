@@ -21,12 +21,13 @@ Runnable example problems (`cargo run --example name`):
 1. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
 2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [4].
 3. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
-4. [Activity recognition (UCI HAR)](READMEhar.md) - walking, standing, sitting etc...
+4. [Activity recognition (UCI HAR)](READMEhar.md): walking, standing, sitting etc...
 5. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
 6. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
 7. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
-8. [Text language identification](READMElanguage_id.md) - English, French, ... 22 languages.
-9. [MNIST image classification](https://github.com/jesper-olsen/engram) - note this example is in its own repo.
+7. [Iris](READMEiris.md).
+8. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
+9. [MNIST image classification](https://github.com/jesper-olsen/engram). Note this example is in its own repo.
 
 
 ## References

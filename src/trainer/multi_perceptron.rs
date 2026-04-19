@@ -33,6 +33,7 @@ where
     pub fn new<L>(
         samples: &'a [T],
         class_labels: &'a [L],
+        exclude: Option<usize>,
         n_classes: usize,
         proto_per_class: usize,
         mut rng: R,
@@ -72,7 +73,8 @@ where
             proto_labels.push(proto_label);
         }
 
-        let indices = (0..samples.len()).collect();
+        //let indices = (0..samples.len()).collect();
+        let indices = (0..samples.len()).filter(|i| Some(*i) != exclude).collect();
         Self {
             accumulators,
             prototypes,
