@@ -2,6 +2,10 @@ use crate::types::traits::{Accumulator, HyperVector};
 use rand::Rng;
 use rand::seq::SliceRandom;
 
+// ── ScalarEncoder ───────────────────────────────────────────────────────────────────
+//
+//
+
 pub struct ScalarEncoder<H: HyperVector> {
     pub min: f32,
     pub max: f32,
@@ -38,9 +42,11 @@ impl<H: HyperVector> ScalarEncoder<H> {
     }
 }
 
-// Simpler than TabularEncoder
+// ── BundleEncoder ───────────────────────────────────────────────────────────────────
+//
 // Weights each raw basis vector by the feature value directly
 // Good for pre-normalized continuous features like HAR's [-1, 1] range
+
 pub struct BundleEncoder<T: HyperVector, const N: usize> {
     base_vectors: Vec<T>,
 }
@@ -61,6 +67,9 @@ impl<T: HyperVector, const N: usize> BundleEncoder<T, N> {
         acc.finalize()
     }
 }
+
+// ── TabularEncoder ───────────────────────────────────────────────────────────────────
+//
 
 pub struct TabularEncoder<H: HyperVector> {
     // Vectors indexed by the column position in the CSV
