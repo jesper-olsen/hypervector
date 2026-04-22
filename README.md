@@ -26,8 +26,9 @@ Runnable example problems (`cargo run --example name`):
  6. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
  7. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
  8. [Iris](READMEiris.md): the classic ML dataset (flowers). 
- 9. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
-10. [MNIST image classification](https://github.com/jesper-olsen/engram). Note this example is in its own repo.
+ 9. [Adult](READMEadult.md): the classic Adult dataset (Census Income). 
+10. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
+11. [MNIST image classification](https://github.com/jesper-olsen/engram). Note this example is in its own repo.
 
 
 ## References
