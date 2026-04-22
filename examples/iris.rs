@@ -2,13 +2,9 @@ use rand::Rng;
 
 use hypervector::encoding::TabularEncoder;
 use hypervector::hdv;
-use hypervector::trainer::{
-    Classifier,
-    Trainer,
-    multi_perceptron::PerceptronMultiTrainer,
-};
-use hypervector::types::traits::HyperVector;
+use hypervector::trainer::{Classifier, Trainer, multi_perceptron::PerceptronMultiTrainer};
 use hypervector::types::binary::Binary;
+use hypervector::types::traits::HyperVector;
 use mersenne_twister_rs::MersenneTwister64;
 
 // Iris dataset - 3 species: SETOSA, VERSICOLOR, VIRGINICA

@@ -7,7 +7,7 @@ pub mod trainer;
 pub mod types;
 
 // Re-exports
-pub use types::traits::{Accumulator, HyperVector};
+pub use types::traits::{Accumulator, HyperVector, UnitAccumulator};
 
 pub fn save_hypervectors_to_csv<H: HyperVector>(
     filename: &str,

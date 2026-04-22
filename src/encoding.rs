@@ -109,6 +109,25 @@ impl<H: HyperVector> TabularEncoder<H> {
     }
 }
 
+// ── CategoricalEncoder ────────────────────────────────────────────────────────
+//
+
+pub struct CategoricalEncoder<H: HyperVector> {
+    values: Vec<H>, // indexed by enum as usize
+}
+
+impl<H: HyperVector> CategoricalEncoder<H> {
+    pub fn new(size: usize, rng: &mut impl Rng) -> Self {
+        let values = (0..size).map(|_| H::random(rng)).collect();
+        Self { values }
+    }
+
+    #[inline]
+    pub fn encode(&self, idx: usize) -> &H {
+        &self.values[idx]
+    }
+}
+
 #[cfg(test)]
 mod encoding_tests {
     use super::*;
