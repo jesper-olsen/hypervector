@@ -13,7 +13,7 @@
 use clap::Parser;
 use hypervector::hdv;
 use hypervector::types::binary::Binary;
-use hypervector::types::traits::{HyperVector, UnitAccumulator};
+use hypervector::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
@@ -90,12 +90,14 @@ fn load_titles(data: &Path) -> HashMap<MovieId, String> {
 
 // ── HDC helpers ──────────────────────────────────────────────────────────────
 
-/// Collaborative item encoding:
-///   1. Give each user a random seed HDV.
-///   2. Each movie's HDV = bundle of the seed HDVs of users who liked it.
+/// Iterated collaborative encoding:
 ///
-/// Movies with no likes in `ratings` fall back to a random HDV so the map
-/// is complete over all `movie_ids`.
+///   Step 1 — Random seed HDV per movie.
+///   Step 2 — User HDV = bundle of seed HDVs of movies the user liked.
+///             (captures each user's taste as a point in movie-space)
+///   Step 3 — Movie HDV = weighted bundle of user HDVs of users who liked it,
+///             weight = 1 / (movies liked by that user).
+///             Normalising by activity prevents prolific raters from dominating.
 fn build_item_hdvs<H, R>(
     ratings: &[Rating],
     movie_ids: &[MovieId],
@@ -106,30 +108,41 @@ where
     H: HyperVector,
     R: Rng + ?Sized,
 {
-    // Step 1: random HDV per user
-    let user_ids: Vec<UserId> = {
-        let s: HashSet<UserId> = ratings.iter().map(|r| r.user).collect();
-        s.into_iter().collect()
-    };
-    let user_hdvs: HashMap<UserId, H> = user_ids.iter().map(|&id| (id, H::random(rng))).collect();
+    // ── Step 1: random seed HDV per movie ───────────────────────────────────
+    let seed_hdvs: HashMap<MovieId, H> = movie_ids.iter().map(|&id| (id, H::random(rng))).collect();
 
-    // Step 2: accumulate liked-user HDVs per movie
-    let mut accumulators: HashMap<MovieId, H::UnitAccumulator> = HashMap::new();
+    // ── Step 2: user HDV = bundle of seed HDVs of movies they liked ─────────
+    let mut user_accs: HashMap<UserId, H::UnitAccumulator> = HashMap::new();
     for r in ratings {
-        if r.score >= threshold
-            && let Some(u_hdv) = user_hdvs.get(&r.user)
-        {
-            accumulators.entry(r.movie).or_default().add(u_hdv);
+        if r.score >= threshold {
+            if let Some(m_hdv) = seed_hdvs.get(&r.movie) {
+                user_accs.entry(r.user).or_default().add(m_hdv);
+            }
+        }
+    }
+    let user_hdvs: HashMap<UserId, H> = user_accs
+        .iter_mut()
+        .map(|(&id, acc)| (id, acc.finalize()))
+        .collect();
+
+    // ── Step 3: movie HDV = weighted bundle of user HDVs ────────────────────
+    let mut movie_accs: HashMap<MovieId, H::Accumulator> = HashMap::new();
+    for r in ratings {
+        if r.score >= threshold {
+            if let Some(u_hdv) = user_hdvs.get(&r.user) {
+                let weight = 1.0 / user_accs[&r.user].count().max(1) as f64;
+                movie_accs.entry(r.movie).or_default().add(u_hdv, weight);
+            }
         }
     }
 
-    // Step 3: finalise; movies with zero likes get a random fallback
+    // Movies with zero likes (cold items) fall back to their seed HDV
     movie_ids
         .iter()
         .map(|&id| {
-            let hdv = match accumulators.remove(&id) {
+            let hdv = match movie_accs.remove(&id) {
                 Some(mut acc) => acc.finalize(),
-                None => H::random(rng),
+                None => seed_hdvs[&id].clone(),
             };
             (id, hdv)
         })
@@ -137,20 +150,22 @@ where
 }
 
 /// Build a user profile by bundling the HDVs of all movies the user liked.
-fn build_profile<H: HyperVector>(
+fn build_profile<H>(
     user: UserId,
     ratings: &[Rating],
     item_hdvs: &HashMap<MovieId, H>,
     threshold: u8,
-) -> Option<H> {
-    let mut acc = H::UnitAccumulator::default();
+) -> Option<H>
+where
+    H: HyperVector,
+{
+    let mut acc = <H as HyperVector>::UnitAccumulator::default();
 
     for r in ratings {
-        if r.user == user
-            && r.score >= threshold
-            && let Some(hdv) = item_hdvs.get(&r.movie)
-        {
-            acc.add(hdv);
+        if r.user == user && r.score >= threshold {
+            if let Some(hdv) = item_hdvs.get(&r.movie) {
+                acc.add(hdv);
+            }
         }
     }
 
@@ -163,11 +178,14 @@ fn build_profile<H: HyperVector>(
 
 /// Rank movies by similarity to a profile (lower distance = better match).
 /// Items in `exclude` (already seen by the user) are omitted.
-fn rank_movies<H: HyperVector>(
+fn rank_movies<H>(
     profile: &H,
     item_hdvs: &HashMap<MovieId, H>,
     exclude: &HashSet<MovieId>,
-) -> Vec<MovieId> {
+) -> Vec<MovieId>
+where
+    H: HyperVector,
+{
     let mut scored: Vec<(MovieId, f32)> = item_hdvs
         .iter()
         .filter(|(id, _)| !exclude.contains(id))
@@ -260,11 +278,11 @@ fn evaluate<H: HyperVector>(
 
     // ── Output ──────────────────────────────────────────────────────────────
     println!(
-        "Top-{} Hit Rate: {hit_rate:.2}%  ({hit_count}/{total_test_items})",
-        args.topk
+        "Top-{k} Hit Rate: {hit_rate:.2}%  ({hit_count}/{total_test_items})",
+        k = args.topk
     );
 
-    println!("Precision@{}: {precision_at_k:.4}", args.topk);
+    println!("Precision@{k}: {precision_at_k:.4}", k = args.topk,);
 
     if skipped > 0 {
         println!("  ({skipped} skipped: user had no liked training movies)");
@@ -298,7 +316,7 @@ fn demo_user<H: HyperVector>(
     let ranked = rank_movies(&profile, item_hdvs, &seen);
     for (rank, &movie_id) in ranked.iter().take(args.topk).enumerate() {
         let title = titles.get(&movie_id).map(|s| s.as_str()).unwrap_or("?");
-        println!("  #{rnk:2}  movie {movie_id:4}  {title}", rnk = rank + 1);
+        println!("  #{:2}  movie {:4}  {title}", rank + 1, movie_id);
     }
 }
 
