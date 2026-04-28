@@ -316,7 +316,7 @@ fn demo_user<H: HyperVector>(
     let ranked = rank_movies(&profile, item_hdvs, &seen);
     for (rank, &movie_id) in ranked.iter().take(args.topk).enumerate() {
         let title = titles.get(&movie_id).map(|s| s.as_str()).unwrap_or("?");
-        println!("  #{:2}  movie {:4}  {title}", rank + 1, movie_id);
+        println!("  #{:2}  movie {movie_id:4}  {title}", rank + 1);
     }
 }
 
