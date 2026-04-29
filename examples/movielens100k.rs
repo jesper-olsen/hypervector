@@ -88,6 +88,44 @@ fn load_titles(data: &Path) -> HashMap<MovieId, String> {
         .collect()
 }
 
+// ── Evaluation helpers ────────────────────────────────────────────────────────
+
+/// Pre-computed per-user sets needed by both evaluators.
+struct EvalSets {
+    /// Movies each user rated in the training set (seen, to be excluded from recs).
+    user_train_movies: HashMap<UserId, HashSet<MovieId>>,
+    /// Movies each user liked (score >= threshold) in the test set (ground truth).
+    test_by_user: HashMap<UserId, HashSet<MovieId>>,
+}
+
+impl EvalSets {
+    fn build(train: &[Rating], test: &[Rating], threshold: u8) -> Self {
+        let mut user_train_movies: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
+        for r in train {
+            user_train_movies.entry(r.user).or_default().insert(r.movie);
+        }
+        let mut test_by_user: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
+        for r in test {
+            if r.score >= threshold {
+                test_by_user.entry(r.user).or_default().insert(r.movie);
+            }
+        }
+        Self {
+            user_train_movies,
+            test_by_user,
+        }
+    }
+}
+
+fn print_metrics(label: &str, topk: usize, hits: usize, users: usize, precision: f64, recall: f64) {
+    let hit_rate = 100.0 * hits as f64 / users as f64;
+    println!("{label}");
+    println!("Top-{topk} Hit Rate: {hit_rate:.2}%  ({hits}/{users})");
+    println!("Precision@{topk}: {precision:.4}");
+    println!("Recall@{topk}: {recall:.4}");
+    println!();
+}
+
 // ── HDC helpers ──────────────────────────────────────────────────────────────
 
 /// Iterated collaborative encoding:
@@ -196,13 +234,13 @@ where
     scored.into_iter().map(|(id, _)| id).collect()
 }
 
-/// Rank movies by raw popularity (number of liked ratings in training data).
-/// Items in `exclude` are omitted.
-fn rank_movies_by_popularity(
+// ── Popularity baseline ───────────────────────────────────────────────────────
+
+/// Pre-sort all movies by training popularity once, then per-user we only filter.
+fn build_popularity_ranking(
     train: &[Rating],
     threshold: u8,
     all_movie_ids: &[MovieId],
-    exclude: &HashSet<MovieId>,
 ) -> Vec<MovieId> {
     let mut counts: HashMap<MovieId, usize> = HashMap::new();
     for r in train {
@@ -210,62 +248,45 @@ fn rank_movies_by_popularity(
             *counts.entry(r.movie).or_default() += 1;
         }
     }
-    let mut scored: Vec<(MovieId, usize)> = all_movie_ids
-        .iter()
-        .filter(|id| !exclude.contains(id))
-        .map(|&id| (id, counts.get(&id).copied().unwrap_or(0)))
-        .collect();
-    scored.sort_by(|a, b| b.1.cmp(&a.1));
-    scored.into_iter().map(|(id, _)| id).collect()
+    let mut ranking = all_movie_ids.to_vec();
+    ranking.sort_by(|a, b| counts.get(b).unwrap_or(&0).cmp(counts.get(a).unwrap_or(&0)));
+    ranking
 }
 
-// ── Evaluation ───────────────────────────────────────────────────────────────
+fn evaluate_pop(sets: &EvalSets, train: &[Rating], all_movie_ids: &[MovieId], args: &Args) {
+    // Compute global popularity ranking once — O(movies log movies).
+    // Per-user we only filter out seen items from this pre-sorted list.
+    let global_ranking = build_popularity_ranking(train, args.threshold, all_movie_ids);
 
-// Eval popular recommender: unseen movies ranked by training popularity
-fn evaluate_pop(train: &[Rating], test: &[Rating], all_movie_ids: &[MovieId], args: &Args) {
-    // ── Build user → seen movies (from train) ───────────────────────────────
-    let mut user_train_movies: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
-    for r in train {
-        user_train_movies.entry(r.user).or_default().insert(r.movie);
-    }
-
-    // ── Build user → liked test items ───────────────────────────────────────
-    let mut test_by_user: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
-    for r in test {
-        if r.score >= args.threshold {
-            test_by_user.entry(r.user).or_default().insert(r.movie);
-        }
-    }
-
-    // ── Metrics ─────────────────────────────────────────────────────────────
-    let mut precision_sum = 0.0; // for Precision@K (macro average)
-    let mut recall_sum = 0.0; // for Recall@K (macro average)
+    let mut precision_sum = 0.0f64;
+    let mut recall_sum = 0.0f64;
     let mut user_count = 0usize;
     let mut users_with_hits = 0usize;
 
-    // ── Per-user evaluation ─────────────────────────────────────────────────
-    for (&user, relevant_items) in &test_by_user {
-        // Movies already seen in training
-        let seen = user_train_movies.get(&user).cloned().unwrap_or_default();
+    for (user, relevant_items) in &sets.test_by_user {
+        let seen = sets
+            .user_train_movies
+            .get(user)
+            .cloned()
+            .unwrap_or_default();
+
+        let topk: Vec<MovieId> = global_ranking
+            .iter()
+            .filter(|id| !seen.contains(id))
+            .take(args.topk)
+            .cloned()
+            .collect();
+
+        let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
+        precision_sum += hits as f64 / args.topk as f64;
+        recall_sum += hits as f64 / relevant_items.len() as f64;
         user_count += 1;
-        let ranked = rank_movies_by_popularity(train, args.threshold, all_movie_ids, &seen);
-        let topk: Vec<MovieId> = ranked.iter().take(args.topk).cloned().collect();
-        let hits_in_topk = topk.iter().filter(|id| relevant_items.contains(id)).count();
-        precision_sum += hits_in_topk as f64 / args.topk as f64;
-        recall_sum += hits_in_topk as f64 / relevant_items.len() as f64;
-        if hits_in_topk > 0 {
+        if hits > 0 {
             users_with_hits += 1;
         }
     }
 
-    // ── Final metrics ───────────────────────────────────────────────────────
-    let hit_rate = if users_with_hits > 0 {
-        100.0 * users_with_hits as f64 / user_count as f64
-    } else {
-        0.0
-    };
-
-    let (precision_at_k, recall_at_k) = if user_count > 0 {
+    let (precision, recall) = if user_count > 0 {
         (
             precision_sum / user_count as f64,
             recall_sum / user_count as f64,
@@ -274,50 +295,37 @@ fn evaluate_pop(train: &[Rating], test: &[Rating], all_movie_ids: &[MovieId], ar
         (0.0, 0.0)
     };
 
-    // ── Output ──────────────────────────────────────────────────────────────
-    println!("Popularity Recommender");
-    println!(
-        "Top-{k} Hit Rate: {hit_rate:.2}%  ({users_with_hits}/{user_count})",
-        k = args.topk
+    print_metrics(
+        "Popularity Recommender",
+        args.topk,
+        users_with_hits,
+        user_count,
+        precision,
+        recall,
     );
-
-    println!("Precision@{k}: {precision_at_k:.4}", k = args.topk,);
-    println!("Recall@{k}: {recall_at_k:.4}", k = args.topk,);
-    println!();
 }
 
+// ── HDC Evaluation ────────────────────────────────────────────────────────────
+//
+// Metrics:
+//   Hit Rate:    What percentage of users saw at least one movie they liked?
+//   Recall@K:    Out of everything the user liked, what fraction did we find?
+//   Precision@K: Out of K slots, how many were actually useful?
+
 fn evaluate<H: HyperVector>(
+    sets: &EvalSets,
     train: &[Rating],
-    test: &[Rating],
     item_hdvs: &HashMap<MovieId, H>,
     args: &Args,
 ) {
-    // ── Build user → seen movies (from train) ───────────────────────────────
-    let mut user_train_movies: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
-    for r in train {
-        user_train_movies.entry(r.user).or_default().insert(r.movie);
-    }
-
-    // ── Build user → liked test items ───────────────────────────────────────
-    let mut test_by_user: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
-    for r in test {
-        if r.score >= args.threshold {
-            test_by_user.entry(r.user).or_default().insert(r.movie);
-        }
-    }
-
-    // ── Metrics ─────────────────────────────────────────────────────────────
-    let mut precision_sum = 0.0; // for Precision@K (macro average)
-    let mut recall_sum = 0.0; // for Recall@K (macro average)
+    let mut precision_sum = 0.0f64;
+    let mut recall_sum = 0.0f64;
     let mut user_count = 0usize;
     let mut users_with_hits = 0usize;
-
     let mut skipped = 0usize;
 
-    // ── Per-user evaluation ─────────────────────────────────────────────────
-    for (&user, relevant_items) in &test_by_user {
-        // Build profile
-        let profile = match build_profile(user, train, item_hdvs, args.threshold) {
+    for (user, relevant_items) in &sets.test_by_user {
+        let profile = match build_profile(*user, train, item_hdvs, args.threshold) {
             Some(p) => p,
             None => {
                 skipped += relevant_items.len();
@@ -325,37 +333,25 @@ fn evaluate<H: HyperVector>(
             }
         };
 
-        // Movies already seen in training
-        let seen = user_train_movies.get(&user).cloned().unwrap_or_default();
-
-        // Rank all unseen movies
+        let seen = sets
+            .user_train_movies
+            .get(user)
+            .cloned()
+            .unwrap_or_default();
         let ranked = rank_movies(&profile, item_hdvs, &seen);
 
-        // Take top-K
         let topk: Vec<MovieId> = ranked.iter().take(args.topk).cloned().collect();
+        let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
 
-        // ── Precision@K & Recall@K (User-level) ────────────────────────────────────────
-        let hits_in_topk = topk.iter().filter(|id| relevant_items.contains(id)).count();
-
-        precision_sum += hits_in_topk as f64 / args.topk as f64;
-        recall_sum += hits_in_topk as f64 / relevant_items.len() as f64;
-
+        precision_sum += hits as f64 / args.topk as f64;
+        recall_sum += hits as f64 / relevant_items.len() as f64;
         user_count += 1;
-
-        // ── Hit-rate ─────────────────────────────────────────────────────────
-        if hits_in_topk > 0 {
+        if hits > 0 {
             users_with_hits += 1;
         }
     }
 
-    // ── Final metrics ───────────────────────────────────────────────────────
-    let hit_rate = if users_with_hits > 0 {
-        100.0 * users_with_hits as f64 / user_count as f64
-    } else {
-        0.0
-    };
-
-    let (precision_at_k, recall_at_k) = if user_count > 0 {
+    let (precision, recall) = if user_count > 0 {
         (
             precision_sum / user_count as f64,
             recall_sum / user_count as f64,
@@ -364,19 +360,18 @@ fn evaluate<H: HyperVector>(
         (0.0, 0.0)
     };
 
-    // ── Output ──────────────────────────────────────────────────────────────
-    println!("HyperVector Profile Recommender");
-    println!(
-        "Top-{k} Hit Rate: {hit_rate:.2}%  ({users_with_hits}/{user_count})",
-        k = args.topk
+    print_metrics(
+        "HyperVector Profile Recommender",
+        args.topk,
+        users_with_hits,
+        user_count,
+        precision,
+        recall,
     );
 
-    println!("Precision@{k}: {precision_at_k:.4}", k = args.topk,);
-    println!("Recall@{k}: {recall_at_k:.4}", k = args.topk,);
     if skipped > 0 {
         println!("  ({skipped} skipped: user had no liked training movies)");
     }
-    println!();
 }
 
 // ── Demo ─────────────────────────────────────────────────────────────────────
@@ -388,7 +383,7 @@ fn demo_user<H: HyperVector>(
     titles: &HashMap<MovieId, String>,
     args: &Args,
 ) {
-    println!("\n── Top-{} recommendations for user {user} ──", args.topk);
+    println!("── Top-{} recommendations for user {user} ──", args.topk);
     let profile = match build_profile(user, train, item_hdvs, args.threshold) {
         Some(p) => p,
         None => {
@@ -414,12 +409,12 @@ fn demo_user<H: HyperVector>(
 
 fn run<H: HyperVector>(args: &Args) {
     let split = &args.split;
-    let base = load_ratings(&args.data.join(format!("u{split}.base")));
+    let train = load_ratings(&args.data.join(format!("u{split}.base")));
     let test = load_ratings(&args.data.join(format!("u{split}.test")));
     let titles = load_titles(&args.data);
 
     let movie_ids: Vec<MovieId> = {
-        let ids: HashSet<MovieId> = base.iter().chain(test.iter()).map(|r| r.movie).collect();
+        let ids: HashSet<MovieId> = train.iter().chain(test.iter()).map(|r| r.movie).collect();
         let mut v: Vec<_> = ids.into_iter().collect();
         v.sort_unstable();
         v
@@ -427,19 +422,24 @@ fn run<H: HyperVector>(args: &Args) {
 
     println!(
         "Split u{split}  |  {} train, {} test ratings, {} movies, dim={}",
-        base.len(),
+        train.len(),
         test.len(),
         movie_ids.len(),
         args.dim
     );
+    println!();
+
+    // Build the per-user train/test sets once; both evaluators share them.
+    let sets = EvalSets::build(&train, &test, args.threshold);
+
+    evaluate_pop(&sets, &train, &movie_ids, args);
 
     let mut rng = MersenneTwister64::new(42);
     let item_hdvs: HashMap<MovieId, H> =
-        build_item_hdvs(&base, &movie_ids, args.threshold, &mut rng);
+        build_item_hdvs(&train, &movie_ids, args.threshold, &mut rng);
 
-    evaluate_pop(&base, &test, &movie_ids, args);
-    evaluate(&base, &test, &item_hdvs, args);
-    demo_user(1, &base, &item_hdvs, &titles, args);
+    evaluate(&sets, &train, &item_hdvs, args);
+    demo_user(1, &train, &item_hdvs, &titles, args);
 }
 
 fn main() {
