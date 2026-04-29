@@ -219,11 +219,10 @@ fn evaluate<H: HyperVector>(
     }
 
     // ── Metrics ─────────────────────────────────────────────────────────────
-    let mut hit_count = 0usize; // for hit-rate (recall-style)
-    let mut total_test_items = 0usize;
-
     let mut precision_sum = 0.0; // for Precision@K (macro average)
+    let mut recall_sum = 0.0; // for Recall@K (macro average)
     let mut user_count = 0usize;
+    let mut users_with_hits = 0usize;
 
     let mut skipped = 0usize;
 
@@ -247,41 +246,44 @@ fn evaluate<H: HyperVector>(
         // Take top-K
         let topk: Vec<MovieId> = ranked.iter().take(args.topk).cloned().collect();
 
-        // ── Precision@K ─────────────────────────────────────────────────────
+        // ── Precision@K & Recall@K (User-level) ────────────────────────────────────────
         let hits_in_topk = topk.iter().filter(|id| relevant_items.contains(id)).count();
 
-        let precision = hits_in_topk as f64 / args.topk as f64;
-        precision_sum += precision;
+        precision_sum += hits_in_topk as f64 / args.topk as f64;
+        recall_sum += hits_in_topk as f64 / relevant_items.len() as f64;
+
         user_count += 1;
 
         // ── Hit-rate ─────────────────────────────────────────────────────────
-        hit_count += relevant_items
-            .iter()
-            .filter(|movie| topk.contains(movie))
-            .count();
-        total_test_items += relevant_items.len();
+        if hits_in_topk > 0 {
+            users_with_hits += 1;
+        }
     }
 
     // ── Final metrics ───────────────────────────────────────────────────────
-    let hit_rate = if total_test_items > 0 {
-        100.0 * hit_count as f64 / total_test_items as f64
+    let hit_rate = if users_with_hits > 0 {
+        100.0 * users_with_hits as f64 / user_count as f64
     } else {
         0.0
     };
 
-    let precision_at_k = if user_count > 0 {
-        precision_sum / user_count as f64
+    let (precision_at_k, recall_at_k) = if user_count > 0 {
+        (
+            precision_sum / user_count as f64,
+            recall_sum / user_count as f64,
+        )
     } else {
-        0.0
+        (0.0, 0.0)
     };
 
     // ── Output ──────────────────────────────────────────────────────────────
     println!(
-        "Top-{k} Hit Rate: {hit_rate:.2}%  ({hit_count}/{total_test_items})",
+        "Top-{k} Hit Rate: {hit_rate:.2}%  ({users_with_hits}/{user_count})",
         k = args.topk
     );
 
     println!("Precision@{k}: {precision_at_k:.4}", k = args.topk,);
+    println!("Recall@{k}: {recall_at_k:.4}", k = args.topk,);
 
     if skipped > 0 {
         println!("  ({skipped} skipped: user had no liked training movies)");
