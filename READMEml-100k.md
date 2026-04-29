@@ -69,7 +69,7 @@ Recall@10: 0.1744
 
 ## Experiments
 
-Model: Training Popularity 
+Model: Training Popularity (Most popular unseen movies in the training set).
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
