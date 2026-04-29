@@ -254,13 +254,12 @@ fn evaluate<H: HyperVector>(
         precision_sum += precision;
         user_count += 1;
 
-        // ── Hit-rate (your original metric) ─────────────────────────────────
-        for movie in relevant_items {
-            if topk.contains(movie) {
-                hit_count += 1;
-            }
-            total_test_items += 1;
-        }
+        // ── Hit-rate ─────────────────────────────────────────────────────────
+        hit_count += relevant_items
+            .iter()
+            .filter(|movie| topk.contains(movie))
+            .count();
+        total_test_items += relevant_items.len();
     }
 
     // ── Final metrics ───────────────────────────────────────────────────────
