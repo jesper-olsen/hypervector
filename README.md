@@ -27,8 +27,9 @@ Runnable example problems (`cargo run --example name`):
  7. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
  8. [Iris](READMEiris.md): the classic ML dataset (flowers). 
  9. [Adult](READMEadult.md): the classic Adult dataset (Census Income). 
-10. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
-11. [MNIST image classification](https://github.com/jesper-olsen/engram). Note this example is in its own repo.
+10. [MovieLens 100k](READMEml-100k.md): movie recommendation on the MovieLens 100k dataset. 
+11. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
+12. [MNIST image classification](https://github.com/jesper-olsen/engram). Note this example is in its own repo.
 
 
 ## References
