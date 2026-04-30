@@ -152,10 +152,10 @@ where
     // ── Step 2: user HDV = bundle of seed HDVs of movies they liked ─────────
     let mut user_accs: HashMap<UserId, H::UnitAccumulator> = HashMap::new();
     for r in ratings {
-        if r.score >= threshold {
-            if let Some(m_hdv) = seed_hdvs.get(&r.movie) {
-                user_accs.entry(r.user).or_default().add(m_hdv);
-            }
+        if r.score >= threshold
+            && let Some(m_hdv) = seed_hdvs.get(&r.movie)
+        {
+            user_accs.entry(r.user).or_default().add(m_hdv);
         }
     }
     let user_hdvs: HashMap<UserId, H> = user_accs
@@ -166,11 +166,11 @@ where
     // ── Step 3: movie HDV = weighted bundle of user HDVs ────────────────────
     let mut movie_accs: HashMap<MovieId, H::Accumulator> = HashMap::new();
     for r in ratings {
-        if r.score >= threshold {
-            if let Some(u_hdv) = user_hdvs.get(&r.user) {
-                let weight = 1.0 / user_accs[&r.user].count().max(1) as f64;
-                movie_accs.entry(r.movie).or_default().add(u_hdv, weight);
-            }
+        if r.score >= threshold
+            && let Some(u_hdv) = user_hdvs.get(&r.user)
+        {
+            let weight = 1.0 / user_accs[&r.user].count().max(1) as f64;
+            movie_accs.entry(r.movie).or_default().add(u_hdv, weight);
         }
     }
 
@@ -200,10 +200,11 @@ where
     let mut acc = <H as HyperVector>::UnitAccumulator::default();
 
     for r in ratings {
-        if r.user == user && r.score >= threshold {
-            if let Some(hdv) = item_hdvs.get(&r.movie) {
-                acc.add(hdv);
-            }
+        if r.user == user
+            && r.score >= threshold
+            && let Some(hdv) = item_hdvs.get(&r.movie)
+        {
+            acc.add(hdv);
         }
     }
 
