@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 #[derive(Parser, Debug)]
 #[command(about = "MovieLens 100K profile recommendation with HDC")]
 struct Args {
-    /// Path to the ml-100k directory
+    /// Path to the ml-32m directory
     #[arg(long, default_value = "ml-100k")]
     data: PathBuf,
 
@@ -33,17 +33,17 @@ struct Args {
     #[arg(long, default_value_t = 4096)]
     dim: usize,
 
-    /// Minimum rating to treat as "liked" (1-5)
-    #[arg(long, default_value_t = 4)]
+    /// Minimum rating to treat as "liked" (1-10)
+    #[arg(long, default_value_t = 8)]
     threshold: u8,
 
     /// Top-K for hit-rate evaluation
     #[arg(long, default_value_t = 10)]
     topk: usize,
 
-    /// Which split to use (1-5, or 'a' / 'b')
-    #[arg(long, default_value = "1")]
-    split: String,
+    /// Train/test split, e.g. 0.8=> 80% training, 20% test
+    #[arg(long, default_value_t = 0.8)]
+    split: f32,
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -55,32 +55,80 @@ type MovieId = u32;
 struct Rating {
     user: UserId,
     movie: MovieId,
-    score: u8,
+    score: u8, // ml-32m uses floats (0.5 increments) - here mapped to 1-10
 }
 
-fn load_ratings(path: &Path) -> Vec<Rating> {
+#[derive(Debug, Clone)]
+struct RatingWithTs {
+    user: UserId,
+    movie: MovieId,
+    score: u8,
+    timestamp: u64,
+}
+
+/// Load all ratings from ml-32m/ratings.csv, keeping timestamps for splitting.
+fn load_ratings_csv(path: &Path) -> Vec<RatingWithTs> {
     fs::read_to_string(path)
         .unwrap_or_else(|e| panic!("Cannot read {path:?}: {e}"))
         .lines()
+        .skip(1) // skip "userId,movieId,rating,timestamp" header
         .filter(|l| !l.trim().is_empty())
         .map(|line| {
-            let mut it = line.split_whitespace();
-            let user = it.next().unwrap().parse().unwrap();
-            let movie = it.next().unwrap().parse().unwrap();
-            let score = it.next().unwrap().parse().unwrap();
-            Rating { user, movie, score }
+            let mut it = line.split(',');
+            let user: UserId = it.next().unwrap().parse().unwrap();
+            let movie: MovieId = it.next().unwrap().parse().unwrap();
+            let score: f32 = it.next().unwrap().parse().unwrap();
+            let timestamp: u64 = it.next().unwrap().trim().parse().unwrap();
+            let score: u8 = 2 * score as u8;
+            RatingWithTs {
+                user,
+                movie,
+                score,
+                timestamp,
+            }
         })
         .collect()
 }
 
-/// u.item is Latin-1 encoded – read as bytes and lossily convert.
+/// Split by timestamp: the oldest `train_fraction` of interactions become
+/// train, the rest become test.  Using a global percentile keeps the split
+/// deterministic and independent of per-user density.
+fn temporal_split(
+    mut ratings: Vec<RatingWithTs>,
+    train_fraction: f64, // e.g. 0.8
+) -> (Vec<Rating>, Vec<Rating>) {
+    ratings.sort_unstable_by_key(|r| r.timestamp);
+
+    let cutoff = (ratings.len() as f64 * train_fraction).round() as usize;
+    let cutoff_ts = ratings[cutoff.saturating_sub(1)].timestamp;
+
+    let mut train = Vec::new();
+    let mut test = Vec::new();
+
+    for r in ratings {
+        let rating = Rating {
+            user: r.user,
+            movie: r.movie,
+            score: r.score,
+        };
+        if r.timestamp <= cutoff_ts {
+            train.push(rating);
+        } else {
+            test.push(rating);
+        }
+    }
+    (train, test)
+}
+
+/// movies.csv is plain UTF-8; genres are pipe-separated after the title.
 fn load_titles(data: &Path) -> HashMap<MovieId, String> {
-    let bytes = fs::read(data.join("u.item")).unwrap_or_default();
-    // Latin-1: every byte is a valid Unicode code point with the same value.
-    let text: String = bytes.iter().map(|&b| b as char).collect();
+    let text = fs::read_to_string(data.join("movies.csv")).unwrap_or_default();
+
     text.lines()
+        .skip(1) // skip "movieId,title,genres" header
         .filter_map(|line| {
-            let mut it = line.splitn(3, '|');
+            // Split on the *first* two commas only – titles can contain commas.
+            let mut it = line.splitn(3, ',');
             let id: MovieId = it.next()?.parse().ok()?;
             let title = it.next()?.to_owned();
             Some((id, title))
@@ -93,24 +141,27 @@ fn load_titles(data: &Path) -> HashMap<MovieId, String> {
 /// Pre-computed per-user sets needed by both evaluators.
 struct EvalSets {
     /// Movies each user rated in the training set (seen, to be excluded from recs).
-    train: HashMap<UserId, HashSet<MovieId>>,
+    user_train_movies: HashMap<UserId, HashSet<MovieId>>,
     /// Movies each user liked (score >= threshold) in the test set (ground truth).
-    test: HashMap<UserId, HashSet<MovieId>>,
+    test_by_user: HashMap<UserId, HashSet<MovieId>>,
 }
 
 impl EvalSets {
-    fn build(ratings_train: &[Rating], ratings_test: &[Rating], threshold: u8) -> Self {
-        let mut train: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
-        for r in ratings_train {
-            train.entry(r.user).or_default().insert(r.movie);
+    fn build(train: &[Rating], test: &[Rating], threshold: u8) -> Self {
+        let mut user_train_movies: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
+        for r in train {
+            user_train_movies.entry(r.user).or_default().insert(r.movie);
         }
-        let mut test: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
-        for r in ratings_test {
+        let mut test_by_user: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
+        for r in test {
             if r.score >= threshold {
-                test.entry(r.user).or_default().insert(r.movie);
+                test_by_user.entry(r.user).or_default().insert(r.movie);
             }
         }
-        Self { train, test }
+        Self {
+            user_train_movies,
+            test_by_user,
+        }
     }
 }
 
@@ -122,14 +173,13 @@ fn print_metrics(
     precision_sum: f64,
     recall_sum: f64,
 ) {
-    let hit_rate = 100.0 * hits as f64 / users as f64;
-
     let (precision, recall) = if users > 0 {
         (precision_sum / users as f64, recall_sum / users as f64)
     } else {
         (0.0, 0.0)
     };
 
+    let hit_rate = 100.0 * hits as f64 / users as f64;
     println!("{label}");
     println!("Top-{topk} Hit Rate: {hit_rate:.2}%  ({hits}/{users})");
     println!("Precision@{topk}: {precision:.4}");
@@ -139,7 +189,7 @@ fn print_metrics(
 
 // ── HDC helpers ──────────────────────────────────────────────────────────────
 
-/// Collaborative encoding:
+/// Iterated collaborative encoding:
 ///
 ///   Step 1 — Random seed HDV per movie.
 ///   Step 2 — User HDV = bundle of seed HDVs of movies the user liked.
@@ -199,13 +249,16 @@ where
 }
 
 /// Build a user profile by bundling the HDVs of all movies the user liked.
-fn build_profile<H: HyperVector>(
+fn build_profile<H>(
     user: UserId,
     ratings: &[Rating],
     item_hdvs: &HashMap<MovieId, H>,
     threshold: u8,
-) -> Option<H> {
-    let mut acc = H::UnitAccumulator::default();
+) -> Option<H>
+where
+    H: HyperVector,
+{
+    let mut acc = <H as HyperVector>::UnitAccumulator::default();
 
     for r in ratings {
         if r.user == user
@@ -225,11 +278,14 @@ fn build_profile<H: HyperVector>(
 
 /// Rank movies by similarity to a profile (lower distance = better match).
 /// Items in `exclude` (already seen by the user) are omitted.
-fn rank_movies<H: HyperVector>(
+fn rank_movies<H>(
     profile: &H,
     item_hdvs: &HashMap<MovieId, H>,
     exclude: &HashSet<MovieId>,
-) -> Vec<MovieId> {
+) -> Vec<MovieId>
+where
+    H: HyperVector,
+{
     let mut scored: Vec<(MovieId, f32)> = item_hdvs
         .iter()
         .filter(|(id, _)| !exclude.contains(id))
@@ -266,11 +322,15 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], all_movie_ids: &[MovieId], ar
 
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
-    let mut users = 0usize;
+    let mut user_count = 0usize;
     let mut users_with_hits = 0usize;
 
-    for (user, relevant_items) in &sets.test {
-        let seen = sets.train.get(user).cloned().unwrap_or_default();
+    for (user, relevant_items) in &sets.test_by_user {
+        let seen = sets
+            .user_train_movies
+            .get(user)
+            .cloned()
+            .unwrap_or_default();
 
         let topk: Vec<MovieId> = global_ranking
             .iter()
@@ -282,7 +342,7 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], all_movie_ids: &[MovieId], ar
         let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
         precision_sum += hits as f64 / args.topk as f64;
         recall_sum += hits as f64 / relevant_items.len() as f64;
-        users += 1;
+        user_count += 1;
         if hits > 0 {
             users_with_hits += 1;
         }
@@ -292,7 +352,7 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], all_movie_ids: &[MovieId], ar
         "Popularity Recommender",
         args.topk,
         users_with_hits,
-        users,
+        user_count,
         precision_sum,
         recall_sum,
     );
@@ -313,11 +373,11 @@ fn evaluate<H: HyperVector>(
 ) {
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
-    let mut users = 0usize;
+    let mut user_count = 0usize;
     let mut users_with_hits = 0usize;
     let mut skipped = 0usize;
 
-    for (user, relevant_items) in &sets.test {
+    for (user, relevant_items) in &sets.test_by_user {
         let profile = match build_profile(*user, train, item_hdvs, args.threshold) {
             Some(p) => p,
             None => {
@@ -326,7 +386,11 @@ fn evaluate<H: HyperVector>(
             }
         };
 
-        let seen = sets.train.get(user).cloned().unwrap_or_default();
+        let seen = sets
+            .user_train_movies
+            .get(user)
+            .cloned()
+            .unwrap_or_default();
         let ranked = rank_movies(&profile, item_hdvs, &seen);
 
         let topk: Vec<MovieId> = ranked.iter().take(args.topk).cloned().collect();
@@ -334,7 +398,7 @@ fn evaluate<H: HyperVector>(
 
         precision_sum += hits as f64 / args.topk as f64;
         recall_sum += hits as f64 / relevant_items.len() as f64;
-        users += 1;
+        user_count += 1;
         if hits > 0 {
             users_with_hits += 1;
         }
@@ -344,7 +408,7 @@ fn evaluate<H: HyperVector>(
         "HyperVector Profile Recommender",
         args.topk,
         users_with_hits,
-        users,
+        user_count,
         precision_sum,
         recall_sum,
     );
@@ -388,9 +452,8 @@ fn demo_user<H: HyperVector>(
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 fn run<H: HyperVector>(args: &Args) {
-    let split = &args.split;
-    let train = load_ratings(&args.data.join(format!("u{split}.base")));
-    let test = load_ratings(&args.data.join(format!("u{split}.test")));
+    let all = load_ratings_csv(&args.data.join("ratings.csv"));
+    let (train, test) = temporal_split(all, 0.8);
     let titles = load_titles(&args.data);
 
     let movie_ids: Vec<MovieId> = {
@@ -401,7 +464,8 @@ fn run<H: HyperVector>(args: &Args) {
     };
 
     println!(
-        "Split u{split}  |  {} train, {} test ratings, {} movies, dim={}",
+        "Split {}  |  {} train, {} test ratings, {} movies, dim={}",
+        args.split,
         train.len(),
         test.len(),
         movie_ids.len(),
@@ -428,6 +492,7 @@ fn main() {
     hdv!(binary, Bin4096, 4096);
     hdv!(binary, Bin8192, 8192);
     hdv!(binary, Bin16384, 16384);
+    hdv!(binary, Bin32768, 32768);
 
     let args = Args::parse();
 
@@ -437,6 +502,7 @@ fn main() {
         4096 => run::<Bin4096>(&args),
         8192 => run::<Bin8192>(&args),
         16384 => run::<Bin16384>(&args),
+        32768 => run::<Bin32768>(&args),
         d => {
             eprintln!("Unsupported dim {d}. Use one of: 1024 2048 4096 8192");
             std::process::exit(1);
