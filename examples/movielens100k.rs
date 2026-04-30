@@ -66,7 +66,7 @@ fn load_ratings(path: &Path) -> Vec<Rating> {
         .map(|line| {
             let mut it = line.split_whitespace();
             let user = it.next().unwrap().parse().unwrap();
-            let movie = it.next().unwrap().parse().unwrap();
+            let movie = it.next().unwrap().parse::<u32>().unwrap() - 1; // convert 1-based to 0-based
             let score = it.next().unwrap().parse().unwrap();
             Rating { user, movie, score }
         })
@@ -74,16 +74,18 @@ fn load_ratings(path: &Path) -> Vec<Rating> {
 }
 
 /// u.item is Latin-1 encoded – read as bytes and lossily convert.
-fn load_titles(data: &Path) -> HashMap<MovieId, String> {
+fn load_titles(data: &Path) -> Vec<String> {
     let bytes = fs::read(data.join("u.item")).unwrap_or_default();
     // Latin-1: every byte is a valid Unicode code point with the same value.
     let text: String = bytes.iter().map(|&b| b as char).collect();
     text.lines()
-        .filter_map(|line| {
+        .enumerate()
+        .map(|(i, line)| {
             let mut it = line.splitn(3, '|');
-            let id: MovieId = it.next()?.parse().ok()?;
-            let title = it.next()?.to_owned();
-            Some((id, title))
+            let id: MovieId = it.next().unwrap().parse().unwrap();
+            let title = it.next().unwrap().to_owned();
+            assert_eq!(id, (i + 1) as u32, "{data:?}/u.item: non-contiguous ID");
+            title
         })
         .collect()
 }
@@ -360,7 +362,7 @@ fn demo_user<H: HyperVector>(
     user: UserId,
     train: &[Rating],
     item_hdvs: &HashMap<MovieId, H>,
-    titles: &HashMap<MovieId, String>,
+    titles: &[String],
     args: &Args,
 ) {
     println!("── Top-{} recommendations for user {user} ──", args.topk);
@@ -380,7 +382,7 @@ fn demo_user<H: HyperVector>(
 
     let ranked = rank_movies(&profile, item_hdvs, &seen);
     for (rank, &movie_id) in ranked.iter().take(args.topk).enumerate() {
-        let title = titles.get(&movie_id).map(|s| s.as_str()).unwrap_or("?");
+        let title = &titles[movie_id as usize];
         println!("  #{:2}  movie {movie_id:4}  {title}", rank + 1);
     }
 }
