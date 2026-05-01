@@ -95,21 +95,27 @@ fn load_titles(data: &Path) -> Vec<String> {
 /// Pre-computed per-user sets needed by both evaluators.
 struct EvalSets {
     /// Movies each user rated in the training set (seen, to be excluded from recs).
-    train: HashMap<UserId, HashSet<MovieId>>,
+    train: Vec<HashSet<MovieId>>,
     /// Movies each user liked (score >= threshold) in the test set (ground truth).
-    test: HashMap<UserId, HashSet<MovieId>>,
+    test: Vec<HashSet<MovieId>>,
 }
 
 impl EvalSets {
-    fn build(ratings_train: &[Rating], ratings_test: &[Rating], threshold: u8) -> Self {
-        let mut train: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
+    fn build(
+        ratings_train: &[Rating],
+        ratings_test: &[Rating],
+        threshold: u8,
+        max_user: UserId,
+    ) -> Self {
+        let mut train: Vec<HashSet<MovieId>> = (0..=max_user).map(|_| HashSet::new()).collect();
+        let mut test: Vec<HashSet<MovieId>> = (0..=max_user).map(|_| HashSet::new()).collect();
+
         for r in ratings_train {
-            train.entry(r.user).or_default().insert(r.movie);
+            train[r.user as usize].insert(r.movie);
         }
-        let mut test: HashMap<UserId, HashSet<MovieId>> = HashMap::new();
         for r in ratings_test {
             if r.score >= threshold {
-                test.entry(r.user).or_default().insert(r.movie);
+                test[r.user as usize].insert(r.movie);
             }
         }
         Self { train, test }
@@ -271,7 +277,11 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], all_movie_ids: &[MovieId], ar
     let mut users = 0usize;
     let mut users_with_hits = 0usize;
 
-    for (user, relevant_items) in &sets.test {
+    for user in 0..sets.test.len() {
+        let relevant_items = &sets.test[user];
+        if relevant_items.is_empty() {
+            continue;
+        }
         let seen = sets.train.get(user).cloned().unwrap_or_default();
 
         let topk: Vec<MovieId> = global_ranking
@@ -319,14 +329,19 @@ fn evaluate<H: HyperVector>(
     let mut users_with_hits = 0usize;
     let mut skipped = 0usize;
 
-    for (user, relevant_items) in &sets.test {
-        let profile = match build_profile(*user, train, item_hdvs, args.threshold) {
-            Some(p) => p,
-            None => {
-                skipped += relevant_items.len();
-                continue;
-            }
-        };
+    for user in 0..sets.test.len() {
+        let relevant_items = &sets.test[user];
+        if relevant_items.is_empty() {
+            continue;
+        }
+        let profile =
+            match build_profile(user.try_into().unwrap(), train, item_hdvs, args.threshold) {
+                Some(p) => p,
+                None => {
+                    skipped += relevant_items.len();
+                    continue;
+                }
+            };
 
         let seen = sets.train.get(user).cloned().unwrap_or_default();
         let ranked = rank_movies(&profile, item_hdvs, &seen);
@@ -412,7 +427,8 @@ fn run<H: HyperVector>(args: &Args) {
     println!();
 
     // Build the per-user train/test sets once; both evaluators share them.
-    let sets = EvalSets::build(&train, &test, args.threshold);
+    let max_user = train.iter().map(|r| r.user).max().unwrap();
+    let sets = EvalSets::build(&train, &test, args.threshold, max_user);
 
     evaluate_pop(&sets, &train, &movie_ids, args);
 
