@@ -326,8 +326,12 @@ fn evaluate<H: HyperVector>(sets: &EvalSets, train: &[Rating], item_hdvs: &[H], 
                 }
             };
 
-        let seen = sets.train.get(user).cloned().unwrap_or_default();
-        let ranked = rank_movies(&profile, item_hdvs, &seen);
+        let Some(seen) = sets.train.get(user) else {
+            // no training data - doesn't happen if profile is calculated...
+            skipped += relevant_items.len();
+            continue;
+        };
+        let ranked = rank_movies(&profile, item_hdvs, seen);
 
         let topk: Vec<MovieId> = ranked.iter().take(args.topk).cloned().collect();
         let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
