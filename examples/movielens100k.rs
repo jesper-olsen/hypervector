@@ -172,19 +172,18 @@ where
     // ── Step 2: user HDV = bundle of seed HDVs of movies they liked ─────────
     let mut user_accs: Vec<H::UnitAccumulator> =
         (0..n_users).map(|_| H::UnitAccumulator::new()).collect();
-    for r in ratings {
-        if r.score >= threshold {
-            user_accs[r.user as usize].add(&seed_hdvs[r.movie as usize]);
-        }
+    for r in ratings.iter().filter(|r| r.score >= threshold) {
+        user_accs[r.user as usize].add(&seed_hdvs[r.movie as usize]);
     }
     let user_hdvs: Vec<H> = user_accs.iter_mut().map(|acc| acc.finalize()).collect();
 
     // ── Step 3: movie HDV = weighted bundle of user HDVs ────────────────────
     let mut movie_accs: Vec<H::Accumulator> =
         (0..n_movies).map(|_| H::Accumulator::new()).collect();
-    for r in ratings {
-        if r.score >= threshold {
-            let weight = 1.0 / user_accs[r.user as usize].count().max(1) as f64;
+    for r in ratings.iter().filter(|r| r.score >= threshold) {
+        let count = user_accs[r.user as usize].count();
+        if count > 0 {
+            let weight = 1.0 / (count as f64).sqrt();
             movie_accs[r.movie as usize].add(&user_hdvs[r.user as usize], weight);
         }
     }

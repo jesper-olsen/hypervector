@@ -50,21 +50,21 @@ Precision@10: 0.0745
 Recall@10: 0.1346
 
 HyperVector Profile Recommender
-Top-10 Hit Rate: 60.60%  (566/934)
-Precision@10: 0.0966
-Recall@10: 0.1744
+Top-10 Hit Rate: 69.38%  (648/934)
+Precision@10: 0.1229
+Recall@10: 0.2185
 
 ── Top-10 recommendations for user 1 ──
-  # 1  movie  655  Stand by Me (1986)
-  # 2  movie  496  It's a Wonderful Life (1946)
-  # 3  movie  367  Clueless (1995)
-  # 4  movie  715  To Die For (1995)
-  # 5  movie  549  Rob Roy (1995)
-  # 6  movie  588  Beauty and the Beast (1991)
-  # 7  movie  518  Miller's Crossing (1990)
-  # 8  movie  693  Casino (1995)
-  # 9  movie  498  African Queen, The (1951)
-  #10  movie  431  Highlander (1986)
+  # 1  movie  654  Stand by Me (1986)
+  # 2  movie  650  Glory (1989)
+  # 3  movie  422  E.T. the Extra-Terrestrial (1982)
+  # 4  movie  495  It's a Wonderful Life (1946)
+  # 5  movie  526  Gandhi (1982)
+  # 6  movie  366  Clueless (1995)
+  # 7  movie  317  Schindler's List (1993)
+  # 8  movie  482  Casablanca (1942)
+  # 9  movie  201  Groundhog Day (1993)
+  #10  movie  356  One Flew Over the Cuckoo's Nest (1975)
 ```
 
 ## Experiments
@@ -85,13 +85,13 @@ Model: HyperVector Profile
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
-|    1  |          83%  |       0.27   |    0.15   |
-|    2  |          80%  |       0.23   |    0.18   |
-|    3  |          75%  |       0.19   |    0.20   |
-|    4  |          71%  |       0.17   |    0.19   |
-|    5  |          72%  |       0.17   |    0.21   |
-|    a  |          61%  |       0.10   |    0.17   |
-|    b  |          62%  |       0.10   |    0.18   |
+|    1  |          86%  |       0.31   |    0.18   |
+|    2  |          84%  |       0.25   |    0.21   |
+|    3  |          77%  |       0.21   |    0.23   |
+|    4  |          75%  |       0.20   |    0.22   |
+|    5  |          75%  |       0.19   |    0.23   |
+|    a  |          69%  |       0.12   |    0.22   |
+|    b  |          69%  |       0.12   |    0.22   |
 
 
 ## References
