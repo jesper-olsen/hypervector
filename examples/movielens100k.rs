@@ -16,7 +16,7 @@ use hypervector::types::binary::Binary;
 use hypervector::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -105,10 +105,10 @@ impl EvalSets {
         ratings_train: &[Rating],
         ratings_test: &[Rating],
         threshold: u8,
-        max_user: UserId,
+        n_users: usize,
     ) -> Self {
-        let mut train: Vec<HashSet<MovieId>> = (0..=max_user).map(|_| HashSet::new()).collect();
-        let mut test: Vec<HashSet<MovieId>> = (0..=max_user).map(|_| HashSet::new()).collect();
+        let mut train: Vec<HashSet<MovieId>> = (0..n_users).map(|_| HashSet::new()).collect();
+        let mut test: Vec<HashSet<MovieId>> = (0..n_users).map(|_| HashSet::new()).collect();
 
         for r in ratings_train {
             train[r.user as usize].insert(r.movie);
@@ -157,51 +157,46 @@ fn print_metrics(
 ///             Normalising by activity prevents prolific raters from dominating.
 fn build_item_hdvs<H, R>(
     ratings: &[Rating],
-    movie_ids: &[MovieId],
+    n_movies: usize,
+    n_users: usize,
     threshold: u8,
     rng: &mut R,
-) -> HashMap<MovieId, H>
+) -> Vec<H>
 where
     H: HyperVector,
     R: Rng + ?Sized,
 {
     // ── Step 1: random seed HDV per movie ───────────────────────────────────
-    let seed_hdvs: HashMap<MovieId, H> = movie_ids.iter().map(|&id| (id, H::random(rng))).collect();
+    let seed_hdvs: Vec<H> = (0..n_movies).map(|_| H::random(rng)).collect();
 
     // ── Step 2: user HDV = bundle of seed HDVs of movies they liked ─────────
-    let mut user_accs: HashMap<UserId, H::UnitAccumulator> = HashMap::new();
+    let mut user_accs: Vec<H::UnitAccumulator> =
+        (0..n_users).map(|_| H::UnitAccumulator::new()).collect();
     for r in ratings {
-        if r.score >= threshold
-            && let Some(m_hdv) = seed_hdvs.get(&r.movie)
-        {
-            user_accs.entry(r.user).or_default().add(m_hdv);
+        if r.score >= threshold {
+            user_accs[r.user as usize].add(&seed_hdvs[r.movie as usize]);
         }
     }
-    let user_hdvs: HashMap<UserId, H> = user_accs
-        .iter_mut()
-        .map(|(&id, acc)| (id, acc.finalize()))
-        .collect();
+    let user_hdvs: Vec<H> = user_accs.iter_mut().map(|acc| acc.finalize()).collect();
 
     // ── Step 3: movie HDV = weighted bundle of user HDVs ────────────────────
-    let mut movie_accs: HashMap<MovieId, H::Accumulator> = HashMap::new();
+    let mut movie_accs: Vec<H::Accumulator> =
+        (0..n_movies).map(|_| H::Accumulator::new()).collect();
     for r in ratings {
-        if r.score >= threshold
-            && let Some(u_hdv) = user_hdvs.get(&r.user)
-        {
-            let weight = 1.0 / user_accs[&r.user].count().max(1) as f64;
-            movie_accs.entry(r.movie).or_default().add(u_hdv, weight);
+        if r.score >= threshold {
+            let weight = 1.0 / user_accs[r.user as usize].count().max(1) as f64;
+            movie_accs[r.movie as usize].add(&user_hdvs[r.user as usize], weight);
         }
     }
 
     // Movies with zero likes (cold items) fall back to their seed HDV
-    movie_ids
-        .iter()
-        .map(|&id| {
-            let hdv = match movie_accs.remove(&id) {
-                Some(mut acc) => acc.finalize(),
-                None => seed_hdvs[&id].clone(),
-            };
-            (id, hdv)
+    (0..n_movies)
+        .map(|id| {
+            if movie_accs[id].count() > 0.0 {
+                movie_accs[id].finalize()
+            } else {
+                seed_hdvs[id].clone()
+            }
         })
         .collect()
 }
@@ -210,17 +205,14 @@ where
 fn build_profile<H: HyperVector>(
     user: UserId,
     ratings: &[Rating],
-    item_hdvs: &HashMap<MovieId, H>,
+    item_hdvs: &[H],
     threshold: u8,
 ) -> Option<H> {
     let mut acc = H::UnitAccumulator::default();
 
     for r in ratings {
-        if r.user == user
-            && r.score >= threshold
-            && let Some(hdv) = item_hdvs.get(&r.movie)
-        {
-            acc.add(hdv);
+        if r.user == user && r.score >= threshold {
+            acc.add(&item_hdvs[r.movie as usize]);
         }
     }
 
@@ -235,13 +227,14 @@ fn build_profile<H: HyperVector>(
 /// Items in `exclude` (already seen by the user) are omitted.
 fn rank_movies<H: HyperVector>(
     profile: &H,
-    item_hdvs: &HashMap<MovieId, H>,
+    item_hdvs: &[H],
     exclude: &HashSet<MovieId>,
 ) -> Vec<MovieId> {
     let mut scored: Vec<(MovieId, f32)> = item_hdvs
         .iter()
-        .filter(|(id, _)| !exclude.contains(id))
-        .map(|(&id, hdv)| (id, profile.distance(hdv)))
+        .enumerate()
+        .filter(|(id, _)| !exclude.contains(&(*id as u32)))
+        .map(|(id, hdv)| (id as MovieId, profile.distance(hdv)))
         .collect();
 
     scored.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
@@ -251,26 +244,22 @@ fn rank_movies<H: HyperVector>(
 // ── Popularity baseline ───────────────────────────────────────────────────────
 
 /// Pre-sort all movies by training popularity once, then per-user we only filter.
-fn build_popularity_ranking(
-    train: &[Rating],
-    threshold: u8,
-    all_movie_ids: &[MovieId],
-) -> Vec<MovieId> {
-    let mut counts: HashMap<MovieId, usize> = HashMap::new();
+fn build_popularity_ranking(train: &[Rating], threshold: u8, n_movies: usize) -> Vec<MovieId> {
+    let mut counts: Vec<usize> = vec![0usize; n_movies];
     for r in train {
         if r.score >= threshold {
-            *counts.entry(r.movie).or_default() += 1;
+            counts[r.movie as usize] += 1
         }
     }
-    let mut ranking = all_movie_ids.to_vec();
-    ranking.sort_by(|a, b| counts.get(b).unwrap_or(&0).cmp(counts.get(a).unwrap_or(&0)));
+    let mut ranking: Vec<MovieId> = (0..n_movies).map(|i| i as MovieId).collect();
+    ranking.sort_by(|a, b| counts[*b as usize].cmp(&counts[*a as usize]));
     ranking
 }
 
-fn evaluate_pop(sets: &EvalSets, train: &[Rating], all_movie_ids: &[MovieId], args: &Args) {
+fn evaluate_pop(sets: &EvalSets, train: &[Rating], n_movies: usize, args: &Args) {
     // Compute global popularity ranking once — O(movies log movies).
     // Per-user we only filter out seen items from this pre-sorted list.
-    let global_ranking = build_popularity_ranking(train, args.threshold, all_movie_ids);
+    let global_ranking = build_popularity_ranking(train, args.threshold, n_movies);
 
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
@@ -317,12 +306,7 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], all_movie_ids: &[MovieId], ar
 //   Recall@K:    Out of everything the user liked, what fraction did we find?
 //   Precision@K: Out of K slots, how many were actually useful?
 
-fn evaluate<H: HyperVector>(
-    sets: &EvalSets,
-    train: &[Rating],
-    item_hdvs: &HashMap<MovieId, H>,
-    args: &Args,
-) {
+fn evaluate<H: HyperVector>(sets: &EvalSets, train: &[Rating], item_hdvs: &[H], args: &Args) {
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
     let mut users = 0usize;
@@ -376,7 +360,7 @@ fn evaluate<H: HyperVector>(
 fn demo_user<H: HyperVector>(
     user: UserId,
     train: &[Rating],
-    item_hdvs: &HashMap<MovieId, H>,
+    item_hdvs: &[H],
     titles: &[String],
     args: &Args,
 ) {
@@ -409,32 +393,25 @@ fn run<H: HyperVector>(args: &Args) {
     let train = load_ratings(&args.data.join(format!("u{split}.base")));
     let test = load_ratings(&args.data.join(format!("u{split}.test")));
     let titles = load_titles(&args.data);
-
-    let movie_ids: Vec<MovieId> = {
-        let ids: HashSet<MovieId> = train.iter().chain(test.iter()).map(|r| r.movie).collect();
-        let mut v: Vec<_> = ids.into_iter().collect();
-        v.sort_unstable();
-        v
-    };
+    let n_movies = titles.len();
 
     println!(
         "Split u{split}  |  {} train, {} test ratings, {} movies, dim={}",
         train.len(),
         test.len(),
-        movie_ids.len(),
+        n_movies,
         args.dim
     );
     println!();
 
     // Build the per-user train/test sets once; both evaluators share them.
-    let max_user = train.iter().map(|r| r.user).max().unwrap();
-    let sets = EvalSets::build(&train, &test, args.threshold, max_user);
+    let n_users = train.iter().map(|r| r.user).max().unwrap() as usize + 1;
+    let sets = EvalSets::build(&train, &test, args.threshold, n_users);
 
-    evaluate_pop(&sets, &train, &movie_ids, args);
+    evaluate_pop(&sets, &train, n_movies, args);
 
     let mut rng = MersenneTwister64::new(42);
-    let item_hdvs: HashMap<MovieId, H> =
-        build_item_hdvs(&train, &movie_ids, args.threshold, &mut rng);
+    let item_hdvs: Vec<H> = build_item_hdvs(&train, n_movies, n_users, args.threshold, &mut rng);
 
     evaluate(&sets, &train, &item_hdvs, args);
     demo_user(1, &train, &item_hdvs, &titles, args);
