@@ -50,21 +50,21 @@ Precision@10: 0.0745
 Recall@10: 0.1346
 
 HyperVector Profile Recommender
-Top-10 Hit Rate: 69.38%  (648/934)
-Precision@10: 0.1229
-Recall@10: 0.2185
+Top-10 Hit Rate: 71.31%  (666/934)
+Precision@10: 0.1267
+Recall@10: 0.2257
 
 ── Top-10 recommendations for user 1 ──
   # 1  movie  654  Stand by Me (1986)
-  # 2  movie  650  Glory (1989)
+  # 2  movie  317  Schindler's List (1993)
   # 3  movie  422  E.T. the Extra-Terrestrial (1982)
-  # 4  movie  495  It's a Wonderful Life (1946)
-  # 5  movie  526  Gandhi (1982)
-  # 6  movie  366  Clueless (1995)
-  # 7  movie  317  Schindler's List (1993)
-  # 8  movie  482  Casablanca (1942)
-  # 9  movie  201  Groundhog Day (1993)
-  #10  movie  356  One Flew Over the Cuckoo's Nest (1975)
+  # 4  movie  426  To Kill a Mockingbird (1962)
+  # 5  movie  495  It's a Wonderful Life (1946)
+  # 6  movie  482  Casablanca (1942)
+  # 7  movie  201  Groundhog Day (1993)
+  # 8  movie  356  One Flew Over the Cuckoo's Nest (1975)
+  # 9  movie  526  Gandhi (1982)
+  #10  movie  650  Glory (1989)
 ```
 
 ## Experiments
@@ -85,12 +85,12 @@ Model: HyperVector Profile
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
-|    1  |          86%  |       0.31   |    0.18   |
-|    2  |          84%  |       0.25   |    0.21   |
-|    3  |          77%  |       0.21   |    0.23   |
-|    4  |          75%  |       0.20   |    0.22   |
-|    5  |          75%  |       0.19   |    0.23   |
-|    a  |          69%  |       0.12   |    0.22   |
+|    1  |          89%  |       0.33   |    0.21   |
+|    2  |          86%  |       0.26   |    0.22   |
+|    3  |          79%  |       0.22   |    0.23   |
+|    4  |          76%  |       0.21   |    0.22   |
+|    5  |          76%  |       0.20   |    0.23   |
+|    a  |          71%  |       0.13   |    0.23   |
 |    b  |          69%  |       0.12   |    0.22   |
 
 

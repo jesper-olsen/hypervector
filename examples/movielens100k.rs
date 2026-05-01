@@ -1,3 +1,9 @@
+use clap::Parser;
+use hypervector::hdv;
+use hypervector::types::binary::Binary;
+use hypervector::types::traits::{Accumulator, HyperVector, UnitAccumulator};
+use mersenne_twister_rs::MersenneTwister64;
+use rand::Rng;
 /// MovieLens 100K – Hyperdimensional Profile Recommendation
 ///
 /// Encoding strategy (collaborative):
@@ -10,12 +16,6 @@
 /// Evaluation: u{split}.base / u{split}.test
 ///   For every liked (rating >= threshold) item in the test set, check whether
 ///   it appears in the user's top-K recommendations built from the base set.
-use clap::Parser;
-use hypervector::hdv;
-use hypervector::types::binary::Binary;
-use hypervector::types::traits::{Accumulator, HyperVector, UnitAccumulator};
-use mersenne_twister_rs::MersenneTwister64;
-use rand::Rng;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -169,11 +169,19 @@ where
     // ── Step 1: random seed HDV per movie ───────────────────────────────────
     let seed_hdvs: Vec<H> = (0..n_movies).map(|_| H::random(rng)).collect();
 
-    // ── Step 2: user HDV = bundle of seed HDVs of movies they liked ─────────
-    let mut user_accs: Vec<H::UnitAccumulator> =
-        (0..n_users).map(|_| H::UnitAccumulator::new()).collect();
+    // Pre-calculate movie popularity (for IDF)
+    let mut movie_popularity = vec![0usize; n_movies];
     for r in ratings.iter().filter(|r| r.score >= threshold) {
-        user_accs[r.user as usize].add(&seed_hdvs[r.movie as usize]);
+        movie_popularity[r.movie as usize] += 1;
+    }
+
+    // ── Step 2: user HDV = bundle of seed HDVs of movies they liked ─────────
+    let mut user_accs: Vec<H::Accumulator> = (0..n_users).map(|_| H::Accumulator::new()).collect();
+    for r in ratings.iter().filter(|r| r.score >= threshold) {
+        let pop = movie_popularity[r.movie as usize];
+        // IDF weight: rare movies get higher weight
+        let idf = 1.0 / (pop as f64).sqrt();
+        user_accs[r.user as usize].add(&seed_hdvs[r.movie as usize], idf);
     }
     let user_hdvs: Vec<H> = user_accs.iter_mut().map(|acc| acc.finalize()).collect();
 
@@ -181,9 +189,9 @@ where
     let mut movie_accs: Vec<H::Accumulator> =
         (0..n_movies).map(|_| H::Accumulator::new()).collect();
     for r in ratings.iter().filter(|r| r.score >= threshold) {
-        let count = user_accs[r.user as usize].count();
-        if count > 0 {
-            let weight = 1.0 / (count as f64).sqrt();
+        let user_signal_strength = user_accs[r.user as usize].count();
+        if user_signal_strength > 0.0 {
+            let weight = 1.0 / (user_signal_strength as f64).sqrt();
             movie_accs[r.movie as usize].add(&user_hdvs[r.user as usize], weight);
         }
     }
@@ -224,7 +232,7 @@ fn build_profile<H: HyperVector>(
 
 /// Rank movies by similarity to a profile (lower distance = better match).
 /// Items in `exclude` (already seen by the user) are omitted.
-fn rank_movies<H: HyperVector>(
+fn rank_movies<H: HyperVector + Sync>(
     profile: &H,
     item_hdvs: &[H],
     exclude: &HashSet<MovieId>,
@@ -305,7 +313,12 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], n_movies: usize, args: &Args)
 //   Recall@K:    Out of everything the user liked, what fraction did we find?
 //   Precision@K: Out of K slots, how many were actually useful?
 
-fn evaluate<H: HyperVector>(sets: &EvalSets, train: &[Rating], item_hdvs: &[H], args: &Args) {
+fn evaluate<H: HyperVector + Sync>(
+    sets: &EvalSets,
+    train: &[Rating],
+    item_hdvs: &[H],
+    args: &Args,
+) {
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
     let mut users = 0usize;
@@ -360,7 +373,7 @@ fn evaluate<H: HyperVector>(sets: &EvalSets, train: &[Rating], item_hdvs: &[H], 
 
 // ── Demo ─────────────────────────────────────────────────────────────────────
 
-fn demo_user<H: HyperVector>(
+fn demo_user<H: HyperVector + Sync>(
     user: UserId,
     train: &[Rating],
     item_hdvs: &[H],
@@ -391,7 +404,7 @@ fn demo_user<H: HyperVector>(
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-fn run<H: HyperVector>(args: &Args) {
+fn run<H: HyperVector + Sync>(args: &Args) {
     let split = &args.split;
     let train = load_ratings(&args.data.join(format!("u{split}.base")));
     let test = load_ratings(&args.data.join(format!("u{split}.test")));
