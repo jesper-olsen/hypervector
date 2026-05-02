@@ -16,7 +16,6 @@ use rand::Rng;
 /// Evaluation: u{split}.base / u{split}.test
 ///   For every liked (rating >= threshold) item in the test set, check whether
 ///   it appears in the user's top-K recommendations built from the base set.
-use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -92,12 +91,44 @@ fn load_titles(data: &Path) -> Vec<String> {
 
 // ── Evaluation helpers ────────────────────────────────────────────────────────
 
+struct BitSet {
+    bits: Vec<u64>,
+}
+
+impl BitSet {
+    fn new(capacity: usize) -> Self {
+        Self {
+            bits: vec![0u64; (capacity + 63) / 64],
+        }
+    }
+
+    fn insert(&mut self, idx: usize) {
+        self.bits[idx / 64] |= 1u64 << (idx % 64);
+    }
+
+    fn contains(&self, idx: usize) -> bool {
+        self.bits[idx / 64] & (1u64 << (idx % 64)) != 0
+    }
+
+    //fn clear(&mut self) {
+    //    self.bits.iter_mut().for_each(|w| *w = 0);
+    //}
+
+    fn cardinality(&self) -> u32 {
+        self.bits.iter().map(|b| b.count_ones()).sum()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.cardinality() == 0
+    }
+}
+
 /// Pre-computed per-user sets needed by both evaluators.
 struct EvalSets {
     /// Movies each user rated in the training set (seen, to be excluded from recs).
-    train: Vec<HashSet<MovieId>>,
+    train: Vec<BitSet>,
     /// Movies each user liked (score >= threshold) in the test set (ground truth).
-    test: Vec<HashSet<MovieId>>,
+    test: Vec<BitSet>,
 }
 
 impl EvalSets {
@@ -106,16 +137,17 @@ impl EvalSets {
         ratings_test: &[Rating],
         threshold: u8,
         n_users: usize,
+        n_movies: usize,
     ) -> Self {
-        let mut train: Vec<HashSet<MovieId>> = (0..n_users).map(|_| HashSet::new()).collect();
-        let mut test: Vec<HashSet<MovieId>> = (0..n_users).map(|_| HashSet::new()).collect();
+        let mut train: Vec<BitSet> = (0..n_users).map(|_| BitSet::new(n_movies)).collect();
+        let mut test: Vec<BitSet> = (0..n_users).map(|_| BitSet::new(n_movies)).collect();
 
         for r in ratings_train {
-            train[r.user as usize].insert(r.movie);
+            train[r.user as usize].insert(r.movie as usize);
         }
         for r in ratings_test {
             if r.score >= threshold {
-                test[r.user as usize].insert(r.movie);
+                test[r.user as usize].insert(r.movie as usize);
             }
         }
         Self { train, test }
@@ -191,7 +223,7 @@ where
     for r in ratings.iter().filter(|r| r.score >= threshold) {
         let user_signal_strength = user_accs[r.user as usize].count();
         if user_signal_strength > 0.0 {
-            let weight = 1.0 / (user_signal_strength as f64).sqrt();
+            let weight = 1.0 / user_signal_strength.sqrt();
             movie_accs[r.movie as usize].add(&user_hdvs[r.user as usize], weight);
         }
     }
@@ -235,12 +267,12 @@ fn build_profile<H: HyperVector>(
 fn rank_movies<H: HyperVector + Sync>(
     profile: &H,
     item_hdvs: &[H],
-    exclude: &HashSet<MovieId>,
+    exclude: &BitSet,
 ) -> Vec<MovieId> {
     let mut scored: Vec<(MovieId, f32)> = item_hdvs
         .iter()
         .enumerate()
-        .filter(|(id, _)| !exclude.contains(&(*id as u32)))
+        .filter(|(id, _)| !exclude.contains(*id))
         .map(|(id, hdv)| (id as MovieId, profile.distance(hdv)))
         .collect();
 
@@ -278,18 +310,21 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], n_movies: usize, args: &Args)
         if relevant_items.is_empty() {
             continue;
         }
-        let seen = sets.train.get(user).cloned().unwrap_or_default();
+        let seen = &sets.train[user];
 
         let topk: Vec<MovieId> = global_ranking
             .iter()
-            .filter(|id| !seen.contains(id))
+            .filter(|id| !seen.contains(**id as usize))
             .take(args.topk)
             .cloned()
             .collect();
 
-        let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
+        let hits = topk
+            .iter()
+            .filter(|id| relevant_items.contains(**id as usize))
+            .count();
         precision_sum += hits as f64 / args.topk as f64;
-        recall_sum += hits as f64 / relevant_items.len() as f64;
+        recall_sum += hits as f64 / relevant_items.cardinality() as f64;
         users += 1;
         if hits > 0 {
             users_with_hits += 1;
@@ -334,23 +369,26 @@ fn evaluate<H: HyperVector + Sync>(
             match build_profile(user.try_into().unwrap(), train, item_hdvs, args.threshold) {
                 Some(p) => p,
                 None => {
-                    skipped += relevant_items.len();
+                    skipped += relevant_items.cardinality() as usize;
                     continue;
                 }
             };
 
         let Some(seen) = sets.train.get(user) else {
             // no training data - doesn't happen if profile is calculated...
-            skipped += relevant_items.len();
+            skipped += relevant_items.cardinality() as usize;
             continue;
         };
         let ranked = rank_movies(&profile, item_hdvs, seen);
 
         let topk: Vec<MovieId> = ranked.iter().take(args.topk).cloned().collect();
-        let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
+        let hits = topk
+            .iter()
+            .filter(|id| relevant_items.contains(**id as usize))
+            .count();
 
         precision_sum += hits as f64 / args.topk as f64;
-        recall_sum += hits as f64 / relevant_items.len() as f64;
+        recall_sum += hits as f64 / relevant_items.cardinality() as f64;
         users += 1;
         if hits > 0 {
             users_with_hits += 1;
@@ -389,11 +427,10 @@ fn demo_user<H: HyperVector + Sync>(
         }
     };
 
-    let seen: HashSet<_> = train
-        .iter()
-        .filter(|r| r.user == user)
-        .map(|r| r.movie)
-        .collect();
+    let mut seen = BitSet::new(titles.len());
+    for r in train.iter().filter(|r| r.user == user) {
+        seen.insert(r.movie as usize)
+    }
 
     let ranked = rank_movies(&profile, item_hdvs, &seen);
     for (rank, &movie_id) in ranked.iter().take(args.topk).enumerate() {
@@ -422,7 +459,7 @@ fn run<H: HyperVector + Sync>(args: &Args) {
 
     // Build the per-user train/test sets once; both evaluators share them.
     let n_users = train.iter().map(|r| r.user).max().unwrap() as usize + 1;
-    let sets = EvalSets::build(&train, &test, args.threshold, n_users);
+    let sets = EvalSets::build(&train, &test, args.threshold, n_users, n_movies);
 
     evaluate_pop(&sets, &train, n_movies, args);
 
