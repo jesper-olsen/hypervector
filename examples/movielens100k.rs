@@ -48,29 +48,62 @@ struct Args {
 
 // ── Data loading ─────────────────────────────────────────────────────────────
 
-type UserId = u32;
-type MovieId = u32;
+const N_USERS: usize = 943;
+const N_MOVIES: usize = 1682;
 
-#[derive(Debug, Clone)]
-struct Rating {
-    user: UserId,
-    movie: MovieId,
-    score: u8,
+// Ratings for user u
+// let start = offsets[u];
+// let end = offsets[u + 1];
+//
+// for i in start..end {
+//     let movie = movies[i];
+//     let score = scores[i];
+// }
+
+struct Ratings {
+    offsets: Vec<usize>,
+    movies: Vec<u32>,
+    scores: Vec<u8>,
 }
 
-fn load_ratings(path: &Path) -> Vec<Rating> {
-    fs::read_to_string(path)
-        .unwrap_or_else(|e| panic!("Cannot read {path:?}: {e}"))
-        .lines()
-        .filter(|l| !l.trim().is_empty())
-        .map(|line| {
+impl Ratings {
+    fn get_user(&self, uid: usize) -> (&[u32], &[u8]) {
+        let start = self.offsets[uid];
+        let end = self.offsets[uid + 1];
+        (&self.movies[start..end], &self.scores[start..end])
+    }
+
+    fn load(path: &Path) -> Ratings {
+        let text = fs::read_to_string(path).unwrap();
+        let n = text.lines().filter(|l| !l.is_empty()).count();
+
+        let mut offsets = vec![0usize; N_USERS + 1];
+        let mut movies = vec![0u32; n];
+        let mut scores = vec![0u8; n];
+        let mut current_user = 0;
+
+        for (i, line) in text.lines().filter(|l| !l.is_empty()).enumerate() {
             let mut it = line.split_whitespace();
-            let user = it.next().unwrap().parse().unwrap();
-            let movie = it.next().unwrap().parse::<u32>().unwrap() - 1; // convert 1-based to 0-based
-            let score = it.next().unwrap().parse().unwrap();
-            Rating { user, movie, score }
-        })
-        .collect()
+            let user = it.next().unwrap().parse::<usize>().unwrap() - 1;
+            movies[i] = it.next().unwrap().parse::<u32>().unwrap() - 1;
+            scores[i] = it.next().unwrap().parse::<u8>().unwrap();
+
+            while current_user < user {
+                offsets[current_user + 1] = i;
+                current_user += 1;
+            }
+        }
+        while current_user < N_USERS {
+            offsets[current_user + 1] = n;
+            current_user += 1;
+        }
+
+        Self {
+            offsets,
+            movies,
+            scores,
+        }
+    }
 }
 
 /// u.item is Latin-1 encoded – read as bytes and lossily convert.
@@ -82,7 +115,7 @@ fn load_titles(data: &Path) -> Vec<String> {
         .enumerate()
         .map(|(i, line)| {
             let mut it = line.splitn(3, '|');
-            let id: MovieId = it.next().unwrap().parse().unwrap();
+            let id: u32 = it.next().unwrap().parse().unwrap();
             let title = it.next().unwrap().to_owned();
             assert_eq!(id, (i + 1) as u32, "{data:?}/u.item: non-contiguous ID");
             title
@@ -95,27 +128,26 @@ fn load_titles(data: &Path) -> Vec<String> {
 /// Pre-computed per-user sets needed by both evaluators.
 struct EvalSets {
     /// Movies each user rated in the training set (seen, to be excluded from recs).
-    train: Vec<HashSet<MovieId>>,
+    train: Vec<HashSet<u32>>,
     /// Movies each user liked (score >= threshold) in the test set (ground truth).
-    test: Vec<HashSet<MovieId>>,
+    test: Vec<HashSet<u32>>,
 }
 
 impl EvalSets {
-    fn build(
-        ratings_train: &[Rating],
-        ratings_test: &[Rating],
-        threshold: u8,
-        n_users: usize,
-    ) -> Self {
-        let mut train: Vec<HashSet<MovieId>> = (0..n_users).map(|_| HashSet::new()).collect();
-        let mut test: Vec<HashSet<MovieId>> = (0..n_users).map(|_| HashSet::new()).collect();
+    fn build(ratings_train: &Ratings, ratings_test: &Ratings, threshold: u8) -> Self {
+        let mut train: Vec<HashSet<u32>> = (0..N_USERS).map(|_| HashSet::new()).collect();
+        let mut test: Vec<HashSet<u32>> = (0..N_USERS).map(|_| HashSet::new()).collect();
 
-        for r in ratings_train {
-            train[r.user as usize].insert(r.movie);
-        }
-        for r in ratings_test {
-            if r.score >= threshold {
-                test[r.user as usize].insert(r.movie);
+        for user in 0..N_USERS {
+            let (movies, _scores) = ratings_train.get_user(user);
+            for m in movies {
+                train[user].insert(*m);
+            }
+            let (movies, scores) = ratings_test.get_user(user);
+            for i in 0..movies.len() {
+                if scores[i] >= threshold {
+                    test[user].insert(movies[i]);
+                }
             }
         }
         Self { train, test }
@@ -155,49 +187,53 @@ fn print_metrics(
 ///   Step 3 — Movie HDV = weighted bundle of user HDVs of users who liked it,
 ///             weight = 1 / (movies liked by that user).
 ///             Normalising by activity prevents prolific raters from dominating.
-fn build_item_hdvs<H, R>(
-    ratings: &[Rating],
-    n_movies: usize,
-    n_users: usize,
-    threshold: u8,
-    rng: &mut R,
-) -> Vec<H>
+fn build_item_hdvs<H, R>(ratings: &Ratings, threshold: u8, rng: &mut R) -> Vec<H>
 where
     H: HyperVector,
     R: Rng + ?Sized,
 {
     // ── Step 1: random seed HDV per movie ───────────────────────────────────
-    let seed_hdvs: Vec<H> = (0..n_movies).map(|_| H::random(rng)).collect();
+    let seed_hdvs: Vec<H> = (0..N_MOVIES).map(|_| H::random(rng)).collect();
 
     // Pre-calculate movie popularity (for IDF)
-    let mut movie_popularity = vec![0usize; n_movies];
-    for r in ratings.iter().filter(|r| r.score >= threshold) {
-        movie_popularity[r.movie as usize] += 1;
+    let mut movie_popularity = vec![0usize; N_MOVIES];
+    for i in 0..ratings.scores.len() {
+        if ratings.scores[i] >= threshold {
+            movie_popularity[ratings.movies[i] as usize] += 1;
+        }
     }
 
     // ── Step 2: user HDV = bundle of seed HDVs of movies they liked ─────────
-    let mut user_accs: Vec<H::Accumulator> = (0..n_users).map(|_| H::Accumulator::new()).collect();
-    for r in ratings.iter().filter(|r| r.score >= threshold) {
-        let pop = movie_popularity[r.movie as usize];
-        // IDF weight: rare movies get higher weight
-        let idf = 1.0 / (pop as f64).sqrt();
-        user_accs[r.user as usize].add(&seed_hdvs[r.movie as usize], idf);
+    let mut user_accs: Vec<H::Accumulator> = (0..N_USERS).map(|_| H::Accumulator::new()).collect();
+    for user in 0..N_USERS {
+        let (movies, _scores) = ratings.get_user(user);
+        for i in 0..movies.len() {
+            let pop = movie_popularity[movies[i] as usize];
+            // IDF weight: rare movies get higher weight
+            let idf = 1.0 / (pop as f64).sqrt();
+            user_accs[user].add(&seed_hdvs[movies[i] as usize], idf);
+        }
     }
     let user_hdvs: Vec<H> = user_accs.iter_mut().map(|acc| acc.finalize()).collect();
 
     // ── Step 3: movie HDV = weighted bundle of user HDVs ────────────────────
     let mut movie_accs: Vec<H::Accumulator> =
-        (0..n_movies).map(|_| H::Accumulator::new()).collect();
-    for r in ratings.iter().filter(|r| r.score >= threshold) {
-        let user_signal_strength = user_accs[r.user as usize].count();
-        if user_signal_strength > 0.0 {
-            let weight = 1.0 / (user_signal_strength as f64).sqrt();
-            movie_accs[r.movie as usize].add(&user_hdvs[r.user as usize], weight);
+        (0..N_MOVIES).map(|_| H::Accumulator::new()).collect();
+    for user in 0..N_USERS {
+        let (movies, scores) = ratings.get_user(user);
+        for i in 0..movies.len() {
+            if scores[i] >= threshold {
+                let user_signal_strength = user_accs[user as usize].count();
+                if user_signal_strength > 0.0 {
+                    let weight = 1.0 / (user_signal_strength as f64).sqrt();
+                    movie_accs[movies[i] as usize].add(&user_hdvs[user], weight);
+                }
+            }
         }
     }
 
     // Movies with zero likes (cold items) fall back to their seed HDV
-    (0..n_movies)
+    (0..N_MOVIES)
         .map(|id| {
             if movie_accs[id].count() > 0.0 {
                 movie_accs[id].finalize()
@@ -210,16 +246,18 @@ where
 
 /// Build a user profile by bundling the HDVs of all movies the user liked.
 fn build_profile<H: HyperVector>(
-    user: UserId,
-    ratings: &[Rating],
+    user: usize,
+    ratings: &Ratings,
     item_hdvs: &[H],
     threshold: u8,
 ) -> Option<H> {
     let mut acc = H::UnitAccumulator::default();
 
-    for r in ratings {
-        if r.user == user && r.score >= threshold {
-            acc.add(&item_hdvs[r.movie as usize]);
+    let (movies, scores) = ratings.get_user(user);
+
+    for i in 0..movies.len() {
+        if scores[i] >= threshold {
+            acc.add(&item_hdvs[movies[i] as usize]);
         }
     }
 
@@ -235,13 +273,13 @@ fn build_profile<H: HyperVector>(
 fn rank_movies<H: HyperVector + Sync>(
     profile: &H,
     item_hdvs: &[H],
-    exclude: &HashSet<MovieId>,
-) -> Vec<MovieId> {
-    let mut scored: Vec<(MovieId, f32)> = item_hdvs
+    exclude: &HashSet<u32>,
+) -> Vec<u32> {
+    let mut scored: Vec<(u32, f32)> = item_hdvs
         .iter()
         .enumerate()
         .filter(|(id, _)| !exclude.contains(&(*id as u32)))
-        .map(|(id, hdv)| (id as MovieId, profile.distance(hdv)))
+        .map(|(id, hdv)| (id as u32, profile.distance(hdv)))
         .collect();
 
     scored.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
@@ -251,22 +289,22 @@ fn rank_movies<H: HyperVector + Sync>(
 // ── Popularity baseline ───────────────────────────────────────────────────────
 
 /// Pre-sort all movies by training popularity once, then per-user we only filter.
-fn build_popularity_ranking(train: &[Rating], threshold: u8, n_movies: usize) -> Vec<MovieId> {
-    let mut counts: Vec<usize> = vec![0usize; n_movies];
-    for r in train {
-        if r.score >= threshold {
-            counts[r.movie as usize] += 1
+fn build_popularity_ranking(train: &Ratings, threshold: u8) -> Vec<u32> {
+    let mut counts: Vec<usize> = vec![0usize; N_MOVIES];
+    for i in 0..train.movies.len() {
+        if train.scores[i] >= threshold {
+            counts[train.movies[i] as usize] += 1
         }
     }
-    let mut ranking: Vec<MovieId> = (0..n_movies).map(|i| i as MovieId).collect();
+    let mut ranking: Vec<u32> = (0..N_MOVIES).map(|i| i as u32).collect();
     ranking.sort_by(|a, b| counts[*b as usize].cmp(&counts[*a as usize]));
     ranking
 }
 
-fn evaluate_pop(sets: &EvalSets, train: &[Rating], n_movies: usize, args: &Args) {
+fn evaluate_pop(sets: &EvalSets, train: &Ratings, args: &Args) {
     // Compute global popularity ranking once — O(movies log movies).
     // Per-user we only filter out seen items from this pre-sorted list.
-    let global_ranking = build_popularity_ranking(train, args.threshold, n_movies);
+    let global_ranking = build_popularity_ranking(train, args.threshold);
 
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
@@ -280,7 +318,7 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], n_movies: usize, args: &Args)
         }
         let seen = sets.train.get(user).cloned().unwrap_or_default();
 
-        let topk: Vec<MovieId> = global_ranking
+        let topk: Vec<u32> = global_ranking
             .iter()
             .filter(|id| !seen.contains(id))
             .take(args.topk)
@@ -313,12 +351,7 @@ fn evaluate_pop(sets: &EvalSets, train: &[Rating], n_movies: usize, args: &Args)
 //   Recall@K:    Out of everything the user liked, what fraction did we find?
 //   Precision@K: Out of K slots, how many were actually useful?
 
-fn evaluate<H: HyperVector + Sync>(
-    sets: &EvalSets,
-    train: &[Rating],
-    item_hdvs: &[H],
-    args: &Args,
-) {
+fn evaluate<H: HyperVector + Sync>(sets: &EvalSets, train: &Ratings, item_hdvs: &[H], args: &Args) {
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
     let mut users = 0usize;
@@ -330,14 +363,13 @@ fn evaluate<H: HyperVector + Sync>(
         if relevant_items.is_empty() {
             continue;
         }
-        let profile =
-            match build_profile(user.try_into().unwrap(), train, item_hdvs, args.threshold) {
-                Some(p) => p,
-                None => {
-                    skipped += relevant_items.len();
-                    continue;
-                }
-            };
+        let profile = match build_profile(user, train, item_hdvs, args.threshold) {
+            Some(p) => p,
+            None => {
+                skipped += relevant_items.len();
+                continue;
+            }
+        };
 
         let Some(seen) = sets.train.get(user) else {
             // no training data - doesn't happen if profile is calculated...
@@ -346,7 +378,7 @@ fn evaluate<H: HyperVector + Sync>(
         };
         let ranked = rank_movies(&profile, item_hdvs, seen);
 
-        let topk: Vec<MovieId> = ranked.iter().take(args.topk).cloned().collect();
+        let topk: Vec<u32> = ranked.iter().take(args.topk).cloned().collect();
         let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
 
         precision_sum += hits as f64 / args.topk as f64;
@@ -374,8 +406,8 @@ fn evaluate<H: HyperVector + Sync>(
 // ── Demo ─────────────────────────────────────────────────────────────────────
 
 fn demo_user<H: HyperVector + Sync>(
-    user: UserId,
-    train: &[Rating],
+    user: usize,
+    train: &Ratings,
     item_hdvs: &[H],
     titles: &[String],
     args: &Args,
@@ -389,11 +421,9 @@ fn demo_user<H: HyperVector + Sync>(
         }
     };
 
-    let seen: HashSet<_> = train
-        .iter()
-        .filter(|r| r.user == user)
-        .map(|r| r.movie)
-        .collect();
+    let (movies, _scores) = train.get_user(user);
+
+    let seen: HashSet<_> = movies.iter().map(|&m| m).collect();
 
     let ranked = rank_movies(&profile, item_hdvs, &seen);
     for (rank, &movie_id) in ranked.iter().take(args.topk).enumerate() {
@@ -406,28 +436,30 @@ fn demo_user<H: HyperVector + Sync>(
 
 fn run<H: HyperVector + Sync>(args: &Args) {
     let split = &args.split;
-    let train = load_ratings(&args.data.join(format!("u{split}.base")));
-    let test = load_ratings(&args.data.join(format!("u{split}.test")));
+    //let train = load_ratings(&args.data.join(format!("u{split}.base")));
+    //let test = load_ratings(&args.data.join(format!("u{split}.test")));
     let titles = load_titles(&args.data);
-    let n_movies = titles.len();
+    assert!(N_MOVIES == titles.len());
+
+    let train = Ratings::load(&args.data.join(format!("u{split}.base")));
+    let test = Ratings::load(&args.data.join(format!("u{split}.test")));
 
     println!(
-        "Split u{split}  |  {} train, {} test ratings, {} movies, dim={}",
-        train.len(),
-        test.len(),
-        n_movies,
+        "Split u{split}  | {} train, {} test ratings, {} movies, dim={}",
+        train.movies.len(),
+        test.movies.len(),
+        titles.len(),
         args.dim
     );
     println!();
 
     // Build the per-user train/test sets once; both evaluators share them.
-    let n_users = train.iter().map(|r| r.user).max().unwrap() as usize + 1;
-    let sets = EvalSets::build(&train, &test, args.threshold, n_users);
+    let sets = EvalSets::build(&train, &test, args.threshold);
 
-    evaluate_pop(&sets, &train, n_movies, args);
+    evaluate_pop(&sets, &train, args);
 
     let mut rng = MersenneTwister64::new(42);
-    let item_hdvs: Vec<H> = build_item_hdvs(&train, n_movies, n_users, args.threshold, &mut rng);
+    let item_hdvs: Vec<H> = build_item_hdvs(&train, args.threshold, &mut rng);
 
     evaluate(&sets, &train, &item_hdvs, args);
     demo_user(1, &train, &item_hdvs, &titles, args);

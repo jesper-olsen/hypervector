@@ -7,9 +7,10 @@ Movie recommendation on the MovieLens 100k dataset [1].
 
 HyperVector Profile - 3-step training:
 
-1. Movies are assigned a unique random hypervector.
-2. Users are assigned a bundling of the movies (hypervectors) they have rated positively.
-3. Movies are assigned a (weighted) bundling of the users that have rated the movies positively.
+1. Each movie is assigned a random seed hypervector.
+2. Each user is represented as an IDF-weighted bundle of the seed HDVs of movies they liked.
+3. Each movie's final HDV is a bundle of the HDVs of users who liked it,
+   weighted by inverse sqrt of user activity to prevent prolific raters dominating.
 
 
 ## Usage
@@ -32,7 +33,7 @@ Options:
 
 ## Preliminaries
 
-Download the dataset from [1] and unzip it so the path `DATA/ml-100k/u.data` exists.
+Download the dataset from [1] and unzip it so the path `DATA/ml-100k/` exists.
 
 [Install Rust](https://rust-lang.org/tools/install/).
 
@@ -42,7 +43,7 @@ Download the dataset from [1] and unzip it so the path `DATA/ml-100k/u.data` exi
 ```bash
 cargo run --example movielens100k --release -- --data DATA/ml-100k --dim 8192  --topk 10 --split a
 
-Split ua  |  90570 train, 9430 test ratings, 1682 movies, dim=8192
+Split ua  | 90570 train, 9430 test ratings, 1682 movies, dim=8192
 
 Popularity Recommender
 Top-10 Hit Rate: 52.46%  (490/934)
@@ -50,21 +51,22 @@ Precision@10: 0.0745
 Recall@10: 0.1346
 
 HyperVector Profile Recommender
-Top-10 Hit Rate: 71.31%  (666/934)
-Precision@10: 0.1267
-Recall@10: 0.2257
+Top-10 Hit Rate: 72.81%  (680/934)
+Precision@10: 0.1355
+Recall@10: 0.2454
 
 ── Top-10 recommendations for user 1 ──
-  # 1  movie  654  Stand by Me (1986)
-  # 2  movie  317  Schindler's List (1993)
-  # 3  movie  422  E.T. the Extra-Terrestrial (1982)
-  # 4  movie  426  To Kill a Mockingbird (1962)
-  # 5  movie  495  It's a Wonderful Life (1946)
-  # 6  movie  482  Casablanca (1942)
-  # 7  movie  201  Groundhog Day (1993)
-  # 8  movie  356  One Flew Over the Cuckoo's Nest (1975)
-  # 9  movie  526  Gandhi (1982)
-  #10  movie  650  Glory (1989)
+  # 1  movie   49  Star Wars (1977)
+  # 2  movie    8  Dead Man Walking (1995)
+  # 3  movie  180  Return of the Jedi (1983)
+  # 4  movie  474  Trainspotting (1996)
+  # 5  movie    6  Twelve Monkeys (1995)
+  # 6  movie  507  People vs. Larry Flynt, The (1996)
+  # 7  movie  221  Star Trek: First Contact (1996)
+  # 8  movie   14  Mr. Holland's Opus (1995)
+  # 9  movie  116  Rock, The (1996)
+  #10  movie  514  Boot, Das (1981)
+cargo run --example movielens100k --release -- --data DATA/ml-100k --dim 8192  0.53s user 0.09s system 48% cpu 1.272 total
 ```
 
 ## Experiments
@@ -85,13 +87,13 @@ Model: HyperVector Profile
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
-|    1  |          89%  |       0.33   |    0.21   |
+|    1  |          88%  |       0.32   |    0.20   |
 |    2  |          86%  |       0.26   |    0.22   |
-|    3  |          79%  |       0.22   |    0.23   |
-|    4  |          76%  |       0.21   |    0.22   |
-|    5  |          76%  |       0.20   |    0.23   |
-|    a  |          71%  |       0.13   |    0.23   |
-|    b  |          69%  |       0.12   |    0.22   |
+|    3  |          81%  |       0.22   |    0.24   |
+|    4  |          77%  |       0.21   |    0.23   |
+|    5  |          76%  |       0.20   |    0.24   |
+|    a  |          73%  |       0.14   |    0.25   |
+|    b  |          72%  |       0.13   |    0.24   |
 
 
 ## References
