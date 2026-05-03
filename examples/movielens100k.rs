@@ -397,8 +397,6 @@ fn demo_user<H: HyperVector + Sync>(
 
 fn run<H: HyperVector + Sync>(args: &Args) {
     let split = &args.split;
-    //let train = load_ratings(&args.data.join(format!("u{split}.base")));
-    //let test = load_ratings(&args.data.join(format!("u{split}.test")));
     let titles = load_titles(&args.data);
     assert!(N_MOVIES == titles.len());
 
@@ -406,13 +404,12 @@ fn run<H: HyperVector + Sync>(args: &Args) {
     let test = Ratings::load(&args.data.join(format!("u{split}.test")));
 
     println!(
-        "Split u{split}  | {} train, {} test ratings, {} movies, dim={}",
+        "Split u{split}  | {} train, {} test ratings, {} movies, dim={}\n",
         train.movies.len(),
         test.movies.len(),
         titles.len(),
         args.dim
     );
-    println!();
 
     // Build the per-user train/test sets once; both evaluators share them.
     let sets = EvalSets::build(&train, &test, args.threshold);
