@@ -41,32 +41,29 @@ Download the dataset from [1] and unzip it so the path `DATA/ml-100k/` exists.
 ## Example Run
 
 ```bash
-cargo run --example movielens100k --release -- --data DATA/ml-100k --dim 8192  --topk 10 --split a
-
 Split ua  | 90570 train, 9430 test ratings, 1682 movies, dim=8192
 
 Popularity Recommender
-Top-10 Hit Rate: 52.46%  (490/934)
-Precision@10: 0.0745
-Recall@10: 0.1346
+Top-10 Hit Rate: 64.79%  (611/943)
+Precision@10: 0.0972
+Recall@10: 0.1170
 
 HyperVector Profile Recommender
-Top-10 Hit Rate: 72.81%  (680/934)
-Precision@10: 0.1355
-Recall@10: 0.2454
+Top-10 Hit Rate: 79.11%  (746/943)
+Precision@10: 0.1732
+Recall@10: 0.2104
 
 ── Top-10 recommendations for user 1 ──
-  # 1  movie   49  Star Wars (1977)
-  # 2  movie    8  Dead Man Walking (1995)
+  # 1  movie    8  Dead Man Walking (1995)
+  # 2  movie   49  Star Wars (1977)
   # 3  movie  180  Return of the Jedi (1983)
-  # 4  movie  474  Trainspotting (1996)
+  # 4  movie  507  People vs. Larry Flynt, The (1996)
   # 5  movie    6  Twelve Monkeys (1995)
-  # 6  movie  507  People vs. Larry Flynt, The (1996)
+  # 6  movie  474  Trainspotting (1996)
   # 7  movie  221  Star Trek: First Contact (1996)
-  # 8  movie   14  Mr. Holland's Opus (1995)
-  # 9  movie  116  Rock, The (1996)
-  #10  movie  514  Boot, Das (1981)
-cargo run --example movielens100k --release -- --data DATA/ml-100k --dim 8192  0.53s user 0.09s system 48% cpu 1.272 total
+  # 8  movie  116  Rock, The (1996)
+  # 9  movie  741  Ransom (1996)
+  #10  movie   14  Mr. Holland's Opus (1995)
 ```
 
 ## Experiments
@@ -78,25 +75,26 @@ Two models are evaluated: 1) Simple Popular movies recommender + 2) HyperVector 
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
-|    1  |          79%  |       0.22   |    0.11   |
-|    2  |          70%  |       0.18   |    0.12   |
-|    3  |          61%  |       0.13   |    0.12   |
-|    4  |          62%  |       0.14   |    0.13   |
+|    1  |          85%  |       0.26   |    0.10   |
+|    2  |          80%  |       0.21   |    0.11   |
+|    3  |          71%  |       0.16   |    0.11   |
+|    4  |          67%  |       0.15   |    0.11   |
 |    5  |          61%  |       0.13   |    0.13   |
-|    a  |          52%  |       0.07   |    0.13   |
-|    b  |          49%  |       0.07   |    0.12   |
+|    a  |          64%  |       0.10   |    0.12   |
+|    b  |          59%  |       0.09   |    0.11   |
 
 ### Model: HyperVector Profile
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
-|    1  |          88%  |       0.32   |    0.20   |
-|    2  |          86%  |       0.26   |    0.22   |
-|    3  |          81%  |       0.22   |    0.24   |
+|    1  |          92%  |       0.39   |    0.17   |
+|    2  |          89%  |       0.32   |    0.19   |
+|    3  |          85%  |       0.26   |    0.20   |
 |    4  |          77%  |       0.21   |    0.23   |
-|    5  |          76%  |       0.20   |    0.24   |
-|    a  |          73%  |       0.14   |    0.25   |
-|    b  |          72%  |       0.13   |    0.24   |
+|    5  |          80%  |       0.25   |    0.20   |
+|    a  |          79%  |       0.17   |    0.21   |
+|    b  |          79%  |       0.16   |    0.20   |
+
 
 
 ## References
