@@ -71,7 +71,10 @@ cargo run --example movielens100k --release -- --data DATA/ml-100k --dim 8192  0
 
 ## Experiments
 
-Model: Training Popularity (Most popular unseen movies in the training set).
+We use the official splits for the data set and score only the movies that were liked (threshold >=4).
+Two models are evaluated: 1) Simple Popular movies recommender + 2) HyperVector Profile
+
+### Model: Training Popularity (Most popular unseen movies in the training set).
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
@@ -83,7 +86,7 @@ Model: Training Popularity (Most popular unseen movies in the training set).
 |    a  |          52%  |       0.07   |    0.13   |
 |    b  |          49%  |       0.07   |    0.12   |
 
-Model: HyperVector Profile
+### Model: HyperVector Profile
 
 | Split | Top-10 Hit    | Precision@10 | Recall@10 |
 | ----: | -------------:|-------------:|---------: |
