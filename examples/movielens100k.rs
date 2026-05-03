@@ -303,57 +303,18 @@ fn build_popularity_ranking(train: &Ratings, threshold: u8) -> Vec<u32> {
     ranking
 }
 
-fn evaluate_pop(sets: &EvalSets, train: &Ratings, args: &Args) {
-    // Compute global popularity ranking once — O(movies log movies).
-    // Per-user we only filter out seen items from this pre-sorted list.
-    let global_ranking = build_popularity_ranking(train, args.threshold);
+// ── Shared evaluation core ────────────────────────────────────────────────────
 
-    let mut precision_sum = 0.0f64;
-    let mut recall_sum = 0.0f64;
-    let mut users = 0usize;
-    let mut users_with_hits = 0usize;
-
-    for user in 0..sets.test.len() {
-        let relevant_items = &sets.test[user];
-        if relevant_items.is_empty() {
-            continue;
-        }
-        let seen = sets.train.get(user).cloned().unwrap_or_default();
-
-        let topk: Vec<u32> = global_ranking
-            .iter()
-            .filter(|id| !seen.contains(id))
-            .take(args.topk)
-            .cloned()
-            .collect();
-
-        let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
-        precision_sum += hits as f64 / args.topk as f64;
-        recall_sum += hits as f64 / relevant_items.len() as f64;
-        users += 1;
-        if hits > 0 {
-            users_with_hits += 1;
-        }
-    }
-
-    print_metrics(
-        "Popularity Recommender",
-        args.topk,
-        users_with_hits,
-        users,
-        precision_sum,
-        recall_sum,
-    );
-}
-
-// ── HDC Evaluation ────────────────────────────────────────────────────────────
-//
-// Metrics:
-//   Hit Rate:    What percentage of users saw at least one movie they liked?
-//   Recall@K:    Out of everything the user liked, what fraction did we find?
-//   Precision@K: Out of K slots, how many were actually useful?
-
-fn evaluate<H: HyperVector + Sync>(sets: &EvalSets, train: &Ratings, item_hdvs: &[H], args: &Args) {
+/// Evaluate any recommender via a closure.
+///
+/// `recommend(user)` returns the ranked movie list for that user,
+/// or `None` to skip them (e.g. no training data).
+fn evaluate_recommender(
+    sets: &EvalSets,
+    label: &str,
+    topk: usize,
+    mut recommend: impl FnMut(usize) -> Option<Vec<u32>>,
+) {
     let mut precision_sum = 0.0f64;
     let mut recall_sum = 0.0f64;
     let mut users = 0usize;
@@ -365,25 +326,13 @@ fn evaluate<H: HyperVector + Sync>(sets: &EvalSets, train: &Ratings, item_hdvs: 
         if relevant_items.is_empty() {
             continue;
         }
-        let profile = match build_profile(user, train, item_hdvs, args.threshold) {
-            Some(p) => p,
-            None => {
-                skipped += relevant_items.len();
-                continue;
-            }
-        };
-
-        let Some(seen) = sets.train.get(user) else {
-            // no training data - doesn't happen if profile is calculated...
+        let Some(ranked) = recommend(user) else {
             skipped += relevant_items.len();
             continue;
         };
-        let ranked = rank_movies(&profile, item_hdvs, seen);
 
-        let topk: Vec<u32> = ranked.iter().take(args.topk).cloned().collect();
-        let hits = topk.iter().filter(|id| relevant_items.contains(id)).count();
-
-        precision_sum += hits as f64 / args.topk as f64;
+        let hits = ranked.iter().take(topk).filter(|id| relevant_items.contains(id)).count();
+        precision_sum += hits as f64 / topk as f64;
         recall_sum += hits as f64 / relevant_items.len() as f64;
         users += 1;
         if hits > 0 {
@@ -391,18 +340,28 @@ fn evaluate<H: HyperVector + Sync>(sets: &EvalSets, train: &Ratings, item_hdvs: 
         }
     }
 
-    print_metrics(
-        "HyperVector Profile Recommender",
-        args.topk,
-        users_with_hits,
-        users,
-        precision_sum,
-        recall_sum,
-    );
+    print_metrics(label, topk, users_with_hits, users, precision_sum, recall_sum);
 
     if skipped > 0 {
-        println!("  ({skipped} skipped: user had no liked training movies)");
+        println!("  ({skipped} skipped)");
     }
+}
+
+fn evaluate_pop(sets: &EvalSets, train: &Ratings, args: &Args) {
+    let global_ranking = build_popularity_ranking(train, args.threshold);
+
+    evaluate_recommender(sets, "Popularity Recommender", args.topk, |user| {
+        let seen = sets.train.get(user)?;
+        Some(global_ranking.iter().filter(|id| !seen.contains(id)).cloned().collect())
+    });
+}
+
+fn evaluate<H: HyperVector + Sync>(sets: &EvalSets, train: &Ratings, item_hdvs: &[H], args: &Args) {
+    evaluate_recommender(sets, "HyperVector Profile Recommender", args.topk, |user| {
+        let profile = build_profile(user, train, item_hdvs, args.threshold)?;
+        let seen = sets.train.get(user)?;
+        Some(rank_movies(&profile, item_hdvs, seen))
+    });
 }
 
 // ── Demo ─────────────────────────────────────────────────────────────────────
