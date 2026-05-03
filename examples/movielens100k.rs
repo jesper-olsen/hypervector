@@ -1,21 +1,23 @@
+//! MovieLens 100K – Hyperdimensional Profile Recommendation
+//!
+//! Encoding strategy (collaborative):
+//!   - Each USER gets a random seed HDV.
+//!   - Each MOVIE's HDV = bundle of the HDVs of users who liked it.
+//!     Two movies liked by overlapping audiences end up geometrically close.
+//!   - A user's PROFILE = bundle of the HDVs of movies they liked.
+//!   - Recommendation: rank unseen movies by distance(movie_hdv, user_profile).
+//!
+//! Evaluation: u{split}.base / u{split}.test
+//!   For every liked (rating >= threshold) item in the test set, check whether
+//!   it appears in the user's top-K recommendations built from the base set.
+
 use clap::Parser;
 use hypervector::hdv;
 use hypervector::types::binary::Binary;
 use hypervector::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
-/// MovieLens 100K – Hyperdimensional Profile Recommendation
-///
-/// Encoding strategy (collaborative):
-///   - Each USER gets a random seed HDV.
-///   - Each MOVIE's HDV = bundle of the HDVs of users who liked it.
-///     Two movies liked by overlapping audiences end up geometrically close.
-///   - A user's PROFILE = bundle of the HDVs of movies they liked.
-///   - Recommendation: rank unseen movies by distance(movie_hdv, user_profile).
-///
-/// Evaluation: u{split}.base / u{split}.test
-///   For every liked (rating >= threshold) item in the test set, check whether
-///   it appears in the user's top-K recommendations built from the base set.
+use std::collections::BinaryHeap;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -223,9 +225,9 @@ where
         let (movies, scores) = ratings.get_user(user);
         for i in 0..movies.len() {
             if scores[i] >= threshold {
-                let user_signal_strength = user_accs[user as usize].count();
+                let user_signal_strength = user_accs[user].count();
                 if user_signal_strength > 0.0 {
-                    let weight = 1.0 / (user_signal_strength as f64).sqrt();
+                    let weight = 1.0 / (user_signal_strength).sqrt();
                     movie_accs[movies[i] as usize].add(&user_hdvs[user], weight);
                 }
             }
