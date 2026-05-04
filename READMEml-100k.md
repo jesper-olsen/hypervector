@@ -41,6 +41,8 @@ Download the dataset from [1] and unzip it so the path `DATA/ml-100k/` exists.
 ## Example Run
 
 ```bash
+cargo run --example movielens100k --release -- --data DATA/ml-100k --dim 8192  --topk 10 --threshold 3 --split a
+
 Split ua  | 90570 train, 9430 test ratings, 1682 movies, dim=8192
 
 Popularity Recommender
@@ -49,9 +51,9 @@ Precision@10: 0.0972
 Recall@10: 0.1170
 
 HyperVector Profile Recommender
-Top-10 Hit Rate: 79.11%  (746/943)
-Precision@10: 0.1732
-Recall@10: 0.2104
+Top-10 Hit Rate: 78.79%  (743/943)
+Precision@10: 0.1730
+Recall@10: 0.2101
 
 ── Top-10 recommendations for user 1 ──
   # 1  movie    8  Dead Man Walking (1995)
@@ -61,14 +63,14 @@ Recall@10: 0.2104
   # 5  movie    6  Twelve Monkeys (1995)
   # 6  movie  474  Trainspotting (1996)
   # 7  movie  221  Star Trek: First Contact (1996)
-  # 8  movie  116  Rock, The (1996)
-  # 9  movie  741  Ransom (1996)
-  #10  movie   14  Mr. Holland's Opus (1995)
+  # 8  movie  741  Ransom (1996)
+  # 9  movie   14  Mr. Holland's Opus (1995)
+  #10  movie  116  Rock, The (1996)
 ```
 
 ## Experiments
 
-We use the official splits for the data set and score only the movies that were liked (threshold >=4).
+We use the official splits for the data set and score only the movies that were liked (threshold >=3).
 Two models are evaluated: 1) Simple Popular movies recommender + 2) HyperVector Profile
 
 ### Model: Training Popularity (Most popular unseen movies in the training set).
