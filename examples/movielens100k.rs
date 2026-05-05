@@ -18,8 +18,7 @@ use hypervector::types::traits::{Accumulator, HyperVector, UnitAccumulator};
 use mersenne_twister_rs::MersenneTwister64;
 use rand::Rng;
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
-use std::collections::HashSet;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -89,7 +88,7 @@ impl Ratings {
             .collect()
     }
 
-    fn load(path: &Path) -> Ratings {
+    fn load(path: &Path, movie_id_map: &HashMap<u32, u32>) -> Ratings {
         let text = fs::read_to_string(path).unwrap();
         let n = text.lines().filter(|l| !l.is_empty()).count();
 
@@ -101,7 +100,8 @@ impl Ratings {
         for (i, line) in text.lines().filter(|l| !l.is_empty()).enumerate() {
             let mut it = line.split_whitespace();
             let user = it.next().unwrap().parse::<usize>().unwrap() - 1;
-            movies[i] = it.next().unwrap().parse::<u32>().unwrap() - 1;
+            let movie_id = it.next().unwrap().parse::<u32>().unwrap();
+            movies[i] = *movie_id_map.get(&movie_id).unwrap();
             scores[i] = it.next().unwrap().parse::<u8>().unwrap();
 
             while current_user < user {
@@ -123,20 +123,24 @@ impl Ratings {
 }
 
 /// u.item is Latin-1 encoded – read as bytes and lossily convert.
-fn load_titles(data: &Path) -> Vec<String> {
+fn load_titles(data: &Path) -> (Vec<String>, HashMap<u32, u32>) {
+    let mut id_map: HashMap<u32, u32> = HashMap::new();
     let bytes = fs::read(data.join("u.item")).unwrap_or_default();
     // Latin-1: every byte is a valid Unicode code point with the same value.
     let text: String = bytes.iter().map(|&b| b as char).collect();
-    text.lines()
+    let titles = text
+        .lines()
         .enumerate()
         .map(|(i, line)| {
             let mut it = line.splitn(3, '|');
             let id: u32 = it.next().unwrap().parse().unwrap();
             let title = it.next().unwrap().to_owned();
-            assert_eq!(id, (i + 1) as u32, "{data:?}/u.item: non-contiguous ID");
+            //assert_eq!(id, (i + 1) as u32, "{data:?}/u.item: non-contiguous ID");
+            id_map.insert(id, i as u32);
             title
         })
-        .collect()
+        .collect();
+    (titles, id_map)
 }
 
 // ── Evaluation helpers ────────────────────────────────────────────────────────
@@ -469,10 +473,9 @@ fn demo_user<H: HyperVector + Sync>(
 
 fn run<H: HyperVector + Sync>(args: &Args) {
     let split = &args.split;
-    let titles = load_titles(&args.data);
-
-    let train = Ratings::load(&args.data.join(format!("u{split}.base")));
-    let test = Ratings::load(&args.data.join(format!("u{split}.test")));
+    let (titles, id_map) = load_titles(&args.data);
+    let train = Ratings::load(&args.data.join(format!("u{split}.base")), &id_map);
+    let test = Ratings::load(&args.data.join(format!("u{split}.test")), &id_map);
 
     println!(
         "Split u{split}  | {} train, {} test ratings, {} movies, dim={}\n",
