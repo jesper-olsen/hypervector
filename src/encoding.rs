@@ -102,18 +102,11 @@ impl<H: HyperVector> TabularEncoder<H> {
     /// Encodes a row of features. Assumes row.len() == schema.len()
     pub fn encode(&self, row: &[f32]) -> H {
         let mut acc = H::Accumulator::new();
-
-        //for (i, &value) in row.iter().enumerate() {
-        //    let val_v = self.field_encoders[i].encode(value);
-        //    let bound = val_v.bind(&self.field_keys[i]);
-        //    acc.add(&bound, 1.0);
-        //}
         for ((&value, encoder), key) in row.iter().zip(&self.field_encoders).zip(&self.field_keys) {
             let val_v = encoder.encode(value);
             let bound = val_v.bind(key);
             acc.add(&bound, 1.0);
         }
-
         acc.finalize()
     }
 }
