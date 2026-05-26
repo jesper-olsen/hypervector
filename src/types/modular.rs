@@ -56,6 +56,7 @@ pub struct Modular<const D: usize> {
 impl<const DIM: usize> HyperVector for Modular<DIM> {
     type Accumulator = WeightedAccumulator<DIM>;
     type UnitAccumulator = UnitAcc<DIM>;
+    type Element = u8;
     const DIM: usize = DIM;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -132,6 +133,17 @@ impl<const DIM: usize> HyperVector for Modular<DIM> {
         file.read_exact(&mut data)?;
         let data = data.map(|b| b & MASK); // Re-mask in case file was written with different R
         Ok(Self { data })
+    }
+
+    fn from_slice(slice: &[u8]) -> Self {
+        assert_eq!(slice.len(), DIM);
+        let data = std::array::from_fn(|i| slice[i] & MASK); // all values in [0, MODULUS)
+        Self { data }
+    }
+
+    fn from_iter(mut iter: impl Iterator<Item = Self::Element>) -> Self {
+        let data = std::array::from_fn(|_i| iter.next().expect("too short"));
+        Self { data }
     }
 }
 
@@ -254,12 +266,6 @@ impl<const D: usize> UnitAccumulator<Modular<D>> for UnitAcc<D> {
 }
 
 impl<const DIM: usize> Modular<DIM> {
-    pub fn from_slice(slice: &[u8]) -> Self {
-        assert_eq!(slice.len(), DIM);
-        let data = std::array::from_fn(|i| slice[i] & MASK); // all values in [0, MODULUS)
-        Self { data }
-    }
-
     // Lee distance: the shorter arc on the circle [0, MODULUS-1]
     // https://en.wikipedia.org/wiki/Lee_distance
     //fn lee_distance(&self, other: &Self) -> u32 {

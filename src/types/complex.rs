@@ -9,22 +9,23 @@ use std::mem::size_of;
 
 // avoid repeated setup of FftPlanner in bind()
 thread_local! {
-    static FFT_PLANNER: RefCell<FftPlanner<f64>> = RefCell::new(FftPlanner::new());
+    static FFT_PLANNER: RefCell<FftPlanner<f32>> = RefCell::new(FftPlanner::new());
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ComplexHDV<const N: usize> {
-    pub data: [Complex<f64>; N],
+    pub data: [Complex<f32>; N],
 }
 
 impl<const N: usize> HyperVector for ComplexHDV<N> {
     type Accumulator = WeightedAccumulator<N>;
     type UnitAccumulator = UnitAcc<N>;
+    type Element = Complex<f32>;
     const DIM: usize = N;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         // Set stddev so that E[‖z‖^2] = 1
-        let stddev = 1.0 / (2.0 * N as f64).sqrt();
+        let stddev = 1.0 / (2.0 * N as f32).sqrt();
         let normal = Normal::new(0.0, stddev).unwrap();
 
         let data = std::array::from_fn(|_| {
@@ -42,7 +43,7 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
     // fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
     //     use rand::Rng;
     //     let data = std::array::from_fn(|_| {
-    //         let theta = rng.gen_range(0.0..2.0 * std::f64::consts::PI);
+    //         let theta = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
     //         Complex::from_polar(1.0, theta)
     //     });
     //     Self { data }
@@ -70,7 +71,7 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
     }
 
     fn distance(&self, other: &Self) -> f32 {
-        self.distance_cosine_sim(other) as f32
+        self.distance_cosine_sim(other) 
         //self.distance_dot(other) as f32
     }
 
@@ -105,14 +106,14 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
     }
 
     fn norm(&self) -> f32 {
-        self.data.iter().map(|e| e.norm_sqr()).sum::<f64>().sqrt() as f32
+        self.data.iter().map(|e| e.norm_sqr()).sum::<f32>().sqrt()
     }
 
     fn unpack(&self) -> Vec<f32> {
         let mut out = Vec::with_capacity(self.data.len() * 2);
         for &c in &self.data {
-            out.push(c.re as f32);
-            out.push(c.im as f32);
+            out.push(c.re);
+            out.push(c.im);
         }
         out
     }
@@ -126,36 +127,37 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
     }
 
     fn read(file: &mut File) -> std::io::Result<Self> {
-        let mut data = [Complex::<f64>::new(0.0, 0.0); N];
+        let mut data = [Complex::<f32>::new(0.0, 0.0); N];
         for slot in &mut data {
-            let mut re_buf = [0u8; size_of::<f64>()];
-            let mut im_buf = [0u8; size_of::<f64>()];
+            let mut re_buf = [0u8; size_of::<f32>()];
+            let mut im_buf = [0u8; size_of::<f32>()];
             file.read_exact(&mut re_buf)?;
             file.read_exact(&mut im_buf)?;
-            let re = f64::from_ne_bytes(re_buf);
-            let im = f64::from_ne_bytes(im_buf);
+            let re = f32::from_ne_bytes(re_buf);
+            let im = f32::from_ne_bytes(im_buf);
             *slot = Complex::new(re, im);
         }
         Ok(Self { data })
     }
-}
 
-impl<const N: usize> ComplexHDV<N> {
-    pub fn from_slice(slice: &[f32]) -> Self {
-        let data = std::array::from_fn(|i| {
-            let re = slice.get(2 * i).copied().unwrap_or(0.0) as f64;
-            let im = slice.get(2 * i + 1).copied().unwrap_or(0.0) as f64;
-            Complex::new(re, im)
-        });
+    fn from_slice(slice: &[Self::Element]) -> Self {
+        let data = std::array::from_fn(|i| slice.get(i).copied().unwrap_or(Complex::new(0.0, 0.0)));
         Self { data }
     }
 
+    fn from_iter(mut iter: impl Iterator<Item = Self::Element>) -> Self {
+        let data = std::array::from_fn(|_| iter.next().expect("wrong size"));
+        Self { data }
+    }
+}
+
+impl<const N: usize> ComplexHDV<N> {
     pub fn normalise(&mut self) {
         let norm = self
             .data
             .iter()
             .map(|e| e.norm_sqr())
-            .sum::<f64>()
+            .sum::<f32>()
             .sqrt()
             .max(1e-12); // avoid division by zero
         self.data.iter_mut().for_each(|e| *e /= norm);
@@ -201,7 +203,7 @@ impl<const N: usize> ComplexHDV<N> {
             ifft.process(&mut result);
 
             // Scale by 1/N (standard for IFFT normalization)
-            let scale = 1.0 / (N as f64);
+            let scale = 1.0 / (N as f32);
             result.iter_mut().for_each(|x| *x *= scale);
             Self { data: result }
         })
@@ -214,17 +216,17 @@ impl<const N: usize> ComplexHDV<N> {
             let fft = planner.plan_fft_forward(N);
             let ifft = planner.plan_fft_inverse(N);
 
-            let mut a: Vec<Complex<f64>> = self.data.iter().cloned().collect();
-            let mut b: Vec<Complex<f64>> = other.data.iter().cloned().collect();
+            let mut a: Vec<Complex<f32>> = self.data.iter().cloned().collect();
+            let mut b: Vec<Complex<f32>> = other.data.iter().cloned().collect();
 
             fft.process(&mut a);
             fft.process(&mut b);
 
-            let mut data: [Complex<f64>; N] = std::array::from_fn(|i| a[i] * b[i].conj());
+            let mut data: [Complex<f32>; N] = std::array::from_fn(|i| a[i] * b[i].conj());
 
             ifft.process(&mut data);
 
-            let scale = 1.0 / (N as f64);
+            let scale = 1.0 / (N as f32);
             data.iter_mut().for_each(|x| *x *= scale);
 
             Self { data }
@@ -242,27 +244,27 @@ impl<const N: usize> ComplexHDV<N> {
         Self { data }
     }
 
-    pub fn distance_dot(&self, other: &Self) -> f64 {
+    pub fn distance_dot(&self, other: &Self) -> f32 {
         // Hermitian dot product: z · w̅
         self.data
             .iter()
             .zip(other.data.iter())
             .map(|(a, b)| *a * b.conj())
-            .sum::<Complex<f64>>()
+            .sum::<Complex<f32>>()
             .norm_sqr()
     }
 
-    pub fn distance_cosine_sim(&self, other: &Self) -> f64 {
+    pub fn distance_cosine_sim(&self, other: &Self) -> f32 {
         // Hermitian dot product: z · w̅
-        let dot: Complex<f64> = self
+        let dot: Complex<f32> = self
             .data
             .iter()
             .zip(other.data.iter())
             .map(|(a, b)| *a * b.conj())
             .sum();
 
-        let mag_a = self.data.iter().map(|a| a.norm_sqr()).sum::<f64>().sqrt();
-        let mag_b = other.data.iter().map(|b| b.norm_sqr()).sum::<f64>().sqrt();
+        let mag_a = self.data.iter().map(|a| a.norm_sqr()).sum::<f32>().sqrt();
+        let mag_b = other.data.iter().map(|b| b.norm_sqr()).sum::<f32>().sqrt();
 
         let cosine_similarity = dot.re / (mag_a * mag_b);
         1.0 - cosine_similarity // 0 = identical, 1 = orthogonal, 2 = opposite
@@ -274,8 +276,8 @@ impl<const N: usize> ComplexHDV<N> {
 
 #[derive(Debug, Clone)]
 pub struct WeightedAccumulator<const N: usize> {
-    sum: [Complex<f64>; N],
-    count: f64, // total number of vectors added
+    sum: [Complex<f32>; N],
+    count: f32, // total number of vectors added
 }
 
 impl<const N: usize> Default for WeightedAccumulator<N> {
@@ -294,13 +296,13 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for WeightedAccumulator<N> {
 
     fn add(&mut self, v: &ComplexHDV<N>, weight: f64) {
         for i in 0..N {
-            self.sum[i] += weight * v.data[i];
+            self.sum[i] += weight as f32 * v.data[i];
         }
-        self.count += weight
+        self.count += weight as f32
     }
 
     fn finalize(&mut self) -> ComplexHDV<N> {
-        let data: [Complex<f64>; N] = std::array::from_fn(|i| self.sum[i] / self.count.sqrt());
+        let data: [Complex<f32>; N] = std::array::from_fn(|i| self.sum[i] / self.count.sqrt());
         ComplexHDV { data }
     }
 
@@ -321,13 +323,13 @@ impl<const N: usize> Accumulator<ComplexHDV<N>> for WeightedAccumulator<N> {
     //}
 
     fn count(&self) -> f64 {
-        self.count
+        self.count as f64
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct UnitAcc<const N: usize> {
-    sum: [Complex<f64>; N],
+    sum: [Complex<f32>; N],
     count: usize, // total number of vectors added
 }
 
@@ -353,8 +355,8 @@ impl<const N: usize> UnitAccumulator<ComplexHDV<N>> for UnitAcc<N> {
     }
 
     fn finalize(&mut self) -> ComplexHDV<N> {
-        let data: [Complex<f64>; N] =
-            std::array::from_fn(|i| self.sum[i] / (self.count as f64).sqrt());
+        let data: [Complex<f32>; N] =
+            std::array::from_fn(|i| self.sum[i] / (self.count as f32).sqrt());
         ComplexHDV { data }
     }
 
@@ -374,10 +376,10 @@ mod tests {
         let mut mt = MersenneTwister64::new(42);
         const N: usize = 1024;
         let a = ComplexHDV::<N>::random(&mut mt);
-        let mag = a.data.iter().map(|e| e.norm_sqr()).sum::<f64>().sqrt();
+        let mag = a.data.iter().map(|e| e.norm_sqr()).sum::<f32>().sqrt();
         println!("mag {mag}");
         // For ComplexHDV::random(), expected norm ≈ 1
-        //let expected = (N as f64).sqrt();
+        //let expected = (N as f32).sqrt();
         let expected = 1.0;
         assert!((mag - expected).abs() < 0.1);
     }

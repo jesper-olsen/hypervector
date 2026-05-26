@@ -20,6 +20,7 @@ pub struct RealHDV<const N: usize> {
 impl<const N: usize> HyperVector for RealHDV<N> {
     type Accumulator = WeightedAccumulator<N>;
     type UnitAccumulator = UnitAcc<N>;
+    type Element = f32;
     const DIM: usize = N;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -95,10 +96,8 @@ impl<const N: usize> HyperVector for RealHDV<N> {
         }
         Ok(Self { data })
     }
-}
 
-impl<const N: usize> RealHDV<N> {
-    pub fn from_slice(slice: &[f32]) -> Self {
+    fn from_slice(slice: &[f32]) -> Self {
         assert!(slice.len() <= N);
         let data = std::array::from_fn(|i| {
             if i < slice.len() {
@@ -110,6 +109,13 @@ impl<const N: usize> RealHDV<N> {
         Self { data }
     }
 
+    fn from_iter(mut iter: impl Iterator<Item = Self::Element>) -> Self {
+        let data = std::array::from_fn(|_i| iter.next().expect("too short") as f64);
+        Self { data }
+    }
+}
+
+impl<const N: usize> RealHDV<N> {
     //fn _bind_circular_convolution(&self, other: &Self) -> Self {
     //    // Performs circular convolution using the direct, time-domain formula:
     //    // result[j] = Σ (from k=0 to N-1) of other[k] * self[j-k]

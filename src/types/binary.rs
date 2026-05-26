@@ -42,6 +42,7 @@ impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
     type Accumulator = WeightedAcc<N, BIPOLAR>;
     //type Accumulator = FixPointAcc<N, BIPOLAR>;
     type UnitAccumulator = SlicedUnitAcc<N, BIPOLAR, 32>; // 1-64 bit PLANES
+    type Element = i8;
     const DIM: usize = N * usize::BITS as usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -131,6 +132,45 @@ impl<const N: usize, const BIPOLAR: bool> HyperVector for Binary<N, BIPOLAR> {
             *slot = usize::from_ne_bytes(buf);
         }
         Ok(Self { data })
+    }
+
+    fn from_slice(slice: &[Self::Element]) -> Self {
+        let dim = N * usize::BITS as usize;
+        assert!(slice.len() <= dim);
+        let mut data = [0; N];
+        for (i, e) in slice.iter().enumerate() {
+            let word_idx = i / usize::BITS as usize;
+            let bit_idx = i % usize::BITS as usize;
+            let bit = if BIPOLAR {
+                (*e == -1) as usize
+            } else {
+                (*e != 0) as usize
+            };
+            data[word_idx] |= bit << bit_idx;
+        }
+        Self { data }
+    }
+
+    fn from_iter(mut iter: impl Iterator<Item = Self::Element>) -> Self {
+        let mut data = [0; N];
+
+        for word in &mut data {
+            let mut current_word: usize = 0;
+            for bit_idx in 0..usize::BITS {
+                let Some(e) = iter.next() else {
+                    *word = current_word;
+                    return Self { data };
+                };
+                let bit = if BIPOLAR {
+                    (e == -1) as usize
+                } else {
+                    (e != 0) as usize
+                };
+                current_word |= bit << bit_idx;
+            }
+            *word = current_word;
+        }
+        Self { data }
     }
 }
 
@@ -463,38 +503,6 @@ impl<const N: usize, const BIPOLAR: bool, const PLANES: usize> UnitAccumulator<B
 
     fn count(&self) -> usize {
         self.count
-    }
-}
-
-impl<const N: usize> Binary<N, true> {
-    pub fn from_slice(slice: &[i8]) -> Self {
-        let dim = N * usize::BITS as usize;
-        assert!(slice.len() <= dim);
-        let mut data = [0; N];
-        for (i, e) in slice.iter().enumerate() {
-            let word_idx = i / usize::BITS as usize;
-            let bit_idx = i % usize::BITS as usize;
-            if *e == -1 {
-                data[word_idx] |= 1 << bit_idx;
-            }
-        }
-        Self { data }
-    }
-}
-
-impl<const N: usize> Binary<N, false> {
-    pub fn from_slice(slice: &[u8]) -> Self {
-        let dim = N * usize::BITS as usize;
-        assert!(slice.len() <= dim);
-        let mut data = [0; N];
-        for (i, e) in slice.iter().enumerate() {
-            let word_idx = i / usize::BITS as usize;
-            let bit_idx = i % usize::BITS as usize;
-            if *e != 0 {
-                data[word_idx] |= 1 << bit_idx;
-            }
-        }
-        Self { data }
     }
 }
 

@@ -18,6 +18,7 @@ pub trait Accumulator<T: HyperVector> {
 pub trait HyperVector: Sized + Clone {
     type Accumulator: Default + Accumulator<Self>;
     type UnitAccumulator: Default + UnitAccumulator<Self>;
+    type Element;
     const DIM: usize;
 
     fn random<R: Rng + ?Sized>(rng: &mut R) -> Self;
@@ -58,4 +59,6 @@ pub trait HyperVector: Sized + Clone {
     fn unpack(&self) -> Vec<f32>;
     fn write(&self, file: &mut File) -> std::io::Result<()>;
     fn read(file: &mut File) -> std::io::Result<Self>;
+    fn from_slice(slice: &[Self::Element]) -> Self;
+    fn from_iter(iter: impl Iterator<Item = Self::Element>) -> Self;
 }

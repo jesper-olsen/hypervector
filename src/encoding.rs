@@ -1,6 +1,11 @@
+use crate::types::binary::Binary;
+use crate::types::complex::ComplexHDV;
+use crate::types::modular::Modular;
+use crate::types::real::RealHDV;
 use crate::types::traits::{Accumulator, HyperVector};
-use rand::Rng;
+use fwht::fwht;
 use rand::seq::SliceRandom;
+use rand::{Rng, RngExt};
 
 // ── ScalarEncoder ───────────────────────────────────────────────────────────────────
 //
@@ -98,10 +103,14 @@ impl<H: HyperVector> TabularEncoder<H> {
     pub fn encode(&self, row: &[f32]) -> H {
         let mut acc = H::Accumulator::new();
 
-        for (i, &value) in row.iter().enumerate() {
-            // Direct index access - no hashing or string matching
-            let val_v = self.field_encoders[i].encode(value);
-            let bound = val_v.bind(&self.field_keys[i]);
+        //for (i, &value) in row.iter().enumerate() {
+        //    let val_v = self.field_encoders[i].encode(value);
+        //    let bound = val_v.bind(&self.field_keys[i]);
+        //    acc.add(&bound, 1.0);
+        //}
+        for ((&value, encoder), key) in row.iter().zip(&self.field_encoders).zip(&self.field_keys) {
+            let val_v = encoder.encode(value);
+            let bound = val_v.bind(key);
             acc.add(&bound, 1.0);
         }
 
@@ -127,6 +136,91 @@ impl<H: HyperVector> CategoricalEncoder<H> {
         &self.values[idx]
     }
 }
+
+// -- FWHT ------------------------------------------------------------------
+
+pub trait FromSpectrum {
+    /// Constructs the hypervector from a raw real-valued spectrum.
+    fn from_spectrum(slice: &[f32]) -> Self;
+}
+
+impl<const N: usize> FromSpectrum for Binary<N, true> {
+    fn from_spectrum(coefficients: &[f32]) -> Self {
+        let iter = coefficients
+            .iter()
+            .map(|&val| if val < 0.0 { -1 } else { 1 });
+        Self::from_iter(iter)
+    }
+}
+
+impl<const N: usize> FromSpectrum for Binary<N, false> {
+    fn from_spectrum(coefficients: &[f32]) -> Self {
+        let iter = coefficients
+            .iter()
+            .map(|&val| if val < 0.0 { 0 } else { 1 });
+        Self::from_iter(iter)
+    }
+}
+
+impl<const N: usize> FromSpectrum for RealHDV<N> {
+    fn from_spectrum(coefficients: &[f32]) -> Self {
+        Self::from_slice(coefficients)
+    }
+}
+
+impl<const N: usize> FromSpectrum for ComplexHDV<N> {
+    fn from_spectrum(_coefficients: &[f32]) -> Self {
+        unimplemented!()
+    }
+}
+
+impl<const N: usize> FromSpectrum for Modular<N> {
+    fn from_spectrum(_coefficients: &[f32]) -> Self {
+        unimplemented!()
+    }
+}
+
+pub struct FwhtEncoder<T, const FEATURE_DIM: usize> {
+    random_base: Vec<f32>,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T, const FEATURE_DIM: usize> FwhtEncoder<T, FEATURE_DIM>
+where
+    T: FromSpectrum + HyperVector,
+{
+    pub fn new(rng: &mut impl Rng) -> Self {
+        assert!(T::DIM.is_power_of_two());
+        let random_base = (0..T::DIM)
+            .map(|_| if rng.random_bool(0.5) { 1.0 } else { -1.0 })
+            .collect();
+
+        Self {
+            random_base,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    pub fn encode(&self, features: &[f32; FEATURE_DIM]) -> T {
+        // Tile the features across the entire D-dimensional space.
+        // self.random_base already contains D random signs.
+
+        //Can't use array in stable rust yet (1.95.0) ...
+        //let mut buffer: [f32; T::DIM] =
+        //    std::array::from_fn(|i| features[i % FEATURE_DIM] * self.random_base[i]);
+        let mut buffer: Vec<f32> = (0..T::DIM)
+            .map(|i| features[i % FEATURE_DIM] * self.random_base[i])
+            .collect();
+
+        // Fast Walsh-Hadamard Transform
+        fwht(&mut buffer);
+
+        // Map cleanly to the target type via our isolated trait
+        T::from_spectrum(&buffer)
+    }
+}
+
+// -- Tests -----------------------------------------------------------------
 
 #[cfg(test)]
 mod encoding_tests {
