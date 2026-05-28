@@ -71,7 +71,7 @@ impl<const N: usize> HyperVector for ComplexHDV<N> {
     }
 
     fn distance(&self, other: &Self) -> f32 {
-        self.distance_cosine_sim(other) 
+        self.distance_cosine_sim(other)
         //self.distance_dot(other) as f32
     }
 

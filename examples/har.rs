@@ -7,7 +7,7 @@ use rand::Rng;
 use rayon::prelude::*;
 
 use hypervector::datasets::har_dataset::{Dataset, Label, N_FEATURES, NUM_CLASSES};
-use hypervector::encoding::BundleEncoder;
+use hypervector::encoding::{BundleEncoder, FromSpectrum, FwhtEncoder};
 use hypervector::hdv;
 use hypervector::trainer::{
     Classifier, Trainer, ensemble_accuracy,
@@ -42,6 +42,21 @@ impl fmt::Display for TrainerKind {
     }
 }
 
+#[derive(Debug, Clone, ValueEnum, PartialEq)]
+enum Encoder {
+    Bundle,
+    Fwht,
+}
+
+impl fmt::Display for Encoder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Encoder::Bundle => write!(f, "bundle"),
+            Encoder::Fwht => write!(f, "fwht"),
+        }
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -54,6 +69,9 @@ struct Args {
 
     #[arg(long, default_value_t = TrainerKind::Perceptron)]
     trainer: TrainerKind,
+
+    #[arg(long, default_value_t = Encoder::Fwht)]
+    encoder: Encoder,
 
     #[arg(long, default_value_t = 1)]
     /// number of prototypes per class
@@ -116,14 +134,23 @@ where
     trainer.into_model()
 }
 
-fn run<T: HyperVector + Sync + Send>(
-    data: &Dataset,
-    rng: &mut impl Rng,
-    args: &Args,
-) -> Vec<usize> {
-    let encoder = BundleEncoder::<T, N_FEATURES>::new(rng);
-    let train_hvs: Vec<T> = data.train.par_iter().map(|s| encoder.encode(s)).collect();
-    let test_hvs: Vec<T> = data.test.par_iter().map(|s| encoder.encode(s)).collect();
+fn run<T: HyperVector + Sync + Send>(data: &Dataset, rng: &mut impl Rng, args: &Args) -> Vec<usize>
+where
+    T: FromSpectrum,
+{
+    let (train_hvs, test_hvs): (Vec<T>, Vec<T>) = if args.encoder == Encoder::Bundle {
+        let encoder = BundleEncoder::<T, N_FEATURES>::new(rng);
+        (
+            data.train.par_iter().map(|s| encoder.encode(s)).collect(),
+            data.test.par_iter().map(|s| encoder.encode(s)).collect(),
+        )
+    } else {
+        let encoder = FwhtEncoder::<T, N_FEATURES>::new(rng);
+        (
+            data.train.par_iter().map(|s| encoder.encode(s)).collect(),
+            data.test.par_iter().map(|s| encoder.encode(s)).collect(),
+        )
+    };
 
     let k = args.prototypes;
     let epochs = args.epochs;
