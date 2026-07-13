@@ -36,14 +36,9 @@ const FEATURE_HORIZONTAL: u8 = 2;
 const FEATURE_VERTICAL: u8 = 4;
 const FEATURE_DIAGONAL1: u8 = 8;
 const FEATURE_DIAGONAL2: u8 = 16;
-const FEATURE_THINNED: u8 = 32; // New flag
-
-const ALL_FEATURES: u8 = FEATURE_PIXEL_BAG
-    | FEATURE_HORIZONTAL
-    | FEATURE_VERTICAL
-    | FEATURE_DIAGONAL1
-    | FEATURE_DIAGONAL2
-    | FEATURE_THINNED;
+const FEATURE_THINNED: u8 = 32;
+const FEATURE_EDGES: u8 =
+    FEATURE_HORIZONTAL | FEATURE_VERTICAL | FEATURE_DIAGONAL1 | FEATURE_DIAGONAL2;
 
 /// Feature extraction for MNIST digit images using hyperdimensional computing.
 ///
@@ -105,8 +100,7 @@ impl<T: HyperVector> MnistEncoder<T> {
     }
 
     pub fn with_feature_edges(mut self) -> Self {
-        self.features |=
-            FEATURE_HORIZONTAL | FEATURE_VERTICAL | FEATURE_DIAGONAL1 | FEATURE_DIAGONAL2;
+        self.features |= FEATURE_EDGES;
         self
     }
 
@@ -122,10 +116,10 @@ impl<T: HyperVector> MnistEncoder<T> {
         let width = image.width();
         let height = image.height();
 
-        let features = if self.features != 0 {
-            self.features
+        let features = if self.features == 0 {
+            FEATURE_PIXEL_BAG | FEATURE_EDGES
         } else {
-            ALL_FEATURES
+            self.features
         };
 
         if features & FEATURE_PIXEL_BAG != 0 {
@@ -231,6 +225,36 @@ impl<T: HyperVector> MnistEncoder<T> {
     }
 }
 
+/// Computes the majority vote for a set of predictions.
+///
+/// `predictions` is a slice of prediction arrays, where each array comes from a single model.
+/// `num_classes` defines the size of the voting ballot.
+pub fn majority_vote(predictions: &[Vec<u8>], num_classes: usize) -> Vec<u8> {
+    if predictions.is_empty() {
+        return Vec::new();
+    }
+
+    let n_test = predictions[0].len();
+
+    (0..n_test)
+        .into_par_iter()
+        .map(|i| {
+            let mut counts = vec![0u32; num_classes];
+            for r in predictions {
+                counts[r[i] as usize] += 1;
+            }
+
+            counts
+                .into_iter()
+                .enumerate()
+                .rev()
+                .max_by_key(|&(_, count)| count)
+                .map(|(label, _)| label as u8)
+                .unwrap()
+        })
+        .collect()
+}
+
 // -- Confusion Matrix ------------------------------------------------------
 
 /// Row = true label, column = predicted label.
@@ -269,7 +293,6 @@ fn main() -> Result<(), MnistError> {
         Mnist::load_with_shift_augmentation(args.data_dir, max_shift)?
     } else {
         Mnist::load(args.data_dir)?
-        //let data = Mnist::load("MNISTfashion")?;
     };
     println!("Read {} training labels", data.train_labels.len());
 
@@ -342,28 +365,14 @@ fn main() -> Result<(), MnistError> {
     println!("Accuracy range: {min:.1}% - {max:.1}%");
     let n_test = data.test_labels.len();
 
-    let ensemble_predictions: Vec<u8> = (0..n_test)
-        .into_par_iter()
-        .map(|i| {
-            let mut counts = [0u32; 10];
-            for r in &ensemble_results {
-                counts[r[i] as usize] += 1;
-            }
-            counts
-                .iter()
-                .enumerate()
-                .rev()
-                .max_by_key(|&(_, &count)| count)
-                .map(|(label, _)| label as u8)
-                .unwrap()
-        })
-        .collect();
+    let ensemble_predictions = majority_vote(&ensemble_results, 10);
 
     let ensemble_correct = ensemble_predictions
         .par_iter()
         .zip(data.test_labels.par_iter())
         .filter(|&(p, l)| p == l)
         .count();
+
     let ensemble_acc = 100.0 * ensemble_correct as f64 / n_test as f64;
     println!("\nEnsemble Accuracy: {ensemble_correct:5}/{n_test} = {ensemble_acc:.2}%");
 

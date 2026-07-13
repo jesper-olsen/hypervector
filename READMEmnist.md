@@ -1,9 +1,6 @@
-# MNIST Classification via Vector Symbolic Architectures
+# MNIST - Handwritten Digit Classification 
 
-This example demonstrates handwritten digit classification using hyperdimensional computing (HDC). 
-Rather than relying on a deep convolutional neural network for feature extraction, 
-it encodes raw $28 \times 28$ pixel images directly into high-dimensional binary vectors 
-and trains an ensemble of linear perceptrons.
+This example demonstrates that a relatively simple hyperdimensional computing pipeline using fixed random hypervectors, handcrafted image encoding, and an ensemble of perceptrons—can achieve 98.6% accuracy without deep learning or backpropagation through multiple layers.
 
 ## Architecture
 
@@ -43,7 +40,7 @@ The `--augment` options adds jitter to the training set - augments the set with 
 
 
 ```
-cargo run --example mnist --release -- --augment
+cargo run --example mnist --release -- --data-dir MNIST --augment
 Read 540000 training labels
 Training model 1
 Encoding images (Dim 12800)...
@@ -79,8 +76,9 @@ true\pred     0     1     2     3     4     5     6     7     8     9
 
 Dim   | Jitter | Ensemble Size | Individual Accuracy | Ensemble Accuracy | Time
 -----:| :-----:| -------------:|--------------------:| -----------------:| ----:
- 6400 |   no   |     5         |   97.1% - 97.4%     |     97.8%         |  3m
- 6400 |  yes   |     5         |   94.5% - 97.4%     |     98.3%         | 36m
-12800 |   no   |     5         |   97.4% - 97.7%     |     97.8%         |  6m
-12800 |  yes   |     5         |   97.4% - 98.0%     |     98.4%         | 73m
+ 6400 |   no   |     5         |   97.1% - 97.4%     |     97.8%         |   3m
+ 6400 |  yes   |     5         |   94.5% - 97.4%     |     98.3%         |  36m
+12800 |   no   |     5         |   97.4% - 97.7%     |     97.8%         |   6m
+12800 |  yes   |     5         |   97.4% - 98.0%     |     98.4%         |  73m
+12800 |  yes   |    11         |   97.0% - 97.8%     |     98.6%         | 131m
 
