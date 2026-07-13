@@ -29,7 +29,7 @@ Runnable example problems (`cargo run --example name`):
  9. [Adult](READMEadult.md): the classic Adult dataset (Census Income). 
 10. [MovieLens 100k](READMEml-100k.md): movie recommendation on the MovieLens 100k dataset. 
 11. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
-12. [MNIST image classification](https://github.com/jesper-olsen/engram). Note this example is in its own repo.
+12. [MNIST image classification](https://github.com/jesper-olsen/engram). Handwritten digits.
 
 
 ## References
