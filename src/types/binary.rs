@@ -219,7 +219,8 @@ impl<const N: usize, const BIPOLAR: bool, R: Rng + SeedableRng + Default>
             let word = v.data[i];
             for j in 0..usize::BITS as usize {
                 // MAP: Binary 1 -> 1.0, Binary 0 -> -1.0
-                let bit_signal = if ((word >> j) & 1) == 1 { 1.0 } else { -1.0 };
+                //let bit_signal = if ((word >> j) & 1) == 1 { 1.0 } else { -1.0 };
+                let bit_signal = (((word >> j) & 1) as f32) * 2.0 - 1.0;  // branchless
                 self.votes[i][j] += weight as f32 * bit_signal;
             }
         }
