@@ -18,13 +18,13 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 
 Runnable example problems (`cargo run --example name`):
 
-### Symbolic reasoning
+**Symbolic reasoning**
 
  - Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
  - Plate's [inferencing example](READMEplate.md) used in his HRR paper [4].
  - [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
 
- ### Classification
+ **Classification**
  - [Activity recognition (UCI HAR)](READMEhar.md): walking, standing, sitting etc...
  - [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
  - [Wine quality classification (UCI Wine Quality)](READMEwine.md).
@@ -34,7 +34,7 @@ Runnable example problems (`cargo run --example name`):
  - [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
  - [MNIST image classification](READMEmnist.md). Handwritten digits.
 
-### Recommendation
+**Recommendation**
  - [MovieLens 100k](READMEml-100k.md): movie recommendation on the MovieLens 100k dataset. 
 
 
