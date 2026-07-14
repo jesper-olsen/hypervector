@@ -4,7 +4,7 @@ use hypervector::types::binary::Binary;
 use hypervector::types::traits::{Accumulator, HyperVector};
 use hypervector::{
     hdv,
-    trainer::{Classifier, perceptron::PerceptronTrainer},
+    trainer::{argmin, ensemble_fusion, perceptron::PerceptronTrainer},
 };
 use mnist::{self, Image, Mnist, error::MnistError};
 use rand::Rng;
@@ -243,14 +243,15 @@ pub fn majority_vote(predictions: &[Vec<u8>], num_classes: usize) -> Vec<u8> {
             for r in predictions {
                 counts[r[i] as usize] += 1;
             }
-
-            counts
-                .into_iter()
-                .enumerate()
-                .rev()
-                .max_by_key(|&(_, count)| count)
-                .map(|(label, _)| label as u8)
-                .unwrap()
+            let mut best_label = 0;
+            let mut best_count = 0;
+            for (label, count) in counts.into_iter().enumerate() {
+                if count >= best_count {
+                    best_label = label;
+                    best_count = count;
+                }
+            }
+            best_label as u8
         })
         .collect()
 }
@@ -286,21 +287,23 @@ fn main() -> Result<(), MnistError> {
 
     //const TOTAL_BITS: usize = 6400;
     const TOTAL_BITS: usize = 12800;
-    //const TOTAL_BITS: usize = 25600;
     hdv!(binary, HDV, TOTAL_BITS);
     let data = if args.augment {
-        let max_shift = 1; // +/- pixels
+        let max_shift = 1;
         Mnist::load_with_shift_augmentation(args.data_dir, max_shift)?
     } else {
         Mnist::load(args.data_dir)?
     };
-    println!("Read {} training labels", data.train_labels.len());
+    println!("Loaded {} training labels", data.train_labels.len());
 
+    const N: usize = mnist::NUM_LABELS;
     let seed = 42;
-    let mut ensemble_results = Vec::with_capacity(args.ensemble_size);
+    let mut ensemble_hard_results: Vec<Vec<u8>> = Vec::with_capacity(args.ensemble_size);
+    let mut ensemble_score_results: Vec<Vec<[f32; N]>> = Vec::with_capacity(args.ensemble_size);
     let mut test_accuracies = Vec::with_capacity(args.ensemble_size);
+
     for mn in 1..=args.ensemble_size {
-        println!("Training model {mn}");
+        println!("Training model {mn}/{}", args.ensemble_size);
         let mut rng = StdRng::seed_from_u64(seed + mn as u64);
         let n_epochs = 2000;
 
@@ -315,7 +318,7 @@ fn main() -> Result<(), MnistError> {
             .map(|im| encoder.encode(im))
             .collect();
         let mut trainer =
-            PerceptronTrainer::<HDV, u8, _, 10>::new(&train_hvs, &data.train_labels, None, rng);
+            PerceptronTrainer::<HDV, u8, _, N>::new(&train_hvs, &data.train_labels, None, rng);
 
         for epoch in 1..=n_epochs {
             let r = trainer.step(epoch);
@@ -326,7 +329,6 @@ fn main() -> Result<(), MnistError> {
                 r.accuracy() * 100.0
             );
             std::io::stdout().flush().unwrap();
-
             if r.errors == 0 {
                 break;
             }
@@ -334,16 +336,15 @@ fn main() -> Result<(), MnistError> {
         println!();
         let model = trainer.into_model();
 
-        let results: Vec<u8> = data
+        let scores: Vec<[f32; N]> = data
             .test_images
             .par_iter()
-            .map(|im| {
-                let h = encoder.encode(im);
-                model.predict(&h) as u8
-            })
+            .map(|im| model.scores(&encoder.encode(im)))
             .collect();
 
-        let correct: usize = results
+        let hard_results: Vec<u8> = scores.iter().map(|s| argmin(s) as u8).collect();
+
+        let correct: usize = hard_results
             .par_iter()
             .zip(data.test_labels.par_iter())
             .filter(|&(predicted, label)| *predicted == *label)
@@ -352,7 +353,8 @@ fn main() -> Result<(), MnistError> {
         let acc = 100.0 * correct as f64 / total as f64;
 
         test_accuracies.push(acc);
-        ensemble_results.push(results);
+        ensemble_hard_results.push(hard_results);
+        ensemble_score_results.push(scores);
         println!("Test Accuracy: {correct:5}/{total} = {acc:.2}%\n");
     }
 
@@ -365,19 +367,33 @@ fn main() -> Result<(), MnistError> {
     println!("Accuracy range: {min:.1}% - {max:.1}%");
     let n_test = data.test_labels.len();
 
-    let ensemble_predictions = majority_vote(&ensemble_results, 10);
-
-    let ensemble_correct = ensemble_predictions
+    // Hard voting baseline (majority of per-model argmin labels)
+    let hard_vote_predictions = majority_vote(&ensemble_hard_results, N);
+    let hard_vote_correct = hard_vote_predictions
         .par_iter()
         .zip(data.test_labels.par_iter())
         .filter(|&(p, l)| p == l)
         .count();
+    let hard_vote_acc = 100.0 * hard_vote_correct as f64 / n_test as f64;
+    println!(
+        "\nHard-vote Ensemble Accuracy:   {hard_vote_correct:5}/{n_test} = {hard_vote_acc:.2}%"
+    );
 
-    let ensemble_acc = 100.0 * ensemble_correct as f64 / n_test as f64;
-    println!("\nEnsemble Accuracy: {ensemble_correct:5}/{n_test} = {ensemble_acc:.2}%");
+    // Sum-rule score fusion
+    let fusion_predictions: Vec<u8> = ensemble_fusion(&ensemble_score_results)
+        .into_iter()
+        .map(|l| l as u8)
+        .collect();
+    let fusion_correct = fusion_predictions
+        .par_iter()
+        .zip(data.test_labels.par_iter())
+        .filter(|&(p, l)| p == l)
+        .count();
+    let fusion_acc = 100.0 * fusion_correct as f64 / n_test as f64;
+    println!("Score-fusion Ensemble Accuracy: {fusion_correct:5}/{n_test} = {fusion_acc:.2}%");
 
-    println!("\nEnsemble Confusion Matrix:");
-    let cm = confusion_matrix(&ensemble_predictions, &data.test_labels);
+    println!("\nScore-fusion Confusion Matrix:");
+    let cm = confusion_matrix(&fusion_predictions, &data.test_labels);
     print_confusion_matrix(&cm);
 
     Ok(())

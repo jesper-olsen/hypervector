@@ -1,6 +1,6 @@
 # MNIST - Handwritten Digit Classification 
 
-This example demonstrates that a relatively simple hyperdimensional computing pipeline using fixed random hypervectors, handcrafted image encoding, and an ensemble of perceptrons—can achieve 98.6% accuracy without deep learning or backpropagation through multiple layers.
+This example demonstrates that a relatively simple hyperdimensional computing pipeline, and an ensemble of perceptrons - can achieve 98.6% accuracy on MNIST without deep learning or backpropagation through multiple layers.
 
 ## Architecture
 
@@ -40,36 +40,38 @@ The `--augment` options adds jitter to the training set - augments the set with 
 
 
 ```
-cargo run --example mnist --release -- --data-dir MNIST --augment
-Read 540000 training labels
-Training model 1
+cargo run --example mnist --release -- --data-dir MNIST --augment --ensemble-size 11    
+
+Loaded 540000 training labels
+Training model 1/11
 Encoding images (Dim 12800)...
-Epoch 2000: 525546/540000=97.32%
-Test Accuracy:  9746/10000 = 97.46%
+Epoch 2000: 524756/540000=97.18%
+Test Accuracy:  9770/10000 = 97.70%
 
 [..snip..]
 
-Training model 5
+Training model 11/11
 Encoding images (Dim 12800)...
-Epoch 2000: 527744/540000=97.73%
-Test Accuracy:  9796/10000 = 97.96%
+Epoch 2000: 522474/540000=96.75%
+Test Accuracy:  9749/10000 = 97.49%
 
-Accuracy range: 97.4% - 98.0%
+Accuracy range: 97.1% - 98.0%
 
-Ensemble Accuracy:  9836/10000 = 98.36%
+Hard-vote Ensemble Accuracy:    9860/10000 = 98.60%
+Score-fusion Ensemble Accuracy:  9864/10000 = 98.64%
 
-Ensemble Confusion Matrix:
+Score-fusion Confusion Matrix:
 true\pred     0     1     2     3     4     5     6     7     8     9
-       0    976     0     0     1     0     0     1     0     2     0
-       1      0  1123     3     0     1     1     5     1     1     0
-       2      2     4  1014     2     1     0     0     4     5     0
-       3      0     0     1  1000     0     3     0     1     4     1
-       4      1     0     2     1   972     0     1     0     1     4
-       5      2     0     1     5     0   881     2     0     1     0
-       6      3     2     0     1     2     5   945     0     0     0
-       7      0     2     9     2     2     0     0  1001     2    10
-       8      7     0     5     5     6     3     1     3   941     3
-       9      0     3     1     2     4     2     0     7     7   983
+       0    976     0     1     0     0     0     1     0     1     1
+       1      0  1124     2     0     1     2     3     2     1     0
+       2      2     4  1017     1     1     0     0     3     4     0
+       3      0     0     1  1001     0     3     0     1     3     1
+       4      1     0     1     1   974     0     1     0     1     3
+       5      2     1     1     3     0   882     1     0     0     2
+       6      3     2     0     1     3     4   944     0     1     0
+       7      0     3    10     1     2     0     0  1001     2     9
+       8      3     0     4     0     4     2     0     2   957     2
+       9      0     3     0     2     6     2     0     3     5   988
 ```
 
 ## Benchmark

@@ -72,6 +72,12 @@ pub struct PrototypeModel<T: HyperVector, const N: usize> {
     pub prototypes: [T; N],
 }
 
+impl<T: HyperVector, const N: usize> PrototypeModel<T, N> {
+    pub fn scores(&self, h: &T) -> [f32; N] {
+        std::array::from_fn(|i| self.prototypes[i].distance(&h))
+    }
+}
+
 impl<T: HyperVector, const N: usize> Classifier<T> for PrototypeModel<T, N> {
     fn predict(&self, h: &T) -> usize {
         let (idx, _) = nearest(h, &self.prototypes);
@@ -129,6 +135,65 @@ where
 {
     let votes = ensemble_vote::<L>(predictions, n_classes);
     let correct = votes
+        .iter()
+        .zip(labels.iter())
+        .filter(|(pred, label)| **pred == (**label).into())
+        .count();
+    let total = labels.len();
+    (correct, total - correct, correct as f64 / total as f64)
+}
+
+/// Sum-rule fusion for score-based ensembles.
+///
+/// `scores` holds one `Vec<[f32; N]>` per model, each indexed by sample.
+/// Each entry is that model's per-class distance for the sample (lower = closer).
+/// The fused prediction is the class with the smallest *summed* distance
+/// across all models. Valid to sum directly (no per-model normalization)
+/// as long as every model shares the same encoder/dimensionality, so their
+/// distance scales are already comparable.
+pub fn ensemble_fusion<const N: usize>(scores: &[Vec<[f32; N]>]) -> Vec<usize> {
+    let n_samples = scores[0].len();
+    (0..n_samples)
+        .into_par_iter()
+        .map(|i| {
+            let mut summed = [0f32; N];
+            for model_scores in scores {
+                for c in 0..N {
+                    summed[c] += model_scores[i][c];
+                }
+            }
+            argmin(&summed)
+            //summed
+            //    .iter()
+            //    .enumerate()
+            //    .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            //    .map(|(idx, _)| idx)
+            //    .unwrap()
+        })
+        .collect()
+}
+
+pub fn argmin<const N: usize>(scores: &[f32; N]) -> usize {
+    let mut min_idx = 0;
+    let mut min_val = scores[0];
+    for i in 1..N {
+        if scores[i] < min_val {
+            min_val = scores[i];
+            min_idx = i;
+        }
+    }
+    min_idx
+}
+
+pub fn ensemble_fusion_accuracy<L, const N: usize>(
+    scores: &[Vec<[f32; N]>],
+    labels: &[L],
+) -> (usize, usize, f64)
+where
+    L: Into<usize> + Copy,
+{
+    let preds = ensemble_fusion(scores);
+    let correct = preds
         .iter()
         .zip(labels.iter())
         .filter(|(pred, label)| **pred == (**label).into())
