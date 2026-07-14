@@ -18,18 +18,24 @@ Hyperdimensional computing is a brain-inspired paradigm where information is rep
 
 Runnable example problems (`cargo run --example name`):
 
- 1. Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
- 2. Plate's [inferencing example](READMEplate.md) used in his HRR paper [4].
- 3. [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
- 4. [Activity recognition (UCI HAR)](READMEhar.md): walking, standing, sitting etc...
- 5. [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
- 6. [Wine quality classification (UCI Wine Quality)](READMEwine.md).
- 7. [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
- 8. [Iris](READMEiris.md): the classic ML dataset (flowers). 
- 9. [Adult](READMEadult.md): the classic Adult dataset (Census Income). 
-10. [MovieLens 100k](READMEml-100k.md): movie recommendation on the MovieLens 100k dataset. 
-11. [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
-12. [MNIST image classification](READMEmnist.md). Handwritten digits.
+### Symbolic reasoning
+
+ - Kanerva's [Mexican Dollar](READMEmexican.md) inferencing example [1].
+ - Plate's [inferencing example](READMEplate.md) used in his HRR paper [4].
+ - [Associative memory](READMEkv.md): Benchmark retrieval accuracy vs. bundle size across HDV types and dimensions.
+
+ ### Classification
+ - [Activity recognition (UCI HAR)](READMEhar.md): walking, standing, sitting etc...
+ - [Spoken letter recognition (UCI Isolet)](READMEisolet.md).
+ - [Wine quality classification (UCI Wine Quality)](READMEwine.md).
+ - [Promoter Gene Sequences (UCI Molecular Biology)](READMEpromoter.md).
+ - [Iris](READMEiris.md): the classic ML dataset (flowers). 
+ - [Adult](READMEadult.md): the classic Adult dataset (Census Income). 
+ - [Text language identification](READMElanguage_id.md): English, French, ... 22 languages.
+ - [MNIST image classification](READMEmnist.md). Handwritten digits.
+
+### Recommendation
+ - [MovieLens 100k](READMEml-100k.md): movie recommendation on the MovieLens 100k dataset. 
 
 
 ## References
